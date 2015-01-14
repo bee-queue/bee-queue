@@ -1,0 +1,39 @@
+{
+  "rules": {
+    "brace-style": [2, "1tbs"],
+    "camelcase": 2,
+    "comma-style": [2, "last"],
+    "curly": 2,
+    "dot-notation": 2,
+    "eol-last": 2,
+    "eqeqeq": [2, "smart"],
+    "key-spacing": 2,
+    "new-cap": [2, {"capIsNew": false}],
+    "no-extra-parens": 1,
+    "no-floating-decimal": 2,
+    "no-inner-declarations": "both",
+    "no-mixed-spaces-and-tabs": 2,
+    "no-multiple-empty-lines": [2, {"max": 2}],
+    "no-redeclare": 2,
+    "no-shadow": 1,
+    "no-space-before-semi": 2,
+    "no-spaced-func": 2,
+    "no-trailing-spaces": 2,
+    "no-underscore-dangle": 0,
+    "no-unused-vars": [2, {"vars": "all", "args": "after-used"}],
+    "no-use-before-define": [2, "nofunc"],
+    "no-warning-comments": [1, {"terms": ["todo"], "location": "anywhere"}],
+    "quotes": [2, "single"],
+    "semi": [2, "always"],
+    "space-after-function-name": [2, "never"],
+    "space-after-keywords": [2, "always"],
+    "space-before-blocks": 2,
+    "space-in-brackets": [2, "never"],
+    "space-in-parens": 2,
+    "space-infix-ops": 2,
+    "strict": 0
+  },
+  "env": {
+    "node": true
+  }
+}
