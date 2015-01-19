@@ -1,0 +1,35 @@
+{
+  "name": "bee-queue",
+  "version": "0.1.0",
+  "description": "A simple, fast, robust task queue, backed by Redis.",
+  "main": "index.js",
+  "dependencies": {
+    "redis": "^0.12.1"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.5",
+    "grunt-eslint": "^3.0.0",
+    "grunt-githooks": "^0.3.1",
+    "chai": "^1.10.0",
+    "grunt-mocha-test": "^0.12.6"
+  },
+  "scripts": {
+    "test": "grunt test"
+  },
+  "keywords": [
+    "task",
+    "job",
+    "queue",
+    "redis"
+  ],
+  "author": "Lewis J Ellis <me@lewisjellis.com>",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LewisJEllis/bee-queue.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LewisJEllis/bee-queue/issues"
+  },
+  "homepage": "https://github.com/LewisJEllis/bee-queue"
+}
