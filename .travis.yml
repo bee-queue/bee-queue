@@ -1,0 +1,8 @@
+before_script:
+  - npm install -g eslint
+  - npm install -g mocha
+language: node_js
+node_js:
+  - "0.11"
+  - "0.10"
+services: redis

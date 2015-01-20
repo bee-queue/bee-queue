@@ -10,7 +10,8 @@ var Queue = require('bee-queue');
 var testQueue = new Queue('test');
 
 testQueue.process(function (job, done) {
-  console.log('processing job ' + job.jobId + '; the sum is: ' + job.data.x + job.data.y);
+  console.log('processing job ' + job.jobId);
+  console.log('the sum is: ' + (job.data.x + job.data.y));
   done();
 });
 
@@ -33,7 +34,7 @@ Bee Queue: a simple, fast, robust job/task queue, backed by Redis.
 
 Heavily inspired by [Bull](https://github.com/OptimalBits/bull), which was an invaluable reference during development. More comparisons/explanations to come.
 
-Why Bees? Bee Queue is like bees because it:
+Why Bees? Bee Queue is like a bee because it:
 - carries pollen (messages) between flowers (servers)
 - is small and simple
 - is fast (bees can fly 20mph!)

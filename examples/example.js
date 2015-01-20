@@ -3,7 +3,7 @@ var testQueue = new Queue('test');
 
 testQueue.process(function (job, done) {
   console.log('processing job ' + job.jobId);
-  console.log('the sum is: ' + job.data.x + job.data.y);
+  console.log('the sum is: ' + (job.data.x + job.data.y));
   done();
 });
 
