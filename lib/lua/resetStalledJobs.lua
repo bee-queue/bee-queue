@@ -11,7 +11,7 @@ for i, v in ipairs(actives) do
     -- can probably safely change this to -1 instead of 0
     -- theoretical speedup, probably insignificant
     -- maybe check that its not in completed to be safe from duplicates
-    redis.call("lrem", ARGV[1] .. "active", 0, v)
+    redis.call("lrem", activeKey, 0, v)
   end
 end
 
