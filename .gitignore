@@ -1,0 +1,5 @@
+logs
+*.log
+notes.txt
+node_modules
+dump.rdb
