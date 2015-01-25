@@ -1,4 +1,3 @@
-/*eslint-env node, mocha */
 /*eslint-disable no-shadow, handle-callback-err */
 
 var Job = require('../lib/job');
@@ -89,16 +88,16 @@ describe('Job', function () {
   describe('Locking', function () {
     it('acquires a lock', function (done) {
       return job.acquireLock(function (err, acquired) {
-        assert.strictEqual(acquired, 'OK');
+        assert.isTrue(acquired);
         done();
       });
     });
 
     it('cannot acquire existing lock', function (done) {
       return job.acquireLock(function (err, acquired) {
-        assert.strictEqual(acquired, 'OK');
+        assert.isTrue(acquired);
         job.acquireLock(function (err, acquired) {
-          assert.notStrictEqual(acquired, 'OK');
+          assert.isFalse(acquired);
           done();
         });
       });
@@ -106,9 +105,9 @@ describe('Job', function () {
 
     it('can renew a previously taken lock', function (done) {
       return job.acquireLock(function (err, acquired) {
-        assert.strictEqual(acquired, 'OK');
+        assert.isTrue(acquired);
         job.renewLock(function (err, renewed) {
-          assert.strictEqual(renewed, 'OK');
+          assert.isTrue(renewed);
           done();
         });
       });
@@ -116,14 +115,14 @@ describe('Job', function () {
 
     it('can renew a lock without acquiring first', function (done) {
       return job.renewLock(function (err, renewed) {
-        assert.strictEqual(renewed, 'OK');
+        assert.isTrue(renewed);
         done();
       });
     });
 
     it('can release a lock', function (done) {
       return job.acquireLock(function (err, acquired) {
-        assert.strictEqual(acquired, 'OK');
+        assert.isTrue(acquired);
         job.releaseLock(function (err, released) {
           assert.isTrue(released);
           done();
@@ -133,7 +132,7 @@ describe('Job', function () {
 
     it('cannot release a lock with a different token', function (done) {
       return job.acquireLock(function (err, acquired) {
-        assert.strictEqual(acquired, 'OK');
+        assert.isTrue(acquired);
         job.queue.token = 'something else';
         job.releaseLock(function (err, released) {
           assert.isFalse(released);
