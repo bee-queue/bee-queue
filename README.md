@@ -7,28 +7,28 @@ A simple, fast, robust job/task queue, backed by Redis.
 
 ```javascript
 var Queue = require('bee-queue');
-var testQueue = new Queue('test');
+var queue = new Queue('test');
 
-testQueue.process(function (job, done) {
-  console.log('processing job ' + job.jobId);
-  console.log('the sum is: ' + (job.data.x + job.data.y));
-  done();
+queue.on('ready', function () {
+  queue.process(function (job, done) {
+    console.log('processing job ' + job.jobId);
+    console.log('the sum is: ' + (job.data.x + job.data.y));
+    done();
+  });
+
+  var reportEnqueued = function (err, job) {
+    console.log('enqueued job ' + job.jobId);
+  };
+
+  queue.add({x: 1, y: 1}, reportEnqueued);
+  queue.add({x: 1, y: 2}, reportEnqueued);
+  setTimeout(queue.add.bind(queue, {x: 1, y: 3}, reportEnqueued), 500);
 });
-
-var reportEnqueued = function (err, job) {
-  console.log('enqueued job ' + job.jobId);
-};
-
-testQueue.add({x: 1, y: 1}, reportEnqueued);
-testQueue.add({x: 1, y: 2}, reportEnqueued);
-
-setTimeout(testQueue.add.bind(testQueue, {x: 1, y: 3}, reportEnqueued), 1500);
-
 ```
 
 Bee Queue: a simple, fast, robust job/task queue, backed by Redis.
 
-- Simple: ~500 LOC, and the only dependency is [node-redis](https://github.com/mranney/node_redis).
+- Simple: ~400 LOC, and the only dependency is [node-redis](https://github.com/mranney/node_redis).
 - Fast: uses Lua scripting and pipelining whenever possible; numbers, benchmarks, etc to come.
 - Robust: well-tested, designed to withstand failures and avoid race conditions.
 
@@ -58,6 +58,9 @@ The constructor settings can take the following fields:
 - `socket`: provide a socket path instead of a host and port
 - `db`: redis DB index
 - `options`: options object for [node-redis](https://github.com/mranney/node_redis#rediscreateclient)
+- `lockTimeout`: ms, default 5000. The experation time of a processor's lock on a job; higher values will reduce the amount of relocking, but if a processor gets stuck, it will take longer before its stalled job gets retried.
+- `globalKeyPrefix`: string, default 'bq'. Configurable just in case the `bq:` namespace is, for whatever reason, unavailable on your redis database.
+- catchExceptions: boolean, default false. Whether to catch exceptions thrown by the handler given to `Queue.process`; only set to true if you must rely on throwing exceptions and having them be caught. Otherwise, communicate errors via `done(err)`.
 
 # Contributing
 Pull requests are welcome; just make sure `grunt test` passes.
