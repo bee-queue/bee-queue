@@ -32,7 +32,9 @@ Bee Queue: a simple, fast, robust job/task queue, backed by Redis.
 - Fast: uses Lua scripting and pipelining whenever possible; numbers, benchmarks, etc to come.
 - Robust: well-tested, designed to withstand failures and avoid race conditions.
 
-Heavily inspired by [Bull](https://github.com/OptimalBits/bull), which was an invaluable reference during development. More comparisons/explanations to come.
+Currently a bit raw, but 1.0.0 (and thorough docs/explanations/benchmarks/comparisons) should come soon.
+
+Heavily inspired by [Bull](https://github.com/OptimalBits/bull), which was an invaluable reference during development.
 
 Why Bees? Bee Queue is like a bee because it:
 - carries pollen (messages) between flowers (servers)
