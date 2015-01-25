@@ -10,11 +10,13 @@ for i, v in ipairs(actives) do
     results[#results + 1] = v -- jobId
     -- can probably safely change this to -1 instead of 0
     -- theoretical speedup, probably insignificant
-    -- maybe check that its not in completed to be safe from duplicates
+    -- maybe check that its not in succeeded to be safe from duplicates
     redis.call("lrem", activeKey, 0, v)
   end
 end
 
-redis.call("rpush", ARGV[1] .. "wait", unpack(results));
+if #results > 0 then
+  redis.call("rpush", ARGV[1] .. "wait", unpack(results));
+end
 
 return results
