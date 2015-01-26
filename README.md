@@ -49,12 +49,14 @@ npm install bee-queue
 
 # Methods
 ```
-Queue(name, settings)
-Queue.add(data, cb(err, job))
-Queue.process(handler(job, done))
+Queue(name[, settings])
+Queue.add(data[, cb(err, job)])
+Queue.process([maxRunning,] handler(job, done))
 ```
+Concurrency is an integer denoting how many jobs can be run at one.
 
-The constructor settings can take the following fields:
+
+The constructor's settings argument is an object whcih can take the following fields:
 - `host`: redis host
 - `port`: redis port
 - `socket`: provide a socket path instead of a host and port
@@ -63,6 +65,10 @@ The constructor settings can take the following fields:
 - `lockTimeout`: ms, default 5000. The experation time of a processor's lock on a job; higher values will reduce the amount of relocking, but if a processor gets stuck, it will take longer before its stalled job gets retried.
 - `globalKeyPrefix`: string, default 'bq'. Configurable just in case the `bq:` namespace is, for whatever reason, unavailable on your redis database.
 - catchExceptions: boolean, default false. Whether to catch exceptions thrown by the handler given to `Queue.process`; only set to true if you must rely on throwing exceptions and having them be caught. Otherwise, communicate errors via `done(err)`.
+
+The process function's `maxRunning` parameter sets the maximum number of simultaneously active jobs, defaulting to 1.
+
+It's analogous to [kue's processing concurrency](https://github.com/LearnBoost/kue#processing-concurrency). However, `bee-queue` will use only two Redis connections, while kue (and the equivalent in bull, using `maxRunning` instances of the same queue) will use `2 * maxRunning` connections.
 
 # Contributing
 Pull requests are welcome; just make sure `grunt test` passes.
