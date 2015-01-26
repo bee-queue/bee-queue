@@ -1,7 +1,7 @@
 {
   "name": "bee-queue",
   "version": "0.1.0",
-  "description": "A simple, fast, robust task queue, backed by Redis.",
+  "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
     "redis": "^0.12.1"
@@ -21,7 +21,8 @@
     "task",
     "job",
     "queue",
-    "redis"
+    "redis",
+    "lua"
   ],
   "author": "Lewis J Ellis <me@lewisjellis.com>",
   "license": "MIT",

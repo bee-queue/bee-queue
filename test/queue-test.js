@@ -375,7 +375,7 @@ describe('Queue', function () {
 
     for (var i = 0; i < numJobs; i++) {
       deadQueue.add({count: i}, reportAdded);
-    };
+    }
   });
 
   it('processes pre-existing jobs when starting a queue', function (done) {
