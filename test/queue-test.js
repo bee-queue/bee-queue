@@ -138,7 +138,7 @@ describe('Queue', function () {
     });
   });
 
-  it('processes many jobs in a row', function (done) {
+  it('processes many jobs in a row with one processor', function (done) {
     queue = Queue('test');
     var counter = 0;
     var numJobs = 20;
@@ -150,6 +150,29 @@ describe('Queue', function () {
       if (counter === numJobs) {
         done();
       }
+    });
+
+    for (var i = 0; i < numJobs; i++) {
+      queue.add({count: i});
+    }
+  });
+
+  it('processes many jobs with one concurrent processor', function (done) {
+    queue = Queue('test');
+    var counter = 0;
+    var concurrency = 5;
+    var numJobs = 20;
+
+    queue.process(concurrency, function (job, jobDone) {
+      assert.isTrue(queue.running <= concurrency);
+      setTimeout(function () {
+        jobDone();
+        assert.strictEqual(job.data.count, counter);
+        counter++;
+        if (counter === numJobs) {
+          done();
+        }
+      }, 20);
     });
 
     for (var i = 0; i < numJobs; i++) {
@@ -294,6 +317,43 @@ describe('Queue', function () {
     for (var i = 0; i < 5; i++) {
       createAndStall();
     }
+  });
+
+  it('resets and processes stalled jobs from concurrent processor', function (done) {
+    var deadQueue = Queue('test', {
+      lockTimeout: 10
+    });
+    var counter = 0;
+    var concurrency = 5;
+    var numJobs = 10;
+
+    var processJobs = function () {
+      queue = Queue('test');
+      queue.process(function (job, jobDone) {
+        assert.strictEqual(job.data.count, counter++);
+        jobDone();
+        if (counter === numJobs) {
+          done();
+        }
+      });
+    };
+
+    var processAndClose = function () {
+      deadQueue.process(concurrency, function () {
+        // wait for it to get all spooled up...
+        if (deadQueue.running === concurrency) {
+          deadQueue.close(function () {
+            setTimeout(processJobs, 15);
+          });
+        }
+      });
+    };
+
+    var reportAdded = barrier(numJobs, processAndClose);
+
+    for (var i = 0; i < numJobs; i++) {
+      deadQueue.add({count: i}, reportAdded);
+    };
   });
 
   it('processes pre-existing jobs when starting a queue', function (done) {
