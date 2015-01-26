@@ -180,6 +180,28 @@ describe('Queue', function () {
     }
   });
 
+  it('processes many randomly delayed jobs with one concurrent processor', function (done) {
+    queue = Queue('test');
+    var counter = 0;
+    var concurrency = 5;
+    var numJobs = 20;
+
+    queue.process(concurrency, function (job, jobDone) {
+      assert.isTrue(queue.running <= concurrency);
+      setTimeout(function () {
+        jobDone();
+        counter++;
+        if (counter === numJobs) {
+          done();
+        }
+      }, 20);
+    });
+
+    for (var i = 0; i < numJobs; i++) {
+      setTimeout(queue.add.bind(queue, {count: i}), Math.random() * 75);
+    }
+  });
+
   it('processes many jobs with multiple processors', function (done) {
     queue = Queue('test');
     var processors = [
