@@ -1,6 +1,6 @@
 before_script:
   - npm install -g eslint
-  - npm install -g mocha
+  - npm install -g grunt-cli
 language: node_js
 node_js:
   - "0.11"
