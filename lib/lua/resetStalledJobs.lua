@@ -15,6 +15,8 @@ for i, v in ipairs(actives) do
   end
 end
 
+-- results is now active unlocked jobs
+
 if #results > 0 then
   redis.call("rpush", ARGV[1] .. "wait", unpack(results));
 end
