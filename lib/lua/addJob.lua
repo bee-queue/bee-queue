@@ -1,9 +1,10 @@
--- prefix ("bq:name:") -> jobData (JSON string)
-local prefix = KEYS[1]
-local jobData = ARGV[1]
+-- key 1 -> job ID ("bq:name:id")
+-- key 1 -> jobs ("bq:name:jobs")
+-- key 2 -> wait ("bq:name:wait")
+-- arg 1 -> job data
 
-local jobId = redis.call("incr", prefix .. "id")
-redis.call("set", prefix .. jobId, jobData)
-redis.call("lpush", prefix .. "wait", jobId)
+local jobId = redis.call("incr", KEYS[1])
+redis.call("hset", KEYS[2], jobId, ARGV[1])
+redis.call("lpush", KEYS[3], jobId)
 
 return jobId

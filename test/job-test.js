@@ -9,6 +9,7 @@ var assert = chai.assert;
 describe('Job', function () {
   var queue = new Queue('test');
   var data;
+  var options;
   var job;
 
   var clearKeys = function (done) {
@@ -26,7 +27,8 @@ describe('Job', function () {
 
   beforeEach(function (done) {
     data = {foo: 'bar'};
-    return queue.add(data, function (err, newJob) {
+    options = {retries: 1};
+    return queue.add(data, options, function (err, newJob) {
       job = newJob;
       done();
     });
@@ -43,8 +45,8 @@ describe('Job', function () {
       Job.fromId(queue, job.jobId, function (err, storedJob) {
         assert.ok(storedJob, 'fails to return a job');
         assert.property(storedJob, 'jobId', 'stored job has no jobId');
-        assert.property(storedJob, 'data', 'stored job has no data');
         assert.deepEqual(storedJob.data, data, 'stored job data is wrong');
+        assert.deepEqual(storedJob.options, options, 'stored job properties are wrong');
         done();
       });
     });

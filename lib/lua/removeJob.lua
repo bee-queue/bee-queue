@@ -11,4 +11,4 @@ end
 
 redis.call("srem", succeededKey, jobId)
 redis.call("srem", failedKey, jobId)
-redis.call("del", prefix .. jobId)
+redis.call("hdel", prefix .. "jobs", jobId)
