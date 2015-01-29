@@ -172,7 +172,7 @@ describe('Queue', function () {
         if (counter === numJobs) {
           done();
         }
-      }, 20);
+      }, 10);
     });
 
     for (var i = 0; i < numJobs; i++) {
@@ -194,11 +194,11 @@ describe('Queue', function () {
         if (counter === numJobs) {
           done();
         }
-      }, 20);
+      }, 10);
     });
 
     for (var i = 0; i < numJobs; i++) {
-      setTimeout(queue.add.bind(queue, {count: i}), Math.random() * 75);
+      setTimeout(queue.add.bind(queue, {count: i}), Math.random() * 50);
     }
   });
 
@@ -211,13 +211,17 @@ describe('Queue', function () {
     ];
     var counter = 0;
     var numJobs = 20;
+    var processed = [];
 
     var handleJob = function (job, jobDone) {
-      assert.strictEqual(job.data.count, counter);
+      counter++;
+      processed[job.data.count] = true;
       jobDone();
 
-      counter++;
       if (counter === numJobs) {
+        for (var i = 0; i < numJobs; i++) {
+          assert.isTrue(processed[i]);
+        }
         var reportClosed = barrier(3, done);
         processors.forEach(function (queue) {
           queue.close(reportClosed);
@@ -282,26 +286,28 @@ describe('Queue', function () {
 
   it('resets and processes stalled jobs when starting a queue', function (done) {
     var deadQueue = Queue('test', {
-      lockTimeout: 10
+      stallInterval: 0
     });
 
     var processJobs = function () {
-      queue = Queue('test');
+      queue = Queue('test', {
+        stallInterval: 0
+      });
       var jobCount = 0;
-      queue.process(function (job, jobDone) {
-        assert.strictEqual(job.data.foo, 'bar' + (++jobCount));
-        jobDone();
-        if (jobCount === 3) {
-          done();
-        }
+      queue.resetStalledJobs(function () {
+        queue.process(function (job, jobDone) {
+          assert.strictEqual(job.data.foo, 'bar' + (++jobCount));
+          jobDone();
+          if (jobCount === 3) {
+            done();
+          }
+        });
       });
     };
 
     var processAndClose = function () {
       deadQueue.process(function () {
-        deadQueue.close(function () {
-          setTimeout(processJobs, 15);
-        });
+        deadQueue.close(processJobs);
       });
     };
 
@@ -314,20 +320,24 @@ describe('Queue', function () {
 
   it('resets and processes jobs from multiple stalled queues', function (done) {
     var processJobs = function () {
-      queue = Queue('test');
+      queue = Queue('test', {
+        stallInterval: 0
+      });
       var reportDone = barrier(5, done);
-      queue.process(function (job, jobDone) {
-        assert.strictEqual(job.data.foo, 'bar');
-        jobDone();
-        reportDone();
+      queue.resetStalledJobs(function () {
+        queue.process(function (job, jobDone) {
+          assert.strictEqual(job.data.foo, 'bar');
+          jobDone();
+          reportDone();
+        });
       });
     };
 
-    var reportClosed = barrier(5, setTimeout.bind(null, processJobs, 15));
+    var reportClosed = barrier(5, processJobs);
 
     var createAndStall = function () {
       var queue = Queue('test', {
-        lockTimeout: 10
+        stallInterval: 0
       });
       queue.add({foo: 'bar'}, function () {
         queue.process(function () {
@@ -343,20 +353,24 @@ describe('Queue', function () {
 
   it('resets and processes stalled jobs from concurrent processor', function (done) {
     var deadQueue = Queue('test', {
-      lockTimeout: 10
+      stallInterval: 0
     });
     var counter = 0;
     var concurrency = 5;
     var numJobs = 10;
 
     var processJobs = function () {
-      queue = Queue('test');
-      queue.process(function (job, jobDone) {
-        assert.strictEqual(job.data.count, counter++);
-        jobDone();
-        if (counter === numJobs) {
-          done();
-        }
+      queue = Queue('test', {
+        stallInterval: 0
+      });
+      queue.resetStalledJobs(function () {
+        queue.process(function (job, jobDone) {
+          counter += 1;
+          jobDone();
+          if (counter === numJobs) {
+            done();
+          }
+        });
       });
     };
 
@@ -364,9 +378,7 @@ describe('Queue', function () {
       deadQueue.process(concurrency, function () {
         // wait for it to get all spooled up...
         if (deadQueue.running === concurrency) {
-          deadQueue.close(function () {
-            setTimeout(processJobs, 15);
-          });
+          deadQueue.close(processJobs);
         }
       });
     };
