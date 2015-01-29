@@ -1,8 +1,16 @@
 -- keyprefix -> key prefix ("bq:name:")
+-- time -> ms timestamp
+-- interval -> ms stallInterval
 -- returns {resetJobId1, resetJobId2, ...}
--- uses :stalling, :active, :wait
+-- uses :stalling, :active, :wait, :stallTime
 
--- todo figure out a way to ensure this is time-interval-idempotent
+local stallTimeKey = ARGV[1] .. "stallTime"
+local stallTime = tonumber(redis.call("get", stallTimeKey) or 0)
+local now = tonumber(ARGV[2])
+
+if now < stallTime then
+  return 0
+end
 
 local activeKey = ARGV[1] .. "active"
 local stallingKey = ARGV[1] .. "stalling"
@@ -21,6 +29,8 @@ local actives = redis.call("lrange", activeKey, 0, -1)
 if #actives > 0 then
   redis.call("sadd", stallingKey, unpack(actives))
 end
+
+redis.call("set", stallTimeKey, now + ARGV[3])
 
 return stalling
 
