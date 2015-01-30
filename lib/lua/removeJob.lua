@@ -1,7 +1,7 @@
 --[[
 key 1 -> bq:test:succeeded
 key 2 -> bq:test:failed
-key 3 -> bq:test:wait
+key 3 -> bq:test:waiting
 key 4 -> bq:test:active
 key 5 -> bq:test:stalling
 key 6 -> bq:test:jobs

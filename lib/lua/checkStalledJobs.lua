@@ -1,7 +1,7 @@
 --[[
 key 1 -> bq:name:stallTime
 key 2 -> bq:name:stalling
-key 3 -> bq:name:wait
+key 3 -> bq:name:waiting
 key 4 -> bq:name:active
 arg 1 -> ms timestamp ("now")
 arg 2 -> ms stallInterval
@@ -10,7 +10,7 @@ returns {resetJobId1, resetJobId2, ...}
 
 workers are responsible for removing their jobId from the stalling set every stallInterval ms
 if a jobId is not removed from the stalling set within a stallInterval window,
-we assume the job has stalled and should be reset (moved from active back to wait)
+we assume the job has stalled and should be reset (moved from active back to waiting)
 --]]
 
 local now = tonumber(ARGV[1])
@@ -21,7 +21,7 @@ if now < stallTime then
   return 0
 end
 
--- reset any stalling jobs by moving from active to wait
+-- reset any stalling jobs by moving from active to waiting
 local stalling = redis.call("smembers", KEYS[2])
 if #stalling > 0 then
   redis.call("rpush", KEYS[3], unpack(stalling))
