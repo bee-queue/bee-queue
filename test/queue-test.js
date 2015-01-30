@@ -117,6 +117,20 @@ describe('Queue', function () {
     queue.bclient.emit('end');
   });
 
+  it('adds a job with correct prefix', function (done) {
+    queue = Queue('test');
+
+    queue.add({foo: 'bar'}, function (err, job) {
+      assert.isNull(err);
+      assert.ok(job.jobId);
+      queue.client.hget('bq:test:jobs', job.jobId, function (getErr, jobData) {
+        assert.isNull(getErr);
+        assert.strictEqual(jobData, job.toData());
+        done();
+      });
+    });
+  });
+
   it('processes a job', function (done) {
     queue = Queue('test');
 
