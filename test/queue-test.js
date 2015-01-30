@@ -284,6 +284,29 @@ describe('Queue', function () {
     });
   });
 
+  it('processes a job that times out', function (done) {
+    queue = Queue('test');
+
+    queue.process(function (job, jobDone) {
+      assert.strictEqual(job.data.foo, 'bar');
+      setTimeout(jobDone, 20);
+    });
+
+    queue.add({foo: 'bar'}, {timeout: 10}, function (err, job) {
+      assert.isNull(err);
+      assert.ok(job.jobId);
+      assert.strictEqual(job.data.foo, 'bar');
+      assert.strictEqual(job.options.timeout, 10);
+    });
+
+    queue.on('failed', function (job, err) {
+      assert.ok(job);
+      assert.strictEqual(job.data.foo, 'bar');
+      assert.strictEqual(err.message, 'Job 1 timed out (10 ms)');
+      done();
+    });
+  });
+
   it('resets and processes stalled jobs when starting a queue', function (done) {
     var deadQueue = Queue('test', {
       stallInterval: 0
