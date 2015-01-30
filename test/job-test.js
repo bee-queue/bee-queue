@@ -27,7 +27,7 @@ describe('Job', function () {
 
   beforeEach(function (done) {
     data = {foo: 'bar'};
-    options = {retries: 1};
+    options = {test: 1};
     return queue.add(data, options, function (err, newJob) {
       job = newJob;
       done();

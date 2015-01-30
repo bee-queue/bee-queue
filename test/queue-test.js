@@ -307,6 +307,69 @@ describe('Queue', function () {
     });
   });
 
+  it('processes a job that auto-retries', function (done) {
+    queue = Queue('test');
+    var failCount = 0;
+    var retries = 1;
+    var failMsg = 'failing to auto-retry...';
+
+    queue.process(function (job, jobDone) {
+      assert.strictEqual(job.data.foo, 'bar');
+      if (job.options.retries === 0) {
+        assert.strictEqual(failCount, retries);
+        jobDone();
+        done();
+      } else {
+        jobDone(Error(failMsg));
+      }
+    });
+
+    queue.add({foo: 'bar'}, {retries: retries}, function (err, job) {
+      assert.isNull(err);
+      assert.ok(job.jobId);
+      assert.strictEqual(job.data.foo, 'bar');
+      assert.strictEqual(job.options.retries, retries);
+    });
+
+    queue.on('failed', function (job, err) {
+      failCount += 1;
+      assert.ok(job);
+      assert.strictEqual(job.data.foo, 'bar');
+      assert.strictEqual(err.message, failMsg);
+    });
+  });
+
+
+  it('processes a job that times out and retries', function (done) {
+    queue = Queue('test');
+    var failCount = 0;
+    var retries = 1;
+
+    queue.process(function (job, jobDone) {
+      assert.strictEqual(job.data.foo, 'bar');
+      if (job.options.retries === 0) {
+        assert.strictEqual(failCount, retries);
+        jobDone();
+        done();
+      } else {
+        setTimeout(jobDone, 20);
+      }
+    });
+
+    queue.add({foo: 'bar'}, {timeout: 10, retries: retries}, function (err, job) {
+      assert.isNull(err);
+      assert.ok(job.jobId);
+      assert.strictEqual(job.data.foo, 'bar');
+      assert.strictEqual(job.options.retries, retries);
+    });
+
+    queue.on('failed', function (job) {
+      failCount += 1;
+      assert.ok(job);
+      assert.strictEqual(job.data.foo, 'bar');
+    });
+  });
+
   it('resets and processes stalled jobs when starting a queue', function (done) {
     var deadQueue = Queue('test', {
       stallInterval: 0
