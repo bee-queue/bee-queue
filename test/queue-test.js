@@ -294,7 +294,7 @@ describe('Queue', function () {
         stallInterval: 0
       });
       var jobCount = 0;
-      queue.resetStalledJobs(function () {
+      queue.checkStalledJobs(function () {
         queue.process(function (job, jobDone) {
           assert.strictEqual(job.data.foo, 'bar' + (++jobCount));
           jobDone();
@@ -324,7 +324,7 @@ describe('Queue', function () {
         stallInterval: 0
       });
       var reportDone = barrier(5, done);
-      queue.resetStalledJobs(function () {
+      queue.checkStalledJobs(function () {
         queue.process(function (job, jobDone) {
           assert.strictEqual(job.data.foo, 'bar');
           jobDone();
@@ -363,7 +363,7 @@ describe('Queue', function () {
       queue = Queue('test', {
         stallInterval: 0
       });
-      queue.resetStalledJobs(function () {
+      queue.checkStalledJobs(function () {
         queue.process(function (job, jobDone) {
           counter += 1;
           jobDone();
