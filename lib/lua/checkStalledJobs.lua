@@ -1,47 +1,42 @@
--- keyprefix -> key prefix ("bq:name:")
--- time -> ms timestamp
--- interval -> ms stallInterval
--- returns {resetJobId1, resetJobId2, ...}
--- uses :stalling, :active, :wait, :stallTime
+--[[
+key 1 -> bq:name:stallTime
+key 2 -> bq:name:stalling
+key 3 -> bq:name:wait
+key 4 -> bq:name:active
+arg 1 -> ms timestamp ("now")
+arg 2 -> ms stallInterval
 
-local stallTimeKey = ARGV[1] .. "stallTime"
-local stallTime = tonumber(redis.call("get", stallTimeKey) or 0)
-local now = tonumber(ARGV[2])
+returns {resetJobId1, resetJobId2, ...}
+
+workers are responsible for removing their jobId from the stalling set every stallInterval ms
+if a jobId is not removed from the stalling set within a stallInterval window,
+we assume the job has stalled and should be reset (moved from active back to wait)
+--]]
+
+local now = tonumber(ARGV[1])
+local stallTime = tonumber(redis.call("get", KEYS[1]) or 0)
 
 if now < stallTime then
+  -- hasn't been long enough (stallInterval) since last check
   return 0
 end
 
-local activeKey = ARGV[1] .. "active"
-local stallingKey = ARGV[1] .. "stalling"
-local stalling = redis.call("smembers", stallingKey)
-
+-- reset any stalling jobs by moving from active to wait
+local stalling = redis.call("smembers", KEYS[2])
 if #stalling > 0 then
-  redis.call("rpush", ARGV[1] .. "wait", unpack(stalling))
+  redis.call("rpush", KEYS[3], unpack(stalling))
   for i = 1, #stalling do
-    redis.call("lrem", activeKey, 0, stalling[i])
+    redis.call("lrem", KEYS[4], 0, stalling[i])
   end
+  redis.call("del", KEYS[2])
 end
 
-redis.call("del", stallingKey)
-
-local actives = redis.call("lrange", activeKey, 0, -1)
+-- copy currently active jobs into stalling set
+local actives = redis.call("lrange", KEYS[4], 0, -1)
 if #actives > 0 then
-  redis.call("sadd", stallingKey, unpack(actives))
+  redis.call("sadd", KEYS[2], unpack(actives))
 end
 
-redis.call("set", stallTimeKey, now + ARGV[3])
+redis.call("set", KEYS[1], now + ARGV[2])
 
 return stalling
-
---[[
-if < stallTimeout milliseconds since last check, return
-
-take everything in stalling
-  add to wait
-  remove from active
-
-set stalling = active
-
-renewLock procedure: remove id from stalling
-]]

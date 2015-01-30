@@ -56,7 +56,7 @@ describe('Job', function () {
     it('removes the job from redis', function (done) {
       job.remove(function (err) {
         assert.isNull(err);
-        queue.client.get(queue.toKey(job.jobId), function (err, results) {
+        queue.client.hget(queue.toKey('jobs'), job.jobId, function (err, results) {
           assert.isNull(err);
           assert.isNull(results);
           done();

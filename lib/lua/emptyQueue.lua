@@ -1,10 +1,14 @@
--- keyprefix -> key prefix ("hlq:name:")
-local activeKey = ARGV[1] .. "active"
-local actives = redis.call("lrange", activeKey, 0, -1)
+--[[
+key 1 -> bq:name:active
+key 2 -> bq:name:jobs
 
-for i = 1, #actives do
-  actives[i] = prefix .. actives[i]
+unclear whether this script needs to keep existing
+]]
+
+local actives = redis.call("lrange", KEYS[1], 0, -1)
+
+if #actives > 0 then
+  redis.call("hdel", KEYS[2], unpack(actives))
 end
-actives[#actives] = activeKey
 
-redis.call("del", unpack(actives))
+redis.call("del", KEYS[1])
