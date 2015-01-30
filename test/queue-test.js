@@ -391,9 +391,7 @@ describe('Queue', function () {
   });
 
   it('processes pre-existing jobs when starting a queue', function (done) {
-    var deadQueue = Queue('test', {
-      lockTimeout: 10
-    });
+    var deadQueue = Queue('test');
 
     var processJobs = function () {
       queue = Queue('test');
@@ -414,7 +412,7 @@ describe('Queue', function () {
     deadQueue.add({foo: 'bar3'}, reportAdded);
   });
 
-  it('does not process a locked job when a new queue starts', function (done) {
+  it('does not process an in-progress job when a new queue starts', function (done) {
     queue = Queue('test');
     queue.add({foo: 'bar'}, function () {
       queue.process(function (job, jobDone) {

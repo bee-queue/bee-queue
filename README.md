@@ -53,16 +53,14 @@ Queue(name[, settings])
 Queue.add(data[, cb(err, job)])
 Queue.process([maxRunning,] handler(job, done(err)))
 ```
-Concurrency is an integer denoting how many jobs can be run at once.
 
-
-The constructor's settings argument is an object whcih can take the following fields:
+The constructor's settings argument is an object which can take the following fields:
 - `host`: redis host
 - `port`: redis port
 - `socket`: provide a socket path instead of a host and port
 - `db`: redis DB index
 - `options`: options object for [node-redis](https://github.com/mranney/node_redis#rediscreateclient)
-- `lockTimeout`: ms, default 5000. The experation time of a processor's lock on a job; higher values will reduce the amount of relocking, but if a processor gets stuck, it will take longer before its stalled job gets retried.
+- `stallInterval`: ms, default 5000. The length of the window in which workers must report that they aren't stalling; higher values will reduce redis network overhead, but if a worker gets stuck, it will take longer before its stalled job gets retried.
 - `globalKeyPrefix`: string, default 'bq'. Configurable just in case the `bq:` namespace is, for whatever reason, unavailable on your redis database.
 - `catchExceptions`: boolean, default false. Whether to catch exceptions thrown by the handler given to `Queue.process`; only set to true if you must rely on throwing exceptions and having them be caught. Otherwise, communicate errors via `done(err)`.
 
