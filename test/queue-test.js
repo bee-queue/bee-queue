@@ -138,6 +138,31 @@ describe('Queue', function () {
     });
   });
 
+  it('processes a job with removeOnSuccess', function (done) {
+    queue = Queue('test', {
+      removeOnSuccess: true
+    });
+
+    queue.process(function (job, jobDone) {
+      assert.strictEqual(job.data.foo, 'bar');
+      jobDone(null);
+    });
+
+    queue.add({foo: 'bar'}, function (err, job) {
+      assert.isNull(err);
+      assert.ok(job.jobId);
+      assert.strictEqual(job.data.foo, 'bar');
+    });
+
+    queue.on('succeeded', function (job) {
+      queue.client.hget(queue.toKey('jobs'), job.jobId, function (err, jobData) {
+        assert.isNull(err);
+        assert.isNull(jobData);
+        done();
+      });
+    });
+  });
+
   it('processes many jobs in a row with one processor', function (done) {
     queue = Queue('test');
     var counter = 0;
