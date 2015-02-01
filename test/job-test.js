@@ -28,10 +28,8 @@ describe('Job', function () {
   beforeEach(function (done) {
     data = {foo: 'bar'};
     options = {test: 1};
-    return queue.add(data, options, function (err, newJob) {
-      job = newJob;
-      done();
-    });
+    job = queue.createJob(data, options);
+    job.save(done);
   });
 
   describe('Constructor', function () {
