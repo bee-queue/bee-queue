@@ -122,8 +122,8 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
-      queue.client.hget('bq:test:jobs', job.jobId, function (getErr, jobData) {
+      assert.ok(job.id);
+      queue.client.hget('bq:test:jobs', job.id, function (getErr, jobData) {
         assert.isNull(getErr);
         assert.strictEqual(jobData, job.toData());
         done();
@@ -141,7 +141,7 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
+      assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
     });
 
@@ -164,12 +164,12 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
+      assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
     });
 
     queue.on('succeeded', function (job) {
-      queue.client.hget(queue.toKey('jobs'), job.jobId, function (err, jobData) {
+      queue.client.hget(queue.toKey('jobs'), job.id, function (err, jobData) {
         assert.isNull(err);
         assert.isNull(jobData);
         done();
@@ -287,7 +287,7 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
+      assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
     });
 
@@ -311,7 +311,7 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
+      assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
     });
 
@@ -333,7 +333,7 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, {timeout: 10}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
+      assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
       assert.strictEqual(job.options.timeout, 10);
     });
@@ -365,7 +365,7 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, {retries: retries}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
+      assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
       assert.strictEqual(job.options.retries, retries);
     });
@@ -397,7 +397,7 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, {timeout: 10, retries: retries}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
+      assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
       assert.strictEqual(job.options.retries, retries);
     });
@@ -583,7 +583,7 @@ describe('Queue', function () {
 
     queue.add({foo: 'bar'}, function (err, job) {
       assert.isNull(err);
-      assert.ok(job.jobId);
+      assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
     });
   });

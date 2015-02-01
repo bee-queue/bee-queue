@@ -35,14 +35,14 @@ describe('Job', function () {
   describe('Constructor', function () {
     it('creates a job', function () {
       assert.ok(job, 'fails to return a job');
-      assert.property(job, 'jobId', 'job has no jobId');
+      assert.property(job, 'id', 'job has no id');
       assert.property(job, 'data', 'job has no data');
     });
 
     it('saves the job in redis', function (done) {
-      Job.fromId(queue, job.jobId, function (err, storedJob) {
+      Job.fromId(queue, job.id, function (err, storedJob) {
         assert.ok(storedJob, 'fails to return a job');
-        assert.property(storedJob, 'jobId', 'stored job has no jobId');
+        assert.property(storedJob, 'id', 'stored job has no jobId');
         assert.deepEqual(storedJob.data, data, 'stored job data is wrong');
         assert.deepEqual(storedJob.options, options, 'stored job properties are wrong');
         done();
@@ -54,7 +54,7 @@ describe('Job', function () {
     it('removes the job from redis', function (done) {
       job.remove(function (err) {
         assert.isNull(err);
-        queue.client.hget(queue.toKey('jobs'), job.jobId, function (err, results) {
+        queue.client.hget(queue.toKey('jobs'), job.id, function (err, results) {
           assert.isNull(err);
           assert.isNull(results);
           done();
