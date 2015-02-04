@@ -605,4 +605,103 @@ describe('Queue', function () {
     });
   });
 
+  describe('Pubsub events', function () {
+    it('emits a job succeeded event', function (done) {
+      queue = Queue('test');
+      var worker = Queue('test');
+
+      var job = queue.createJob({foo: 'bar'});
+      job.on('succeeded', function (result) {
+        assert.strictEqual(result, 'barbar');
+        worker.close(done);
+      });
+      job.save();
+
+      worker.process(function (job, jobDone) {
+        jobDone(null, job.data.foo + job.data.foo);
+      });
+    });
+
+    it('emits a job succeeded event with no result', function (done) {
+      queue = Queue('test');
+      var worker = Queue('test');
+
+      var job = queue.createJob({foo: 'bar'});
+      job.on('succeeded', function (result) {
+        assert.strictEqual(result, undefined);
+        worker.close(done);
+      });
+      job.save();
+
+      worker.process(function (job, jobDone) {
+        jobDone(null);
+      });
+    });
+
+    it('emits a job failed event', function (done) {
+      queue = Queue('test');
+      var worker = Queue('test');
+
+      var job = queue.createJob({foo: 'bar'});
+      job.on('failed', function (err) {
+        assert.strictEqual(err.message, 'fail!');
+        worker.close(done);
+      });
+      job.save();
+
+      worker.process(function (job, jobDone) {
+        jobDone(Error('fail!'));
+      });
+    });
+
+    it('emits a job progress event', function (done) {
+      queue = Queue('test');
+      var worker = Queue('test');
+      var reportedProgress = false;
+
+      var job = queue.createJob({foo: 'bar'});
+      job.on('progress', function (progress) {
+        assert.strictEqual(progress, 20);
+        reportedProgress = true;
+      });
+
+      job.on('succeeded', function () {
+        assert.isTrue(reportedProgress);
+        worker.close(done);
+      });
+      job.save();
+
+      worker.process(function (job, jobDone) {
+        job.reportProgress(20);
+        setTimeout(jobDone, 20);
+      });
+    });
+
+    it('emits a job retrying event', function (done) {
+      queue = Queue('test');
+      var worker = Queue('test');
+      var retried = false;
+
+      var job = queue.createJob({foo: 'bar'}, {retries: 1});
+      job.on('retrying', function (retries) {
+        assert.strictEqual(retries, 0);
+      });
+      job.on('succeeded', function (result) {
+        assert.isTrue(retried);
+        assert.strictEqual(result, 'retried');
+        worker.close(done);
+      });
+      job.save();
+
+      worker.process(function (job, jobDone) {
+        if (retried) {
+          jobDone(null, 'retried');
+        } else {
+          retried = true;
+          jobDone(Error('failing to retry'));
+        }
+      });
+    });
+  });
+
 });
