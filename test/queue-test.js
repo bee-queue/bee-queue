@@ -95,7 +95,7 @@ describe('Queue', function () {
     queue.bclient.stream.end();
     queue.bclient.emit('error', new Error('ECONNRESET'));
 
-    queue.add({'foo': 'bar'});
+    queue.createJob({'foo': 'bar'}).save();
   });
 
 
@@ -113,14 +113,14 @@ describe('Queue', function () {
     // Not called at all yet because queue.process uses setImmediate
     assert.strictEqual(jobSpy.callCount, 0);
 
-    queue.add({'foo': 'bar'}, function () {});
+    queue.createJob({'foo': 'bar'}).save();
     queue.bclient.emit('end');
   });
 
   it('adds a job with correct prefix', function (done) {
     queue = Queue('test');
 
-    queue.add({foo: 'bar'}, function (err, job) {
+    queue.createJob({foo: 'bar'}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       queue.client.hget('bq:test:jobs', job.id, function (getErr, jobData) {
@@ -139,7 +139,7 @@ describe('Queue', function () {
       jobDone(null, 'baz');
     });
 
-    queue.add({foo: 'bar'}, function (err, job) {
+    queue.createJob({foo: 'bar'}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
@@ -162,7 +162,7 @@ describe('Queue', function () {
       jobDone(null);
     });
 
-    queue.add({foo: 'bar'}, function (err, job) {
+    queue.createJob({foo: 'bar'}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
@@ -192,7 +192,7 @@ describe('Queue', function () {
     });
 
     for (var i = 0; i < numJobs; i++) {
-      queue.add({count: i});
+      queue.createJob({count: i}).save();
     }
   });
 
@@ -215,7 +215,7 @@ describe('Queue', function () {
     });
 
     for (var i = 0; i < numJobs; i++) {
-      queue.add({count: i});
+      queue.createJob({count: i}).save();
     }
   });
 
@@ -236,8 +236,12 @@ describe('Queue', function () {
       }, 10);
     });
 
+    var addJob = function (i) {
+      queue.createJob({count: i}).save();
+    };
+
     for (var i = 0; i < numJobs; i++) {
-      setTimeout(queue.add.bind(queue, {count: i}), Math.random() * 50);
+      setTimeout(addJob.bind(null, i), Math.random() * 50);
     }
   });
 
@@ -273,7 +277,7 @@ describe('Queue', function () {
     });
 
     for (var i = 0; i < numJobs; i++) {
-      queue.add({count: i});
+      queue.createJob({count: i}).save();
     }
   });
 
@@ -285,7 +289,7 @@ describe('Queue', function () {
       jobDone(Error('failed!'));
     });
 
-    queue.add({foo: 'bar'}, function (err, job) {
+    queue.createJob({foo: 'bar'}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
@@ -309,7 +313,7 @@ describe('Queue', function () {
       throw Error('exception!');
     });
 
-    queue.add({foo: 'bar'}, function (err, job) {
+    queue.createJob({foo: 'bar'}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
@@ -331,7 +335,7 @@ describe('Queue', function () {
       setTimeout(jobDone, 20);
     });
 
-    queue.add({foo: 'bar'}, {timeout: 10}, function (err, job) {
+    queue.createJob({foo: 'bar'}, {timeout: 10}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
@@ -363,7 +367,7 @@ describe('Queue', function () {
       }
     });
 
-    queue.add({foo: 'bar'}, {retries: retries}, function (err, job) {
+    queue.createJob({foo: 'bar'}, {retries: retries}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
@@ -395,7 +399,7 @@ describe('Queue', function () {
       }
     });
 
-    queue.add({foo: 'bar'}, {timeout: 10, retries: retries}, function (err, job) {
+    queue.createJob({foo: 'bar'}, {timeout: 10, retries: retries}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');
@@ -438,9 +442,9 @@ describe('Queue', function () {
 
     var reportAdded = barrier(3, processAndClose);
 
-    deadQueue.add({foo: 'bar1'}, reportAdded);
-    deadQueue.add({foo: 'bar2'}, reportAdded);
-    deadQueue.add({foo: 'bar3'}, reportAdded);
+    deadQueue.createJob({foo: 'bar1'}).save(reportAdded);
+    deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
+    deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
   });
 
   it('resets and processes jobs from multiple stalled queues', function (done) {
@@ -464,7 +468,7 @@ describe('Queue', function () {
       var queue = Queue('test', {
         stallInterval: 0
       });
-      queue.add({foo: 'bar'}, function () {
+      queue.createJob({foo: 'bar'}).save(function () {
         queue.process(function () {
           queue.close(reportClosed);
         });
@@ -511,7 +515,7 @@ describe('Queue', function () {
     var reportAdded = barrier(numJobs, processAndClose);
 
     for (var i = 0; i < numJobs; i++) {
-      deadQueue.add({count: i}, reportAdded);
+      deadQueue.createJob({count: i}).save(reportAdded);
     }
   });
 
@@ -532,14 +536,14 @@ describe('Queue', function () {
 
     var reportAdded = barrier(3, deadQueue.close.bind(deadQueue, processJobs));
 
-    deadQueue.add({foo: 'bar1'}, reportAdded);
-    deadQueue.add({foo: 'bar2'}, reportAdded);
-    deadQueue.add({foo: 'bar3'}, reportAdded);
+    deadQueue.createJob({foo: 'bar1'}).save(reportAdded);
+    deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
+    deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
   });
 
   it('does not process an in-progress job when a new queue starts', function (done) {
     queue = Queue('test');
-    queue.add({foo: 'bar'}, function () {
+    queue.createJob({foo: 'bar'}).save(function () {
       queue.process(function (job, jobDone) {
         assert.strictEqual(job.data.foo, 'bar');
         setTimeout(jobDone, 30);
@@ -581,7 +585,7 @@ describe('Queue', function () {
       done();
     });
 
-    queue.add({foo: 'bar'}, function (err, job) {
+    queue.createJob({foo: 'bar'}).save(function (err, job) {
       assert.isNull(err);
       assert.ok(job.id);
       assert.strictEqual(job.data.foo, 'bar');

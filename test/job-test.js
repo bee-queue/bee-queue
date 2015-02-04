@@ -63,25 +63,25 @@ describe('Job', function () {
     });
   });
 
-  describe('moveToSet', function () {
-    var markJobTest = function (status) {
-      return function (done) {
-        job.isInSet(status, function (err, isMember) {
-          assert.isNull(err);
-          assert.isFalse(isMember);
-          job.moveToSet(status, function (err) {
-            assert.isNull(err);
-            job.isInSet(status, function (err, isMember) {
-              assert.isNull(err);
-              assert.isTrue(isMember);
-              done();
-            });
-          });
-        });
-      };
-    };
+  // describe('moveToSet', function () {
+  //   var markJobTest = function (status) {
+  //     return function (done) {
+  //       job.isInSet(status, function (err, isMember) {
+  //         assert.isNull(err);
+  //         assert.isFalse(isMember);
+  //         job.moveToSet(status, function (err) {
+  //           assert.isNull(err);
+  //           job.isInSet(status, function (err, isMember) {
+  //             assert.isNull(err);
+  //             assert.isTrue(isMember);
+  //             done();
+  //           });
+  //         });
+  //       });
+  //     };
+  //   };
 
-    it('marks the job as succeeded', markJobTest('succeeded'));
-    it('marks the job as failed', markJobTest('failed'));
-  });
+  //   it('marks the job as succeeded', markJobTest('succeeded'));
+  //   it('marks the job as failed', markJobTest('failed'));
+  // });
 });
