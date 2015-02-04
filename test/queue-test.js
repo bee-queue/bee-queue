@@ -145,7 +145,8 @@ describe('Queue', function () {
         jobDone(null, 'baz');
       });
 
-      queue.createJob({foo: 'bar'}).save(function (err, job) {
+      var job = queue.createJob({foo: 'bar'});
+      job.save(function (err, job) {
         assert.isNull(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
@@ -154,7 +155,10 @@ describe('Queue', function () {
       queue.on('succeeded', function (job, data) {
         assert.ok(job);
         assert.strictEqual(data, 'baz');
-        done();
+        job.isInSet('succeeded', function (err, isMember) {
+          assert.isTrue(isMember);
+          done();
+        });
       });
     });
 
@@ -191,7 +195,8 @@ describe('Queue', function () {
         jobDone(Error('failed!'));
       });
 
-      queue.createJob({foo: 'bar'}).save(function (err, job) {
+      var job = queue.createJob({foo: 'bar'});
+      job.save(function (err, job) {
         assert.isNull(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
@@ -201,7 +206,10 @@ describe('Queue', function () {
         assert.ok(job);
         assert.strictEqual(job.data.foo, 'bar');
         assert.strictEqual(err.message, 'failed!');
-        done();
+        job.isInSet('failed', function (err, isMember) {
+          assert.isTrue(isMember);
+          done();
+        });
       });
     });
 
@@ -683,8 +691,8 @@ describe('Queue', function () {
       var retried = false;
 
       var job = queue.createJob({foo: 'bar'}, {retries: 1});
-      job.on('retrying', function (retries) {
-        assert.strictEqual(retries, 0);
+      job.on('retrying', function (err) {
+        assert.strictEqual(err.message, 'failing to retry');
       });
       job.on('succeeded', function (result) {
         assert.isTrue(retried);
@@ -700,6 +708,71 @@ describe('Queue', function () {
           retried = true;
           jobDone(Error('failing to retry'));
         }
+      });
+    });
+
+    it('are not received when getEvents is false', function (done) {
+      queue = Queue('test', {
+        getEvents: false
+      });
+      var worker = Queue('test');
+
+      assert.isUndefined(queue.eclient);
+
+      var job = queue.createJob({foo: 'bar'});
+      job.on('succeeded', function () {
+        assert.fail();
+      });
+      job.save();
+
+      worker.process(function (job, jobDone) {
+        jobDone(null, job.data.foo);
+        setTimeout(worker.close.bind(worker, done), 20);
+      });
+    });
+
+    it('are not sent when sendEvents is false', function (done) {
+      queue = Queue('test');
+      var worker = Queue('test', {
+        sendEvents: false
+      });
+
+      var job = queue.createJob({foo: 'bar'});
+      job.on('succeeded', function () {
+        assert.fail();
+      });
+      job.save();
+
+      worker.process(function (job, jobDone) {
+        jobDone(null, job.data.foo);
+        setTimeout(worker.close.bind(worker, done), 20);
+      });
+    });
+
+    it('properly emits events with multiple jobs', function (done) {
+      queue = Queue('test');
+      var worker = Queue('test');
+
+      var reported = 0;
+      var job1 = queue.createJob({foo: 'bar'});
+      var job2 = queue.createJob({foo: 'baz'});
+      job1.on('succeeded', function (result) {
+        reported += 1;
+        assert.strictEqual(result, 'barbar');
+      });
+      job2.on('succeeded', function (result) {
+        reported += 1;
+        assert.strictEqual(result, 'bazbaz');
+      });
+      job1.save();
+      job2.save();
+
+      worker.process(function (job, jobDone) {
+        jobDone(null, job.data.foo + job.data.foo);
+        setTimeout(function () {
+          assert.strictEqual(reported, 2);
+          worker.close(done);
+        }, 20);
       });
     });
   });
