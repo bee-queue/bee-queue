@@ -4,6 +4,7 @@ A simple, fast, robust job/task queue, backed by Redis.
 
   [![NPM Version][npm-image]][npm-url]
   [![Build Status][travis-image]][travis-url]
+  [![Coverage Status][coveralls-image]][coveralls-url]
 
 ```javascript
 var Queue = require('bee-queue');
@@ -79,3 +80,5 @@ You'll need a local redis server to run the tests. Note that running them will d
 [npm-url]: https://www.npmjs.com/package/bee-queue
 [travis-image]: https://img.shields.io/travis/LewisJEllis/bee-queue.svg?style=flat
 [travis-url]: https://travis-ci.org/LewisJEllis/bee-queue
+[coveralls-image]: https://coveralls.io/repos/LewisJEllis/bee-queue/badge.svg?branch=master
+[coveralls-url]: https://coveralls.io/r/LewisJEllis/bee-queue?branch=master
