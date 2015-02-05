@@ -517,12 +517,12 @@ describe('Queue', function () {
   describe('Resets', function () {
     it('resets and processes stalled jobs when starting a queue', function (done) {
       var deadQueue = Queue('test', {
-        stallInterval: 0
+        stallInterval: 1
       });
 
       var processJobs = function () {
         queue = Queue('test', {
-          stallInterval: 0
+          stallInterval: 1
         });
         var jobCount = 0;
         queue.checkStalledJobs(function () {
@@ -552,7 +552,7 @@ describe('Queue', function () {
     it('resets and processes jobs from multiple stalled queues', function (done) {
       var processJobs = function () {
         queue = Queue('test', {
-          stallInterval: 0
+          stallInterval: 1
         });
         var reportDone = barrier(5, done);
         queue.checkStalledJobs(function () {
@@ -568,7 +568,7 @@ describe('Queue', function () {
 
       var createAndStall = function () {
         var queue = Queue('test', {
-          stallInterval: 0
+          stallInterval: 1
         });
         queue.createJob({foo: 'bar'}).save(function () {
           queue.process(function () {
@@ -584,7 +584,7 @@ describe('Queue', function () {
 
     it('resets and processes stalled jobs from concurrent processor', function (done) {
       var deadQueue = Queue('test', {
-        stallInterval: 0
+        stallInterval: 1
       });
       var counter = 0;
       var concurrency = 5;
@@ -592,7 +592,7 @@ describe('Queue', function () {
 
       var processJobs = function () {
         queue = Queue('test', {
-          stallInterval: 0
+          stallInterval: 1
         });
         queue.checkStalledJobs(function () {
           queue.process(function (job, jobDone) {
@@ -623,12 +623,12 @@ describe('Queue', function () {
 
     it('should reset without a callback', function (done) {
       var deadQueue = Queue('test', {
-        stallInterval: 0
+        stallInterval: 1
       });
 
       var processJobs = function () {
         queue = Queue('test', {
-          stallInterval: 0
+          stallInterval: 1
         });
         var jobCount = 0;
         queue.checkStalledJobs();
