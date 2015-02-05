@@ -52,7 +52,7 @@ describe('Queue', function () {
         });
       });
 
-      it('works without a callback', function (done) {
+      it('should work without a callback', function (done) {
         queue = Queue('test');
         queue.on('ready', function () {
           queue.close();
@@ -119,8 +119,10 @@ describe('Queue', function () {
 
     it('creates a queue with passed redis settings', function (done) {
       queue = Queue('test', {
-        host: 'localhost',
-        db: 1
+        redis: {
+          host: 'localhost',
+          db: 1
+        }
       });
 
       queue.once('ready', function () {
@@ -619,7 +621,7 @@ describe('Queue', function () {
       }
     });
 
-    it('resets without a callback', function (done) {
+    it('should reset without a callback', function (done) {
       var deadQueue = Queue('test', {
         stallInterval: 0
       });

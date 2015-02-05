@@ -114,7 +114,7 @@ describe('Job', function () {
       });
     });
 
-    it('works without a callback', function (done) {
+    it('should work without a callback', function (done) {
       makeJob(function (err, job) {
         job.remove();
         setTimeout(function () {
