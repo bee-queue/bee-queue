@@ -34,20 +34,33 @@ describe('Queue', function () {
 
   describe('Connection', function () {
     describe('Close', function () {
-      // todo check unsubscribing
       it('should call end on the clients', function (done) {
         queue = Queue('test');
         var clientSpy = sinon.spy(queue.client, 'end');
         var bclientSpy = sinon.spy(queue.bclient, 'end');
         var eclientSpy = sinon.spy(queue.eclient, 'end');
 
-        queue.close(function (err) {
-          assert.isNull(err);
-          assert.isTrue(clientSpy.calledOnce);
-          assert.isTrue(bclientSpy.calledOnce);
-          assert.isTrue(eclientSpy.calledOnce);
-          queue = undefined;
-          done();
+        queue.on('ready', function () {
+          queue.close(function (err) {
+            assert.isNull(err);
+            assert.isTrue(clientSpy.calledOnce);
+            assert.isTrue(bclientSpy.calledOnce);
+            assert.isTrue(eclientSpy.calledOnce);
+            queue = undefined;
+            done();
+          });
+        });
+      });
+
+      it('works without a callback', function (done) {
+        queue = Queue('test');
+        queue.on('ready', function () {
+          queue.close();
+          setTimeout(function () {
+            assert.isFalse(queue.client.connected);
+            queue = undefined;
+            done();
+          }, 20);
         });
       });
     });
@@ -113,13 +126,24 @@ describe('Queue', function () {
       queue.once('ready', function () {
         assert.strictEqual(queue.client.connectionOption.host, 'localhost');
         assert.strictEqual(queue.bclient.connectionOption.host, 'localhost');
-        assert.strictEqual(queue.client.connectionOption.port, 6379);
-        assert.strictEqual(queue.bclient.connectionOption.port, 6379);
         assert.strictEqual(queue.client.selected_db, 1);
         assert.strictEqual(queue.bclient.selected_db, 1);
         done();
       });
     });
+
+    it('creates a queue with isWorker false', function (done) {
+      queue = Queue('test', {
+        isWorker: false
+      });
+
+      queue.once('ready', function () {
+        assert.strictEqual(queue.client.connectionOption.host, '127.0.0.1');
+        assert.isUndefined(queue.bclient);
+        done();
+      });
+    });
+
   });
 
   it('adds a job with correct prefix', function (done) {
@@ -355,6 +379,31 @@ describe('Queue', function () {
         assert.strictEqual(job.data.foo, 'bar');
       });
     });
+
+    it('Refuses to process when isWorker is false', function (done) {
+      queue = Queue('test', {
+        isWorker: false
+      });
+
+      try {
+        queue.process();
+      } catch (err) {
+        assert.strictEqual(err.message, 'Cannot call Queue.prototype.process on a non-worker');
+        done();
+      }
+    });
+
+    it('Refuses to be called twice', function (done) {
+      queue = Queue('test');
+
+      queue.process(function () {});
+      try {
+        queue.process();
+      } catch (err) {
+        assert.strictEqual(err.message, 'Cannot call Queue.prototype.process twice');
+        done();
+      }
+    });
   });
 
   describe('Processing many jobs', function () {
@@ -568,6 +617,41 @@ describe('Queue', function () {
       for (var i = 0; i < numJobs; i++) {
         deadQueue.createJob({count: i}).save(reportAdded);
       }
+    });
+
+    it('resets without a callback', function (done) {
+      var deadQueue = Queue('test', {
+        stallInterval: 0
+      });
+
+      var processJobs = function () {
+        queue = Queue('test', {
+          stallInterval: 0
+        });
+        var jobCount = 0;
+        queue.checkStalledJobs();
+        setTimeout(function () {
+          queue.process(function (job, jobDone) {
+            assert.strictEqual(job.data.foo, 'bar' + (++jobCount));
+            jobDone();
+            if (jobCount === 3) {
+              done();
+            }
+          });
+        }, 20);
+      };
+
+      var processAndClose = function () {
+        deadQueue.process(function () {
+          deadQueue.close(processJobs);
+        });
+      };
+
+      var reportAdded = barrier(3, processAndClose);
+
+      deadQueue.createJob({foo: 'bar1'}).save(reportAdded);
+      deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
+      deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
     });
   });
 
