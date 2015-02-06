@@ -524,14 +524,11 @@ describe('Queue', function () {
         queue = Queue('test', {
           stallInterval: 1
         });
-        var jobCount = 0;
+        var reportDone = barrier(3, done);
         queue.checkStalledJobs(function () {
           queue.process(function (job, jobDone) {
-            assert.strictEqual(job.data.foo, 'bar' + (++jobCount));
             jobDone();
-            if (jobCount === 3) {
-              done();
-            }
+            reportDone();
           });
         });
       };
@@ -630,15 +627,12 @@ describe('Queue', function () {
         queue = Queue('test', {
           stallInterval: 1
         });
-        var jobCount = 0;
+        var reportDone = barrier(3, done);
         queue.checkStalledJobs();
         setTimeout(function () {
           queue.process(function (job, jobDone) {
-            jobCount++;
+            reportDone();
             jobDone();
-            if (jobCount === 3) {
-              done();
-            }
           });
         }, 20);
       };
