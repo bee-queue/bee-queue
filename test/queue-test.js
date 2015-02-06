@@ -804,6 +804,7 @@ describe('Queue', function () {
 
       var job = queue.createJob({foo: 'bar'}).retries(1);
       job.on('retrying', function (err) {
+        assert.strictEqual(job.options.retries, 0);
         assert.strictEqual(err.message, 'failing to retry');
       });
       queue.once('job retrying', function (jobId, err) {
