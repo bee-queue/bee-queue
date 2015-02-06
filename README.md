@@ -101,10 +101,45 @@ Defaults for Queue `settings` live in `lib/defaults.js`. Changing that file will
 
 ## Queue
 
+### Settings
+The default Queue settings are:
+```javascript
+var queue = Queue('test', {
+  prefix: 'bq',
+  stallInterval: 5000,
+  redis: {
+    host: '127.0.0.1',
+    port: 6379,
+    db: 0,
+    options: {}
+  },
+  getEvents: true,
+  isWorker: true,
+  sendEvents: true,
+  removeOnSuccess: false,
+  catchExceptions: false
+});
+```
+The `settings` fields are:
+- `prefix`: string, default `bq`. Useful if the `bq:` namespace is, for whatever reason, unavailable on your redis database.
+- `stallInterval`: number, ms; the length of the window in which workers must report that they aren't stalling. Higher values will reduce Redis/network overhead, but if a worker stalls, it will take longer before its stalled job(s) will be retried.
+- `redis`: object, specifies how to connect to Redis.
+  - `host`: string, Redis host.
+  - `port`: number, Redis port.
+  - `socket`: string, Redis socket to be used instead of a host and port.
+  - `db`: number, Redis [DB index](http://redis.io/commands/SELECT).
+  - `options`: options object, passed to [node_redis](https://github.com/mranney/node_redis#rediscreateclient).
+- `isWorker`: boolean, default true. Disable if this queue will not process jobs.
+- `getEvents`: boolean, default true. Disable if this queue does not need to receive job events.
+- `sendEvents`: boolean, default true. Disable if this worker does not need to send job events back to other queues.
+- `removeOnSuccess`: boolean, default false. Enable to keep memory usage down by automatically removing jobs from Redis when they succeed.
+- `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](#queueprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
+
 ### Properties
-- `name`: the name passed to the constructor.
-- `paused`: boolean, whether the queue is paused.
-- `settings`: the settings as resolved between the settings passed and the defaults.
+- `name`: string, the name passed to the constructor.
+- `keyPrefix`: string, the prefix used for all Redis keys associated with this queue.
+- `paused`: boolean, whether the queue instance is paused.
+- `settings`: object; the settings determined between those passed and the defaults
 
 ### Events
 
@@ -140,46 +175,13 @@ Any Redis errors are re-emitted from the Queue.
 
 Used to instantiate a new queue; opens connections to Redis.
 
-The default settings are as follows:
-```javascript
-var queue = Queue('test', {
-  prefix: 'bq',
-  stallInterval: 5000,
-  redis: {
-    host: '127.0.0.1',
-    port: 6379,
-    db: 0,
-    options: {}
-  },
-  getEvents: true,
-  isWorker: true,
-  sendEvents: true,
-  removeOnSuccess: false,
-  catchExceptions: false
-});
-```
-The `settings` fields are:
-- `prefix`: string, default 'bq'. Useful if the `bq:` namespace is, for whatever reason, unavailable on your redis database.
-- `stallInterval`: Milliseconds; the length of the window in which workers must report that they aren't stalling. Higher values will reduce Redis/network overhead, but if a worker stalls, it will take longer before its stalled job(s) will be retried.
-- `redis`: Object, specifies how to connect to Redis.
-  - `host`: String, Redis host.
-  - `port`: Number, Redis port.
-  - `socket`: String, Redis socket to be used instead of a host and port.
-  - `db`: Number, Redis [DB index](http://redis.io/commands/SELECT).
-  - `options`: Options object, passed to [node_redis](https://github.com/mranney/node_redis#rediscreateclient).
-- `isWorker`: boolean, default true. Disable if this queue will not process jobs.
-- `getEvents`: boolean, default true. Disable if this queue does not need to receive job events.
-- `sendEvents`: boolean, default true. Disable if this worker does not need to send job events back to other queues.
-- `removeOnSuccess`: boolean, default false. Enable to keep memory usage down by automatically removing jobs from Redis when they succeed.
-- `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](TODO LINK) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
-
 #### Queue.createJob(data)
 ```javascript
 var job = queue.createJob({...});
 ```
 Returns a new [Job object](#job) with the associated [user data](#job).
 
-#### Queue.process([maxRunning], handler(job, done))
+#### Queue.process([concurrency], handler(job, done))
 
 Begins processing jobs with the provided handler function.
 
@@ -245,7 +247,7 @@ job.on('progress', function (progress) {
   console.log('Job ' + job.id + ' reported progress: ' + progress + '%');
 });
 ```
-The job has sent a [progress report](TODO LINK) of `progress` percent.
+The job has sent a [progress report](#jobreportprogressn) of `progress` percent.
 
 ### Methods
 
@@ -299,7 +301,7 @@ Each Queue uses the following Redis keys:
 
 Jobs are moved from the waiting list to the active list using [brpoplpush](http://redis.io/commands/BRPOPLPUSH), and Bee-Queue generally follows the "Reliable Queue" pattern described on the [rpoplpush page](http://redis.io/commands/rpoplpush).
 
-The `isWorker` [setting](TODO LINK) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one for subscribing to Pub/Sub events. As such, these settings should be disabled if you don't need them. In most cases, only one of them needs to be true.
+The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one for subscribing to Pub/Sub events. As such, these settings should be disabled if you don't need them. In most cases, only one of them needs to be true.
 
 The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs IDs left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
 
