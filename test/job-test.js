@@ -22,7 +22,8 @@ describe('Job', function () {
   };
 
   var makeJob = function (cb) {
-    var job = queue.createJob(data, options);
+    var job = queue.createJob(data);
+    job.options = options;
     job.save(cb);
   };
 

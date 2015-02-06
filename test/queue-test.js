@@ -80,7 +80,7 @@ describe('Queue', function () {
       queue.bclient.stream.end();
       queue.bclient.emit('error', new Error('ECONNRESET'));
 
-      queue.createJob({'foo': 'bar'}).save();
+      queue.createJob({foo: 'bar'}).save();
     });
 
 
@@ -98,7 +98,7 @@ describe('Queue', function () {
       // Not called at all yet because queue.process uses setImmediate
       assert.strictEqual(jobSpy.callCount, 0);
 
-      queue.createJob({'foo': 'bar'}).save();
+      queue.createJob({foo: 'bar'}).save();
       queue.bclient.emit('end');
     });
   });
@@ -304,7 +304,7 @@ describe('Queue', function () {
         setTimeout(jobDone, 20);
       });
 
-      queue.createJob({foo: 'bar'}, {timeout: 10}).save(function (err, job) {
+      queue.createJob({foo: 'bar'}).timeout(10).save(function (err, job) {
         assert.isNull(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
@@ -336,7 +336,7 @@ describe('Queue', function () {
         }
       });
 
-      queue.createJob({foo: 'bar'}, {retries: retries}).save(function (err, job) {
+      queue.createJob({foo: 'bar'}).retries(retries).save(function (err, job) {
         assert.isNull(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
@@ -368,7 +368,7 @@ describe('Queue', function () {
         }
       });
 
-      queue.createJob({foo: 'bar'}, {timeout: 10, retries: retries}).save(function (err, job) {
+      queue.createJob({foo: 'bar'}).timeout(10).retries(retries).save(function (err, job) {
         assert.isNull(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
@@ -776,7 +776,7 @@ describe('Queue', function () {
       var worker = Queue('test');
       var retried = false;
 
-      var job = queue.createJob({foo: 'bar'}, {retries: 1});
+      var job = queue.createJob({foo: 'bar'}).retries(1);
       job.on('retrying', function (err) {
         assert.strictEqual(err.message, 'failing to retry');
       });
