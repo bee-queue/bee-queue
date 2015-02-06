@@ -703,11 +703,18 @@ describe('Queue', function () {
     it('emits a job succeeded event', function (done) {
       queue = Queue('test');
       var worker = Queue('test');
+      var queueEvent = false;
 
       var job = queue.createJob({foo: 'bar'});
-      job.on('succeeded', function (result) {
+      job.once('succeeded', function (result) {
+        assert.isTrue(queueEvent);
         assert.strictEqual(result, 'barbar');
         worker.close(done);
+      });
+      queue.once('job succeeded', function (jobId, result) {
+        queueEvent = true;
+        assert.strictEqual(jobId, job.id);
+        assert.strictEqual(result, 'barbar');
       });
       job.save();
 
@@ -719,11 +726,18 @@ describe('Queue', function () {
     it('emits a job succeeded event with no result', function (done) {
       queue = Queue('test');
       var worker = Queue('test');
+      var queueEvent = false;
 
       var job = queue.createJob({foo: 'bar'});
       job.on('succeeded', function (result) {
+        assert.isTrue(queueEvent);
         assert.strictEqual(result, undefined);
         worker.close(done);
+      });
+      queue.once('job succeeded', function (jobId, result) {
+        queueEvent = true;
+        assert.strictEqual(jobId, job.id);
+        assert.strictEqual(result, undefined);
       });
       job.save();
 
@@ -735,11 +749,18 @@ describe('Queue', function () {
     it('emits a job failed event', function (done) {
       queue = Queue('test');
       var worker = Queue('test');
+      var queueEvent = false;
 
       var job = queue.createJob({foo: 'bar'});
       job.on('failed', function (err) {
+        assert.isTrue(queueEvent);
         assert.strictEqual(err.message, 'fail!');
         worker.close(done);
+      });
+      queue.once('job failed', function (jobId, err) {
+        queueEvent = true;
+        assert.strictEqual(jobId, job.id);
+        assert.strictEqual(err.message, 'fail!');
       });
       job.save();
 
@@ -752,15 +773,25 @@ describe('Queue', function () {
       queue = Queue('test');
       var worker = Queue('test');
       var reportedProgress = false;
+      var queueEvent = false;
 
       var job = queue.createJob({foo: 'bar'});
       job.on('progress', function (progress) {
+        assert.isTrue(queueEvent);
         assert.strictEqual(progress, 20);
         reportedProgress = true;
       });
 
+      queue.once('job progress', function (jobId, progress) {
+        queueEvent = true;
+        assert.strictEqual(jobId, job.id);
+        assert.strictEqual(progress, 20);
+      });
+
+
       job.on('succeeded', function () {
         assert.isTrue(reportedProgress);
+        assert.isTrue(queueEvent);
         worker.close(done);
       });
       job.save();
@@ -775,13 +806,20 @@ describe('Queue', function () {
       queue = Queue('test');
       var worker = Queue('test');
       var retried = false;
+      var queueEvent = false;
 
       var job = queue.createJob({foo: 'bar'}).retries(1);
       job.on('retrying', function (err) {
         assert.strictEqual(err.message, 'failing to retry');
       });
+      queue.once('job retrying', function (jobId, err) {
+        queueEvent = true;
+        assert.strictEqual(jobId, job.id);
+        assert.strictEqual(err.message, 'failing to retry');
+      });
       job.on('succeeded', function (result) {
         assert.isTrue(retried);
+        assert.isTrue(queueEvent);
         assert.strictEqual(result, 'retried');
         worker.close(done);
       });
@@ -840,6 +878,7 @@ describe('Queue', function () {
       var worker = Queue('test');
 
       var reported = 0;
+      var jobIdSum = 0;
       var job1 = queue.createJob({foo: 'bar'});
       var job2 = queue.createJob({foo: 'baz'});
       job1.on('succeeded', function (result) {
@@ -850,12 +889,16 @@ describe('Queue', function () {
         reported += 1;
         assert.strictEqual(result, 'bazbaz');
       });
+      queue.on('job succeeded', function (id) {
+        jobIdSum += id;
+      });
       job1.save();
       job2.save();
 
       worker.process(function (job, jobDone) {
         jobDone(null, job.data.foo + job.data.foo);
         setTimeout(function () {
+          assert.strictEqual(jobIdSum, 3);
           assert.strictEqual(reported, 2);
           worker.close(done);
         }, 20);
