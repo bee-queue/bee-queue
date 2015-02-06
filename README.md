@@ -141,7 +141,7 @@ The `settings` fields are:
 - `paused`: boolean, whether the queue instance is paused.
 - `settings`: object; the settings determined between those passed and the defaults
 
-### Events
+### Local Events
 
 #### ready
 ```javascript
@@ -151,16 +151,6 @@ queue.on('ready', function () {
 ```
 The queue has connected to Redis and ensured that Lua scripts are cached.
 
-#### succeeded
-```javascript
-queue.on('succeeded', function (job, result) {
-  console.log('')
-});
-```
-This queue instance has successfully processed `job`. If `result` is defined, the handler called `done(null, result)`.
-
-#### failed
-
 #### error
 ```javascript
 queue.on('error', function (err) {
@@ -168,6 +158,69 @@ queue.on('error', function (err) {
 });
 ```
 Any Redis errors are re-emitted from the Queue.
+
+#### succeeded
+```javascript
+queue.on('succeeded', function (job, result) {
+  console.log('Job ' + job.id + ' succeeded with result: ' + result);
+});
+```
+This queue has successfully processed `job`. If `result` is defined, the handler called `done(null, result)`.
+
+#### retrying
+```javascript
+queue.on('retrying', function (job, err) {
+  console.log('Job ' + job.id + ' failed with error ' + err.message ' but is being retried!');
+});
+```
+This queue has processed `job`, but it reported a failure and has been re-enqueued for another attempt. `job.options.retries` has been decremented accordingly.
+
+#### failed
+```javascript
+queue.on('failed', function (job, err) {
+  console.log('Job ' + job.id + ' failed with error ' + err.message);
+});
+```
+This queue has processed `job`, but its handler reported a failure with `done(err)`.
+
+### Pub/Sub Events
+These events are all reported by some worker queue (with `sendEvents` enabled) and sent as Redis Pub/Sub messages back to any queues listening for them (with `getEvents` enabled). This means that listening for these events is effectively a monitor for all activity by all workers on the queue.
+
+If the `jobId` of an event is for a job that was created by that queue instance, a corresponding [job event](#job-events) will be emitted from that job object.
+
+Note that Queue-level PubSub events pass the `jobId`, but do not have a reference to the job object, since that job might have originally been created by some other queue in some other process. [Job-level events](#job-events) are emitted only in the process that created the job, and are emitted from the job object itself.
+
+#### job succeeded
+```javascript
+queue.on('job succeeded', function (jobId, result) {
+  console.log('Job ' + job.id + ' succeeded with result: ' + result);
+});
+```
+Some worker has successfully processed job `jobId`. If `result` is defined, the handler called `done(null, result)`.
+
+#### job retrying
+```javascript
+queue.on('job retrying', function (jobId, err) {
+  console.log('Job ' + jobId + ' failed with error ' + err.message ' but is being retried!');
+});
+```
+Some worker has processed job `jobId`, but it reported a failure and has been re-enqueued for another attempt.
+
+#### job failed
+```javascript
+queue.on('job failed', function (jobId, err) {
+  console.log('Job ' + jobId + ' failed with error ' + err.message);
+});
+```
+Some worker has processed `job`, but its handler reported a failure with `done(err)`.
+
+#### job progress
+```javascript
+queue.on('job progress', function (jobId, progress) {
+  console.log('Job ' + jobId + ' reported progress: ' + progress + '%');
+});
+```
+Some worker is processing job `jobId`, and it sent a [progress report](#jobreportprogressn) of `progress` percent.
 
 ### Methods
 
@@ -193,12 +246,15 @@ The handler function should:
 - Call `done` exactly once
   - Use `done(err)` to indicate job failure
   - Use `done()` or `done(null, result)` to indicate job success
+    - `result` must be JSON-serializable (for `JSON.stringify`)
 - Never throw an exception, unless `catchExceptions` has been enabled.
 - Never ever [block](http://www.slideshare.net/async_io/practical-use-of-mongodb-for-nodejs/47) [the](http://blog.mixu.net/2011/02/01/understanding-the-node-js-event-loop/) [event](http://strongloop.com/strongblog/node-js-performance-event-loop-monitoring/) [loop](http://zef.me/blog/4561/node-js-and-the-case-of-the-blocked-event-loop) (for very long). If you do, the stall detection might think the job stalled, when it was really just blocking the event loop.
 
 #### Queue.checkStalledJobs([cb])
 
+
 #### Queue.close([cb])
+Closes the queue's connections to Redis.
 
 ## Job
 
@@ -215,7 +271,9 @@ The handler function should:
   - the queue that called `process` to process it
 - `progress`: number; progress between 0 and 100, as reported by `reportProgress`.
 
-### Events
+### Job Events
+These are all Pub/Sub events like [Queue PubSub events](#pubsub-events) and are disabled when `getEvents` is false.
+
 #### succeeded
 ```javascript
 var job = queue.createJob({...}).save();
@@ -231,7 +289,7 @@ job.on('retrying', function (err) {
   console.log('Job ' + job.id + ' failed with error ' + err.message ' but is being retried!');
 });
 ```
-The job has failed, but it is being automatically re-enqueued for another attempt.
+The job has failed, but it is being automatically re-enqueued for another attempt. `job.options.retries` has been decremented accordingly.
 
 #### failed
 ```javascript
@@ -256,6 +314,8 @@ The job has sent a [progress report](#jobreportprogressn) of `progress` percent.
 var job = queue.createJob({...}).retries(3).save();
 ```
 Sets how many times the job should be automatically retried in case of failure.
+
+Stored in `job.options.retries` and decremented each time the job is retried.
 
 Defaults to 0.
 
