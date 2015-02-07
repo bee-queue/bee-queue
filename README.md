@@ -60,7 +60,7 @@ You'll also need [Redis 2.8+](http://redis.io/topics/quickstart) running somewhe
 - [API Reference](#api-reference)
 - [Under The Hood](#under-the-hood)
 - [Contributing](#contributing)
-- [License](#license) (is MIT)
+- [License](https://github.com/LewisJEllis/bee-queue/blob/master/LICENSE)
 
 ## Motivation
 Celery is for Python, and Resque is for Ruby, but [Kue](https://github.com/LearnBoost/kue) and [Bull](https://github.com/OptimalBits/bull) already exist for Node, and they're good at what they do, so why does Bee-Queue also need to exist?
@@ -364,7 +364,7 @@ var defaultCb = function (err) {
 
 Defaults for Queue `settings` live in `lib/defaults.js`. Changing that file will change Bee-Queue's default behavior.
 
-# Under the hood
+## Under the hood
 
 Each Queue uses the following Redis keys:
 - `bq:name:id`: Integer, incremented to determine the next Job ID.
@@ -382,7 +382,7 @@ The `isWorker` [setting](#settings) creates an extra Redis connection dedicated 
 
 The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs IDs left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
 
-# Contributing
+## Contributing
 Pull requests are welcome; just make sure `grunt test` passes. For significant changes, open an issue for discussion first.
 
 You'll need a local redis server to run the tests. Note that running them will delete any keys that start with `bq:test:`.
