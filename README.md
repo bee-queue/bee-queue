@@ -2,8 +2,8 @@
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
 - Simple: ~500 LOC, and the only dependency is [node_redis](https://github.com/mranney/node_redis).
-- Fast: minimizes Redis overhead to maximize throughput.
-- Robust: designed with failure in mind, 100% code coverage
+- Fast: maximizes throughput by minimizing Redis and network overhead.
+- Robust: designed with concurrency, atomicity, and failure in mind; 100% code coverage.
 
 ```javascript
 var Queue = require('bee-queue');
@@ -14,20 +14,24 @@ job.on('succeeded', function (result) {
   console.log('Received result for job ' + job.id + ': ' + result);
 });
 
+// Process jobs from as many servers or processes as you like
 queue.process(function (job, done) {
   console.log('Processing job ' + job.id);
   return done(null, job.data.x + job.data.y);
 });
-
 ```
 
-# Overview
+## Overview
+Bee-Queue is meant to power a distributed worker pool and was built with short, real-time jobs in mind. A web server can enqueue a job, wait for a worker to complete it, and return its results within an HTTP request. Scaling is as simple as running more workers.
+
+[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/LearnBoost/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job scheduling and prioritization, which Bee-Queue [currently does not](#missing-features). Bee-Queue can handle longer background jobs just fine, but they aren't the primary focus.
+
 - Create, save, and process jobs
 - Concurrent processing
 - Job timeouts and retries
-- Job events via Pub/Sub
+- Pass events via Pub/Sub
   - Progress reporting
-  - Return results from jobs
+  - Send back job results
 - Robust design
   - Strives for all atomic operations
   - Retries [stuck jobs](#under-the-hood)
@@ -37,38 +41,37 @@ queue.process(function (job, done) {
   - Benchmarks (coming soon)
 - 100% code coverage
 
-# Installation
+
+## Installation
 ```
 npm install bee-queue
 ```
 You'll also need [Redis 2.8+](http://redis.io/topics/quickstart) running somewhere.
 
 # Table of Contents
-- [Why Bee-Queue?](#why-bee-queue)
-  - [Missing Features](#missing-features)
-  - [Why Bees?](#why-bees)
-- [Creating Jobs]()
-- [Processing Jobs]()
-- [Progress Reporting]()
-- [Job Events]()
-- [Queue Events]()
+- [Motivation](#motivation)
+- [Creating Queues](#creating-queues)
+- [Creating Jobs](#creating-jobs)
+- [Processing Jobs](#processing-jobs)
+- [Progress Reporting](#progress-reporting)
+- [Job Events](#job-events)
+- [Queue Events](#queue-events)
+- [Stalled Jobs](#stalled-jobs)
 - [API Reference](#api-reference)
-  - [Queue](#queuename-job)
-  - [Job](#job)
 - [Under The Hood](#under-the-hood)
+- [Contributing](#contributing)
+- [License](#license) (is MIT)
 
-# Why Bee-Queue?
-[Kue](https://github.com/LearnBoost/kue) and [Bull](https://github.com/OptimalBits/bull) already exist, and they're good at what they do, so why does Bee-Queue also need to exist?
+## Motivation
+Celery is for Python, and Resque is for Ruby, but [Kue](https://github.com/LearnBoost/kue) and [Bull](https://github.com/OptimalBits/bull) already exist for Node, and they're good at what they do, so why does Bee-Queue also need to exist?
 
-In short: Kue has some good stuff, and Bull has some good stuff, but we needed to mix and match the good stuff, and we needed to squeeze out more performance.
+In short: we needed to mix and match things that Kue does well with things that Bull does well, and we needed to squeeze out more performance. There's also a [long version](https://github.com/LewisJEllis/bee-queue/wiki/Origin) with more details.
 
-Bee-Queue starts by combining Bull's simplicity and robustness with Kue's ability to send events back to job creators, then focuses heavily on performance, and finishes by being strict about [code quality](https://github.com/LewisJEllis/bee-queue/blob/master/.eslintrc) and [testing](https://coveralls.io/r/LewisJEllis/bee-queue?branch=master). It compromises on breadth of features, so there are certainly cases where Kue or Bull might be preferable (see below).
+Bee-Queue starts by combining Bull's simplicity and robustness with Kue's ability to send events back to job creators, then focuses heavily on minimizing overhead, and finishes by being strict about [code quality](https://github.com/LewisJEllis/bee-queue/blob/master/.eslintrc) and [testing](https://coveralls.io/r/LewisJEllis/bee-queue?branch=master). It compromises on breadth of features, so there are certainly cases where Kue or Bull might be preferable (see below).
 
 Bull and Kue do things really well and deserve a lot of credit. Bee-Queue borrows ideas from both, and Bull was an especially invaluable reference during initial development.
 
-A more detailed writeup on Bee-Queue's origin and motivating factors can be found [here](https://github.com/LewisJEllis/bee-queue/wiki/Origin).
-
-### Missing Features
+#### Missing Features
 - Job scheduling: Kue and Bull do this.
 - Worker tracking: Kue does this.
 - All-workers pause-resume: Bull does this.
@@ -84,20 +87,21 @@ Bee-Queue is like a bee because it:
 - carries pollen (messages) between flowers (servers)
 - something something "worker bees"
 
+## Creating Queues
+
+## Creating Jobs
+
+## Processing Jobs
+
+## Progress Reporting
+
+## Job Events
+
+## Queue Events
+
+## Stalled Jobs
+
 # API Reference
-
-## Defaults
-
-All methods with an optional callback field will use the following default:
-```javascript
-var defaultCb = function (err) {
-  if (err) {
-    throw err;
-  }
-};
-```
-
-Defaults for Queue `settings` live in `lib/defaults.js`. Changing that file will change Bee-Queue's default behavior.
 
 ## Queue
 
@@ -347,6 +351,19 @@ queue.process(function (job, done) {
 ```
 Reports job progress when called within a handler function. Causes a `progress` event to be emitted.
 
+## Defaults
+
+All methods with an optional callback field will use the following default:
+```javascript
+var defaultCb = function (err) {
+  if (err) {
+    throw err;
+  }
+};
+```
+
+Defaults for Queue `settings` live in `lib/defaults.js`. Changing that file will change Bee-Queue's default behavior.
+
 # Under the hood
 
 Each Queue uses the following Redis keys:
@@ -359,9 +376,9 @@ Each Queue uses the following Redis keys:
 - `bq:name:stalling`: Set of IDs of jobs which haven't 'checked in' during this interval.
 - `bq:name:events`: Pub/Sub channel for workers to send out job results.
 
-Jobs are moved from the waiting list to the active list using [brpoplpush](http://redis.io/commands/BRPOPLPUSH), and Bee-Queue generally follows the "Reliable Queue" pattern described on the [rpoplpush page](http://redis.io/commands/rpoplpush).
+Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon as theyre enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. Bee-Queue generally follows the "Reliable Queue" pattern described on the [rpoplpush page](http://redis.io/commands/rpoplpush).
 
-The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one for subscribing to Pub/Sub events. As such, these settings should be disabled if you don't need them. In most cases, only one of them needs to be true.
+The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one for subscribing to Pub/Sub events. As such, these settings should be disabled if you don't need them. In most cases, only one of them needs to be enabled.
 
 The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs IDs left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
 
