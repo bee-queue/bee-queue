@@ -93,7 +93,7 @@ Bee-Queue is like a bee because it:
 var Queue = require('bee-queue');
 var addQueue = new Queue('addition');
 ```
-Queues are very lightweight (their only significant overhead is their connection(s) to Redis), so if you need to handle different types of jobs, just instantiate a queue for each:
+Queues are very lightweight - the only significant overhead is connecting to Redis - so if you need to handle different types of jobs, just instantiate a queue for each:
 ```javascript
 var subQueue = new Queue('subtraction', {
   redis: {
@@ -105,7 +105,7 @@ var subQueue = new Queue('subtraction', {
 Here, we pass a `settings` object to specify an alternate Redis host and to indicate that this queue will only add jobs (not process them). See [Queue Settings](#settings) for more options.
 
 ## Creating Jobs
-Jobs are created using `Queue.createJob(data)`, which returns a [Job](#job) object storing arbitrary job `data`.
+Jobs are created using `Queue.createJob(data)`, which returns a [Job](#job) object storing arbitrary `data`.
 
 Jobs have a chaining API with commands `.retries(n)` and `.timeout(ms)` for setting options, and `.save([cb])` to save the job into Redis and enqueue it for processing:
 
@@ -116,7 +116,7 @@ job.timeout(3000).retries(2).save(function (err, job) {
 });
 ```
 
-Jobs can be retrieved from Redis using `Queue.getJob(jobId, cb(err, job))`, but most use cases won't need this, and can instead use [Job Events](#job-events) and [Queue Events](#queue-events).
+Jobs can later be retrieved from Redis using [Queue.getJob](#queuegetjobjobid-cberr-job), but most use cases won't need this, and can instead use [Job Events](#job-events) and [Queue Events](#queue-events).
 
 ## Processing Jobs
 To start processing jobs, call `Queue.process` and provide a handler function:
@@ -126,12 +126,12 @@ addQueue.process(function (job, done) {
   return done(null, job.data.x + job.data.y);
 });
 ```
-The handler function will be given the job it needs to process, including `job.data` from when the job was created. It should then pass results to the `done` callback. For more on how the handler should behave, see [Queue.process](queueprocessconcurrency-handlerjob-done).
+The handler function is given the job it needs to process, including `job.data` from when the job was created. It should then pass results to the `done` callback. For more on handlers, see [Queue.process](queueprocessconcurrency-handlerjob-done).
 
 
 `.process` can only be called once per Queue instance, but we can process on as many instances as we like, spanning multiple processes or servers, as long as they all connect to the same Redis instance. From this, we can easily make a worker pool of machines who all run the same code and spend their lives processing our jobs, no matter where those jobs are created.
 
-`.process` can also take a concurrency parameter; if your jobs spend most of their time just waiting on external resources, you might want each processor instance to handle 10 at a time:
+`.process` can also take a concurrency parameter. If your jobs spend most of their time just waiting on external resources, you might want each processor instance to handle 10 at a time:
 ```javascript
 var baseUrl = 'http://www.google.com/search?q=';
 subQueue.process(10, function (job, done) {
