@@ -517,12 +517,12 @@ describe('Queue', function () {
   describe('Resets', function () {
     it('resets and processes stalled jobs when starting a queue', function (done) {
       var deadQueue = Queue('test', {
-        stallInterval: 1
+        stallInterval: 0
       });
 
       var processJobs = function () {
         queue = Queue('test', {
-          stallInterval: 1
+          stallInterval: 0
         });
         var reportDone = barrier(3, done);
         queue.checkStalledJobs(function () {
@@ -549,7 +549,7 @@ describe('Queue', function () {
     it('resets and processes jobs from multiple stalled queues', function (done) {
       var processJobs = function () {
         queue = Queue('test', {
-          stallInterval: 1
+          stallInterval: 0
         });
         var reportDone = barrier(5, done);
         queue.checkStalledJobs(function () {
@@ -565,7 +565,7 @@ describe('Queue', function () {
 
       var createAndStall = function () {
         var queue = Queue('test', {
-          stallInterval: 1
+          stallInterval: 0
         });
         queue.createJob({foo: 'bar'}).save(function () {
           queue.process(function () {
@@ -581,7 +581,7 @@ describe('Queue', function () {
 
     it('resets and processes stalled jobs from concurrent processor', function (done) {
       var deadQueue = Queue('test', {
-        stallInterval: 1
+        stallInterval: 0
       });
       var counter = 0;
       var concurrency = 5;
@@ -589,7 +589,7 @@ describe('Queue', function () {
 
       var processJobs = function () {
         queue = Queue('test', {
-          stallInterval: 1
+          stallInterval: 0
         });
         queue.checkStalledJobs(function () {
           queue.process(function (job, jobDone) {
@@ -620,12 +620,12 @@ describe('Queue', function () {
 
     it('should reset without a callback', function (done) {
       var deadQueue = Queue('test', {
-        stallInterval: 1
+        stallInterval: 0
       });
 
       var processJobs = function () {
         queue = Queue('test', {
-          stallInterval: 1
+          stallInterval: 0
         });
         var reportDone = barrier(3, done);
         queue.checkStalledJobs();
@@ -897,6 +897,66 @@ describe('Queue', function () {
           assert.strictEqual(reported, 2);
           worker.close(done);
         }, 20);
+      });
+    });
+  });
+
+  describe('Destroy', function () {
+    it('should remove all associated redis keys', function (done) {
+      queue = Queue('test');
+
+      queue.process(function (job, jobDone) {
+        assert.strictEqual(job.data.foo, 'bar');
+        jobDone();
+      });
+
+      queue.createJob({foo: 'bar'}).save(function (err, job) {
+        assert.isNull(err);
+        assert.ok(job.id);
+        assert.strictEqual(job.data.foo, 'bar');
+      });
+
+      var checkForKeys = function (err) {
+        assert.isNull(err);
+        queue.client.keys(queue.toKey('*'), function (keysErr, keys) {
+          assert.isNull(keysErr);
+          assert.deepEqual(keys, []);
+          done();
+        });
+      };
+
+      queue.on('succeeded', function (job) {
+        assert.ok(job);
+        queue.destroy(checkForKeys);
+      });
+    });
+
+    it('should work without a callback', function (done) {
+      queue = Queue('test');
+
+      queue.process(function (job, jobDone) {
+        assert.strictEqual(job.data.foo, 'bar');
+        jobDone();
+      });
+
+      queue.createJob({foo: 'bar'}).save(function (err, job) {
+        assert.isNull(err);
+        assert.ok(job.id);
+        assert.strictEqual(job.data.foo, 'bar');
+      });
+
+      var checkForKeys = function () {
+        queue.client.keys(queue.toKey('*'), function (err, keys) {
+          assert.isNull(err);
+          assert.deepEqual(keys, []);
+          done();
+        });
+      };
+
+      queue.on('succeeded', function (job) {
+        assert.ok(job);
+        queue.destroy();
+        setTimeout(checkForKeys, 20);
       });
     });
   });
