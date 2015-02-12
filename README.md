@@ -37,7 +37,7 @@ Bee-Queue is meant to power a distributed worker pool and was built with short, 
   - Retries [stuck jobs](#under-the-hood)
 - Performance-focused
   - Keeps [Redis usage](#under-the-hood) to the bare minimum.
-  - Uses Lua scripting and pipelining to minimize network overhead
+  - Uses [Lua scripting](http://redis.io/commands/EVAL) and [pipelining](http://redis.io/topics/pipelining) to minimize network overhead
   - Benchmarks (coming soon)
 - 100% code coverage
 
@@ -143,12 +143,30 @@ subQueue.process(10, function (job, done) {
 ```
 
 ## Progress Reporting
+Handlers can send progress reports, which will be received as events on the original job instance:
+```javascript
+var job = addQueue.createJob({x: 2, y: 3}).save();
+job.on('progress', function (progress) {
+  console.log('Job ' + job.id + ' reported progress: ' + progress + '%');
+});
+
+addQueue.process(function (job, done) {
+  // do some work
+  job.reportProgress(30);
+  // do more work
+  job.reportProgress(80)
+  // do the rest
+  done();
+});
+```
+Just like `.process`, these `progress` events work across multiple processes or servers; the job instance will receive the progress event no matter where processing happens.
 
 ## Job Events
+Progress reporting happens via 'Job events'. Jobs also emit `succeeded`, `failed`, and `retrying` events:
 
 ## Queue Events
 
-## Stalled Jobs
+## Stalling Jobs
 
 # API Reference
 
