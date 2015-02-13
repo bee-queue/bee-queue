@@ -162,6 +162,91 @@ describe('Queue', function () {
     });
   });
 
+  describe('Health Check', function () {
+    it('reports a waiting job', function (done) {
+      queue = Queue('test');
+
+      var job = queue.createJob({foo: 'bar'});
+      job.save(function (err, job) {
+        assert.isNull(err);
+        assert.ok(job.id);
+        queue.checkHealth(function (healthErr, counts) {
+          assert.isNull(healthErr);
+          assert.strictEqual(counts.waiting, 1);
+          done();
+        });
+      });
+    });
+
+    it('reports an active job', function (done) {
+      queue = Queue('test');
+
+      queue.process(function (job, jobDone) {
+        assert.strictEqual(job.data.foo, 'bar');
+        queue.checkHealth(function (healthErr, counts) {
+          assert.isNull(healthErr);
+          assert.strictEqual(counts.active, 1);
+          jobDone();
+          done();
+        });
+      });
+
+      var job = queue.createJob({foo: 'bar'});
+      job.save(function (err, job) {
+        assert.isNull(err);
+        assert.ok(job.id);
+      });
+    });
+
+    it('reports a succeeded job', function (done) {
+      queue = Queue('test');
+
+      queue.process(function (job, jobDone) {
+        assert.strictEqual(job.data.foo, 'bar');
+        jobDone();
+      });
+
+      var job = queue.createJob({foo: 'bar'});
+      job.save(function (err, job) {
+        assert.isNull(err);
+        assert.ok(job.id);
+      });
+
+      queue.on('succeeded', function (job) {
+        assert.ok(job);
+        queue.checkHealth(function (healthErr, counts) {
+          assert.isNull(healthErr);
+          assert.strictEqual(counts.succeeded, 1);
+          done();
+        });
+      });
+    });
+
+    it('reports a failed job', function (done) {
+      queue = Queue('test');
+
+      queue.process(function (job, jobDone) {
+        assert.strictEqual(job.data.foo, 'bar');
+        jobDone(Error('failed!'));
+      });
+
+      var job = queue.createJob({foo: 'bar'});
+      job.save(function (err, job) {
+        assert.isNull(err);
+        assert.ok(job.id);
+      });
+
+      queue.on('failed', function (job) {
+        assert.ok(job);
+        queue.checkHealth(function (healthErr, counts) {
+          assert.isNull(healthErr);
+          assert.strictEqual(counts.failed, 1);
+          done();
+        });
+      });
+    });
+  });
+
   describe('Processing jobs', function () {
     it('processes a job', function (done) {
       queue = Queue('test');
