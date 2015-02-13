@@ -154,7 +154,7 @@ addQueue.process(function (job, done) {
   // do some work
   job.reportProgress(30);
   // do more work
-  job.reportProgress(80)
+  job.reportProgress(80);
   // do the rest
   done();
 });
@@ -418,7 +418,7 @@ queue.process(function (job, done) {
 ```
 Reports job progress when called within a handler function. Causes a `progress` event to be emitted.
 
-## Defaults
+### Defaults
 
 All methods with an optional callback field will use the following default:
 ```javascript
@@ -443,9 +443,9 @@ Each Queue uses the following Redis keys:
 - `bq:name:stalling`: Set of IDs of jobs which haven't 'checked in' during this interval.
 - `bq:name:events`: Pub/Sub channel for workers to send out job results.
 
-Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon as theyre enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. Bee-Queue generally follows the "Reliable Queue" pattern described on the [rpoplpush page](http://redis.io/commands/rpoplpush).
+Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon as they're enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. Bee-Queue generally follows the "Reliable Queue" pattern described on the [rpoplpush page](http://redis.io/commands/rpoplpush).
 
-The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one for subscribing to Pub/Sub events. As such, these settings should be disabled if you don't need them. In most cases, only one of them needs to be enabled.
+The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one dedicated to receiving Pub/Sub events. As such, these settings should be disabled if you don't need them; in most cases, only one of them needs to be enabled.
 
 The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs IDs left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
 
