@@ -423,9 +423,7 @@ Reports job progress when called within a handler function. Causes a `progress` 
 All methods with an optional callback field will use the following default:
 ```javascript
 var defaultCb = function (err) {
-  if (err) {
-    throw err;
-  }
+  if (err) throw err;
 };
 ```
 
