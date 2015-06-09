@@ -247,6 +247,39 @@ describe('Queue', function () {
     });
   });
 
+  describe('getJob', function () {
+    it('gets an job created by the same queue instance', function (done) {
+      queue = Queue('test');
+
+      var createdJob = queue.createJob({foo: 'bar'});
+      createdJob.save(function (err, createdJob) {
+        assert.isNull(err);
+        assert.ok(createdJob.id);
+        queue.getJob(createdJob.id, function (getErr, job) {
+          assert.isNull(getErr);
+          assert.strictEqual(job.toData(), createdJob.toData());
+          done();
+        });
+      });
+    });
+
+    it('gets a job created by another queue instance', function (done) {
+      queue = Queue('test');
+      var reader = Queue('test');
+
+      var job = queue.createJob({foo: 'bar'});
+      job.save(function (err, createdJob) {
+        assert.isNull(err);
+        assert.ok(createdJob.id);
+        reader.getJob(createdJob.id, function (getErr, job) {
+          assert.isNull(getErr);
+          assert.strictEqual(job.toData(), createdJob.toData());
+          done();
+        });
+      });
+    });
+  });
+
   describe('Processing jobs', function () {
     it('processes a job', function (done) {
       queue = Queue('test');

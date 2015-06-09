@@ -91,12 +91,10 @@ describe('Job', function () {
   describe('Progress', function () {
     it('rejects out-of-bounds progress', function (done) {
       makeJob(function (err, job) {
-        try {
-          job.reportProgress(101);
-        } catch (err) {
+        job.reportProgress(101, function (err) {
           assert.strictEqual(err.message, 'Progress must be between 0 and 100');
           done();
-        }
+        });
       });
     });
   });
