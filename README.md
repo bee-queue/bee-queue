@@ -2,7 +2,7 @@
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
 - Simple: ~500 LOC, and the only dependency is [node_redis](https://github.com/mranney/node_redis).
-- Fast: maximizes throughput by minimizing Redis and network overhead.
+- Fast: maximizes throughput by minimizing Redis and network overhead. [Benchmarks](#benchmarks) well.
 - Robust: designed with concurrency, atomicity, and failure in mind; 100% code coverage.
 
 ```javascript
@@ -90,9 +90,9 @@ Bee-Queue is like a bee because it:
 ## Benchmarks
 ![benchmark chart](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/benchmark/benchmark-chart.png)
 
-These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with io.js 2.2.1 and Redis 3.0.2 running directly on a 13" MBPr. The numbers shown are averages of 3 runs.
+These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with io.js 2.2.1 and Redis 3.0.2 running directly on a 13" MBPr. The numbers shown are averages of 3 runs; the data and code are in the benchmark folder.
 
-For a quick idea of space efficiency, the following table contains Redis memory usage as reported by [INFO](http://redis.io/commands/INFO) after doing a [FLUSHALL](http://redis.io/commands/FLUSHALL), restarting Redis, and running a single basic 10k job benchmark.
+For a quick idea of space efficiency, the following table contains Redis memory usage as reported by [INFO](http://redis.io/commands/INFO) after doing a [FLUSHALL](http://redis.io/commands/FLUSHALL), restarting Redis, and running a single basic 10k job benchmark:
 
 | Library   | Memory After  | Memory Peak |
 | --------- | ------------- | ----------- |
@@ -101,8 +101,6 @@ For a quick idea of space efficiency, the following table contains Redis memory 
 | Kue       |        7.53MB |      7.86MB |
 
 These numbers become even more favorable when considering the ~986kB of memory usage Redis reported on a fresh startup.
-
-To run the benchmarks yourself, `npm install bull kue` and then run the corresponding files inside the benchmark folder.
 
 ## Creating Queues
 [Queue](#queue) objects are the starting point to everything this library does. To make one, we just need to give it a name, typically indicating the sort of job it will process:
