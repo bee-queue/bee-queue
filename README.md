@@ -41,6 +41,7 @@ Bee-Queue is meant to power a distributed worker pool and was built with short, 
   - Benchmarks (coming soon)
 - 100% code coverage
 
+![benchmark chart](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/benchmark/benchmark-chart.png)
 
 ## Installation
 ```
@@ -209,7 +210,7 @@ The `settings` fields are:
 ### Properties
 - `name`: string, the name passed to the constructor.
 - `keyPrefix`: string, the prefix used for all Redis keys associated with this queue.
-- `paused`: boolean, whether the queue instance is paused.
+- `paused`: boolean, whether the queue instance is paused. Only true if the queue is in the process of closing.
 - `settings`: object; the settings determined between those passed and the defaults
 
 ### Local Events
