@@ -93,12 +93,14 @@ Bee-Queue is like a bee because it:
 These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with io.js 2.2.1 and Redis 3.0.2 running directly on a 13" MBPr. The numbers shown are averages of 3 runs.
 
 For a quick idea of space efficiency, the following table contains Redis memory usage as reported by [INFO](http://redis.io/commands/INFO) after doing a [FLUSHALL](http://redis.io/commands/FLUSHALL), restarting Redis, and running a single basic 10k job benchmark.
+
 | Library   | Memory After  | Memory Peak |
 | --------- | ------------- | ----------- |
 | Bee-Queue |        2.65MB |      2.73MB |
 | Bull      |        3.93MB |      5.09MB |
 | Kue       |        7.53MB |      7.86MB |
-These numbers become even more favorable when considering the ~986kB of memory usage Redis reports before doing anything.
+
+These numbers become even more favorable when considering the ~986kB of memory usage Redis reported on a fresh startup.
 
 To run the benchmarks yourself, `npm install bull kue` and then run the corresponding files inside the benchmark folder.
 
