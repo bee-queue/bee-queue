@@ -21,10 +21,10 @@ queue.process(function (job, done) {
 });
 ```
 
-## Overview
-Bee-Queue is meant to power a distributed worker pool and was built with short, real-time jobs in mind. A web server can enqueue a job, wait for a worker to complete it, and return its results within an HTTP request. Scaling is as simple as running more workers.
+## Introduction
+Bee-Queue is meant to power a distributed worker pool and was built with short, real-time jobs in mind. A web server can enqueue a job, wait for a worker process to complete it, and return its results within an HTTP request. Scaling is as simple as running more workers.
 
-[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/LearnBoost/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job scheduling and prioritization, which Bee-Queue [currently does not](#missing-features). Bee-Queue can handle longer background jobs just fine, but they aren't the primary focus.
+[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/LearnBoost/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job scheduling and prioritization, which Bee-Queue [currently does not](#missing-features). Bee-Queue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
 
 - Create, save, and process jobs
 - Concurrent processing
@@ -35,11 +35,11 @@ Bee-Queue is meant to power a distributed worker pool and was built with short, 
 - Robust design
   - Strives for all atomic operations
   - Retries [stuck jobs](#under-the-hood)
+  - 100% code coverage
 - Performance-focused
   - Keeps [Redis usage](#under-the-hood) to the bare minimum
   - Uses [Lua scripting](http://redis.io/commands/EVAL) and [pipelining](http://redis.io/topics/pipelining) to minimize network overhead
   - [Benchmarks](#benchmarks) favorably against similar libraries
-- 100% code coverage
 
 ## Installation
 ```
@@ -50,19 +50,20 @@ You'll also need [Redis 2.8+](http://redis.io/topics/quickstart) running somewhe
 # Table of Contents
 - [Motivation](#motivation)
 - [Benchmarks](#benchmarks)
-- [Creating Queues](#creating-queues)
-- [Creating Jobs](#creating-jobs)
-- [Processing Jobs](#processing-jobs)
-- [Progress Reporting](#progress-reporting)
-- [Job Events](#job-events)
-- [Queue Events](#queue-events)
-- [Stalled Jobs](#stalled-jobs)
+- [Overview](#overview)
+  - [Creating Queues](#creating-queues)
+  - [Creating Jobs](#creating-jobs)
+  - [Processing Jobs](#processing-jobs)
+  - [Progress Reporting](#progress-reporting)
+  - [Job Events](#job-events)
+  - [Queue Events](#queue-events)
+  - [Stalled Jobs](#stalled-jobs)
 - [API Reference](#api-reference)
 - [Under The Hood](#under-the-hood)
 - [Contributing](#contributing)
 - [License](https://github.com/LewisJEllis/bee-queue/blob/master/LICENSE)
 
-## Motivation
+# Motivation
 Celery is for Python, and Resque is for Ruby, but [Kue](https://github.com/LearnBoost/kue) and [Bull](https://github.com/OptimalBits/bull) already exist for Node, and they're good at what they do, so why does Bee-Queue also need to exist?
 
 In short: we needed to mix and match things that Kue does well with things that Bull does well, and we needed to squeeze out more performance. There's also a [long version](https://github.com/LewisJEllis/bee-queue/wiki/Origin) with more details.
@@ -87,20 +88,22 @@ Bee-Queue is like a bee because it:
 - carries pollen (messages) between flowers (servers)
 - something something "worker bees"
 
-## Benchmarks
+# Benchmarks
 ![benchmark chart](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/benchmark/benchmark-chart.png)
 
 These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with io.js 2.2.1 and Redis 3.0.2 running directly on a 13" MBPr. The numbers shown are averages of 3 runs; the raw data collected and code used are available in the benchmark folder.
 
 For a quick idea of space efficiency, the following table contains Redis memory usage as reported by [INFO](http://redis.io/commands/INFO) after doing a [FLUSHALL](http://redis.io/commands/FLUSHALL), restarting Redis, and running a single basic 10k job benchmark:
 
-| Library   | Memory After  | Memory Peak |
-| --------- | ------------- | ----------- |
-| Bee-Queue |        2.65MB |      2.73MB |
-| Bull      |        3.93MB |      5.09MB |
-| Kue       |        7.53MB |      7.86MB |
+| Library   | Memory After  | Memory Peak | Memory After Δ | Memory Peak Δ |
+| --------- | ------------- | ----------- | -------------- | ------------- |
+| Bee-Queue |        2.65MB |      2.73MB |         1.67MB |        1.75MB |
+| Bull      |        3.93MB |      5.09MB |         2.95MB |        4.11MB |
+| Kue       |        7.53MB |      7.86MB |         6.55MB |        6.88MB |
 
-These numbers become even more favorable when considering the ~986kB of memory usage Redis reported on a fresh startup.
+The Δ columns factor out the ~986KB of memory usage reported by Redis on a fresh startup.
+
+# Overview
 
 ## Creating Queues
 [Queue](#queue) objects are the starting point to everything this library does. To make one, we just need to give it a name, typically indicating the sort of job it will process:
@@ -314,13 +317,23 @@ Some worker is processing job `jobId`, and it sent a [progress report](#jobrepor
 
 Used to instantiate a new queue; opens connections to Redis.
 
-#### Queue.createJob(data)
+#### Queue.prototype.createJob(data)
 ```javascript
 var job = queue.createJob({...});
 ```
 Returns a new [Job object](#job) with the associated [user data](#job).
 
-#### Queue.process([concurrency], handler(job, done))
+#### Queue.prototype.getJob(jobId, cb)
+```javascript
+queue.getJob(3, function (err, job) {
+  console.log('Job 3 has status ' + job.status);
+});
+```
+Looks up a job by its `jobId`. The returned job will emit events if `getEvents` is true.
+
+Be careful with this method; most potential uses would be better served by job events on already-existing job instances. Using this method indiscriminately can lead to increasing memory usage, as each queue maintains a table of all associated jobs in order to dispatch events.
+
+#### Queue.prototype.process([concurrency], handler(job, done))
 
 Begins processing jobs with the provided handler function.
 
@@ -336,10 +349,10 @@ The handler function should:
 - Never throw an exception, unless `catchExceptions` has been enabled.
 - Never ever [block](http://www.slideshare.net/async_io/practical-use-of-mongodb-for-nodejs/47) [the](http://blog.mixu.net/2011/02/01/understanding-the-node-js-event-loop/) [event](http://strongloop.com/strongblog/node-js-performance-event-loop-monitoring/) [loop](http://zef.me/blog/4561/node-js-and-the-case-of-the-blocked-event-loop) (for very long). If you do, the stall detection might think the job stalled, when it was really just blocking the event loop.
 
-#### Queue.checkStalledJobs([cb])
+#### Queue.prototype.checkStalledJobs([cb])
 
 
-#### Queue.close([cb])
+#### Queue.prototype.close([cb])
 Closes the queue's connections to Redis.
 
 ## Job
@@ -352,7 +365,7 @@ Closes the queue's connections to Redis.
   - Ideally be as small as possible (1kB or less)
 - `options`: object used by Bee-Queue to store timeout, retries, etc.
   - Do not modify directly; use job methods instead.
-- `queue`: the Queue responsible for this instance of the job. This will either:
+- `queue`: the Queue responsible for this instance of the job. This is either:
   - the queue that called `createJob` to make the job
   - the queue that called `process` to process it
 - `progress`: number; progress between 0 and 100, as reported by `reportProgress`.
@@ -395,7 +408,7 @@ The job has sent a [progress report](#jobreportprogressn) of `progress` percent.
 
 ### Methods
 
-#### Job.retries(n)
+#### Job.prototype.retries(n)
 ```javascript
 var job = queue.createJob({...}).retries(3).save();
 ```
@@ -405,7 +418,7 @@ Stored in `job.options.retries` and decremented each time the job is retried.
 
 Defaults to 0.
 
-#### Job.timeout(ms)
+#### Job.prototype.timeout(ms)
 ```javascript
 var job = queue.createJob({...}).timeout(10000).save();
 ```
@@ -413,7 +426,7 @@ Sets a job runtime timeout; if the job's handler function takes longer than the 
 
 Defaults to no timeout.
 
-#### Job.save([cb])
+#### Job.prototype.save([cb])
 ```javascript
 var job = queue.createJob({...}).save(function (err, job) {
   console.log('Saved job ' + job.id);
@@ -421,7 +434,7 @@ var job = queue.createJob({...}).save(function (err, job) {
 ```
 Saves a job, queueing it up for processing. After the callback fires, `job.id` will be populated.
 
-#### Job.reportProgress(n)
+#### Job.prototype.reportProgress(n)
 ```javascript
 queue.process(function (job, done) {
   ...
