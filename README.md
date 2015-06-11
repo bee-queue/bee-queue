@@ -68,18 +68,9 @@ Celery is for Python, and Resque is for Ruby, but [Kue](https://github.com/Learn
 
 In short: we needed to mix and match things that Kue does well with things that Bull does well, and we needed to squeeze out more performance. There's also a [long version](https://github.com/LewisJEllis/bee-queue/wiki/Origin) with more details.
 
-Bee-Queue starts by combining Bull's simplicity and robustness with Kue's ability to send events back to job creators, then focuses heavily on minimizing overhead, and finishes by being strict about [code quality](https://github.com/LewisJEllis/bee-queue/blob/master/.eslintrc) and [testing](https://coveralls.io/r/LewisJEllis/bee-queue?branch=master). It compromises on breadth of features, so there are certainly cases where Kue or Bull might be preferable (see below).
+Bee-Queue starts by combining Bull's simplicity and robustness with Kue's ability to send events back to job creators, then focuses heavily on minimizing overhead, and finishes by being strict about [code quality](https://github.com/LewisJEllis/bee-queue/blob/master/.eslintrc) and [testing](https://coveralls.io/r/LewisJEllis/bee-queue?branch=master). It compromises on breadth of features, so there are certainly cases where Kue or Bull might be preferable (see [Contributing](#contributing)).
 
 Bull and Kue do things really well and deserve a lot of credit. Bee-Queue borrows ideas from both, and Bull was an especially invaluable reference during initial development.
-
-#### Missing Features
-- Job scheduling: Kue and Bull do this.
-- Worker tracking: Kue does this.
-- All-workers pause-resume: Bull does this.
-- Web interface:  Kue has a nice one built in, and someone made [one for Bull](https://github.com/ShaneK/Matador).
-- Job priority: multiple queues get the job done in simple cases, but Kue has first-class support. Bull provides a wrapper around multiple queues.
-
-Some of these are potential future additions; please comment if you're interested in any of them!
 
 #### Why Bees?
 Bee-Queue is like a bee because it:
@@ -457,7 +448,7 @@ var defaultCb = function (err) {
 
 Defaults for Queue `settings` live in `lib/defaults.js`. Changing that file will change Bee-Queue's default behavior.
 
-## Under the hood
+# Under the hood
 
 Each Queue uses the following Redis keys:
 - `bq:name:id`: Integer, incremented to determine the next Job ID.
@@ -475,8 +466,18 @@ The `isWorker` [setting](#settings) creates an extra Redis connection dedicated 
 
 The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs IDs left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
 
-## Contributing
+# Contributing
+
 Pull requests are welcome; just make sure `grunt test` passes. For significant changes, open an issue for discussion first.
+
+Some significant non-features include:
+- Job scheduling: Kue and Bull do this.
+- Worker tracking: Kue does this.
+- All-workers pause-resume: Bull does this.
+- Web interface:  Kue has a nice one built in, and someone made [one for Bull](https://github.com/ShaneK/Matador).
+- Job priority: multiple queues get the job done in simple cases, but Kue has first-class support. Bull provides a wrapper around multiple queues.
+
+Some of these could be worthwhile additions; please comment if you're interested in using or helping implement them!
 
 You'll need a local redis server to run the tests. Note that running them will delete any keys that start with `bq:test:`.
 
