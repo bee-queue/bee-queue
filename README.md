@@ -184,6 +184,12 @@ Note that Job events become unreliable across process restarts, since the queue'
 
 ## Stalling Jobs
 
+Bee-Queue attempts to provide ["at least once delivery"](http://www.cloudcomputingpatterns.org/At-least-once_Delivery), in the sense that any job enqueued should be processed at least once, even if a worker crashes, gets disconnected, or otherwise fails to confirm completion of the job.
+
+To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queue-prototype-checkStalledJobs-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, and re-enqueues them.
+
+What this means is, you should run `checkStalledJobs`
+
 # API Reference
 
 ## Queue
@@ -347,8 +353,23 @@ The handler function should:
 - Never throw an exception, unless `catchExceptions` has been enabled.
 - Never ever [block](http://www.slideshare.net/async_io/practical-use-of-mongodb-for-nodejs/47) [the](http://blog.mixu.net/2011/02/01/understanding-the-node-js-event-loop/) [event](http://strongloop.com/strongblog/node-js-performance-event-loop-monitoring/) [loop](http://zef.me/blog/4561/node-js-and-the-case-of-the-blocked-event-loop) (for very long). If you do, the stall detection might think the job stalled, when it was really just blocking the event loop.
 
-#### Queue.prototype.checkStalledJobs([cb])
+#### Queue.prototype.checkStalledJobs([interval], [cb])
+Checks for jobs that appear to be stalling and thus need to be retried, then re-enqueues them.
 
+```javascript
+queue.checkStalledJobs(5000, function (err) {
+  console.log('Checked stalled jobs'); // prints every 5000 ms
+});
+```
+
+What happens after the check is determined by the parameters provided:
+- `cb` only: `cb` is called
+- `interval` only: a timeout is set to call the method again in `interval` ms
+- `cb` and `interval`: a timeout is set, then `cb` is called
+
+Bee-Queue automatically calls this method once when a worker begins processing, so it will check once if a worker process restarts. You should also make your own call with an interval parameter to make the check happen repeatedly over time; see [Under the hood](#under-the-hood) for an explanation why.
+
+The maximum delay from when a job stalls until it will be retried is roughly `stallInterval` + `interval`, so to minimize that delay without calling `checkStalledJobs` unnecessarily often, set `interval` to be the same or a bit shorter than `stallInterval`. A good system-wide average frequency for the check is every 0.5-10 seconds, depending on how time-sensitive your jobs are in case of failure.
 
 #### Queue.prototype.close([cb])
 Closes the queue's connections to Redis.
@@ -471,7 +492,9 @@ Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon 
 
 The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one dedicated to receiving Pub/Sub events. As such, these settings should be disabled if you don't need them; in most cases, only one of them needs to be enabled.
 
-The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs IDs left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
+The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs whose IDs are left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
+
+Bee-Queue requires the user to start the repeated checks on their own because if we did it automatically, every queue instance in the system would be doing the check. Checking from all instances is less efficient and provides weaker guarantees than just checking from one or two. For example, a `checkStalledJobs` interval of 5000ms running on 10 processes would average one check every 500ms, but would only guarantee that a check happens every 5000ms. Two instances checking every 1000ms would also average one check every 500ms, but would be more well-distributed across time and would guarantee a check every 1000ms. Though the check is not expensive, and it doesn't hurt to do it extremely often, avoiding needless inefficiency is a main point of this library, so we leave it to the user to control exactly which processes are doing the check and how often.
 
 # Contributing
 
