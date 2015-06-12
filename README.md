@@ -486,7 +486,7 @@ Each Queue uses the following Redis keys:
 - `bq:name:stalling`: Set of IDs of jobs which haven't 'checked in' during this interval.
 - `bq:name:events`: Pub/Sub channel for workers to send out job results.
 
-Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon as they're enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. Bee-Queue generally follows the "Reliable Queue" pattern described on the [rpoplpush page](http://redis.io/commands/rpoplpush).
+Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon as they're enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. Bee-Queue generally follows the "Reliable Queue" pattern described [here](http://redis.io/commands/rpoplpush).
 
 The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one dedicated to receiving Pub/Sub events. As such, these settings should be disabled if you don't need them; in most cases, only one of them needs to be enabled.
 
