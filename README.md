@@ -1,4 +1,5 @@
-# Bee Queue [![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
+![bee-queue logo](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/bee-queue.png)
+[![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
 - Simple: ~500 LOC, and the only dependency is [node_redis](https://github.com/mranney/node_redis).
@@ -187,8 +188,6 @@ Note that Job events become unreliable across process restarts, since the queue'
 Bee-Queue attempts to provide ["at least once delivery"](http://www.cloudcomputingpatterns.org/At-least-once_Delivery), in the sense that any job enqueued should be processed at least once, even if a worker crashes, gets disconnected, or otherwise fails to confirm completion of the job.
 
 To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queue-prototype-checkStalledJobs-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, and re-enqueues them.
-
-What this means is, you should run `checkStalledJobs`
 
 # API Reference
 
