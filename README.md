@@ -125,7 +125,7 @@ job.timeout(3000).retries(2).save(function (err, job) {
 });
 ```
 
-Jobs can later be retrieved from Redis using [Queue.getJob](#queuegetjobjobid-cberr-job), but most use cases won't need this, and can instead use [Job Events](#job-events) and [Queue Events](#queue-events).
+Jobs can later be retrieved from Redis using [Queue.getJob](#queuegetjobjobid-cberr-job), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
 
 ## Processing Jobs
 To start processing jobs, call `Queue.process` and provide a handler function:
@@ -170,10 +170,17 @@ addQueue.process(function (job, done) {
 ```
 Just like `.process`, these `progress` events work across multiple processes or servers; the job instance will receive the progress event no matter where processing happens.
 
-## Job Events
-Progress reporting happens via 'Job events'. Jobs also emit `succeeded`, `failed`, and `retrying` events:
+## Job and Queue Events
 
-## Queue Events
+There are three classes of events emitted by Bee-Queue objects: [Queue Local events](#queue-local-events), [Queue PubSub events](#queue-pubsub-events), and [Job events](#job-events). The linked API Reference sections provide a more complete overview of each.
+
+Progress reporting, demonstrated above, happens via Job events. Jobs also emit `succeeded` events, which we've seen in the [opening example](#bee-queue), and `failed` and `retrying` events.
+
+Queue PubSub events correspond directly to Job events: `job succeeded`, `job retrying`, `job failed`, and `job progress`. These events will fire from all queue instances and for all jobs on the queue.
+
+Queue local events include `ready` and `error` on all queue instances, and `succeeded`, `retrying`, and `failed` on worker queues corresponding to the PubSub events being sent out.
+
+Note that Job events become unreliable across process restarts, since the queue's reference to the associated job object will be lost. Queue PubSub events are thus potentially more reliable, but Job events can be more convenient in situations like an HTTP request where a process restart loses state anyway.
 
 ## Stalling Jobs
 
@@ -221,7 +228,7 @@ The `settings` fields are:
 - `paused`: boolean, whether the queue instance is paused. Only true if the queue is in the process of closing.
 - `settings`: object; the settings determined between those passed and the defaults
 
-### Local Events
+### Queue Local Events
 
 #### ready
 ```javascript
@@ -229,7 +236,7 @@ queue.on('ready', function () {
   console.log('queue now ready to start doing things');
 });
 ```
-The queue has connected to Redis and ensured that Lua scripts are cached.
+The queue has connected to Redis and ensured that the [Lua scripts are cached](http://redis.io/commands/script-load). You can often get away without checking for this event, but it's a good idea to wait for it in case the Redis host didn't have the scripts cached beforehand; if you try to enqueue jobs when the scripts are not yet cached, you may run into a Redis error.
 
 #### error
 ```javascript
@@ -263,12 +270,12 @@ queue.on('failed', function (job, err) {
 ```
 This queue has processed `job`, but its handler reported a failure with `done(err)`.
 
-### Pub/Sub Events
+### Queue PubSub Events
 These events are all reported by some worker queue (with `sendEvents` enabled) and sent as Redis Pub/Sub messages back to any queues listening for them (with `getEvents` enabled). This means that listening for these events is effectively a monitor for all activity by all workers on the queue.
 
 If the `jobId` of an event is for a job that was created by that queue instance, a corresponding [job event](#job-events) will be emitted from that job object.
 
-Note that Queue-level PubSub events pass the `jobId`, but do not have a reference to the job object, since that job might have originally been created by some other queue in some other process. [Job-level events](#job-events) are emitted only in the process that created the job, and are emitted from the job object itself.
+Note that Queue PubSub events pass the `jobId`, but do not have a reference to the job object, since that job might have originally been created by some other queue in some other process. [Job events](#job-events) are emitted only in the process that created the job, and are emitted from the job object itself.
 
 #### job succeeded
 ```javascript
