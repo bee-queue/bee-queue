@@ -177,11 +177,11 @@ There are three classes of events emitted by Bee-Queue objects: [Queue Local eve
 
 Progress reporting, demonstrated above, happens via Job events. Jobs also emit `succeeded` events, which we've seen in the [opening example](#top), and `failed` and `retrying` events.
 
-Queue PubSub events correspond directly to Job events: `job succeeded`, `job retrying`, `job failed`, and `job progress`. These events will fire from all queue instances and for all jobs on the queue.
+Queue PubSub events correspond directly to Job events: `job succeeded`, `job retrying`, `job failed`, and `job progress`. These events fire from all queue instances and for all jobs on the queue.
 
 Queue local events include `ready` and `error` on all queue instances, and `succeeded`, `retrying`, and `failed` on worker queues corresponding to the PubSub events being sent out.
 
-Note that Job events become unreliable across process restarts, since the queue's reference to the associated job object will be lost. Queue PubSub events are thus potentially more reliable, but Job events can be more convenient in situations like an HTTP request where a process restart loses state anyway.
+Note that Job events become unreliable across process restarts, since the queue's reference to the associated job object will be lost. Queue PubSub events are thus potentially more reliable, but Job events are more convenient in places like HTTP requests where a process restart loses state anyway.
 
 ## Stalling Jobs
 
