@@ -767,6 +767,38 @@ describe('Queue', function () {
       deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
       deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
     });
+
+    it('should reset with an interval', function (done) {
+      var deadQueue = Queue('test', {
+        stallInterval: 0
+      });
+
+      var processJobs = function () {
+        queue = Queue('test', {
+          stallInterval: 0
+        });
+        var reportDone = barrier(6, done);
+        queue.checkStalledJobs(10, reportDone);
+        setTimeout(function () {
+          queue.process(function (job, jobDone) {
+            reportDone();
+            jobDone();
+          });
+        }, 20);
+      };
+
+      var processAndClose = function () {
+        deadQueue.process(function () {
+          deadQueue.close(processJobs);
+        });
+      };
+
+      var reportAdded = barrier(3, processAndClose);
+
+      deadQueue.createJob({foo: 'bar1'}).save(reportAdded);
+      deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
+      deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
+    });
   });
 
   describe('Startup', function () {
