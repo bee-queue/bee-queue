@@ -56,8 +56,7 @@ You'll also need [Redis 2.8+](http://redis.io/topics/quickstart) running somewhe
   - [Creating Jobs](#creating-jobs)
   - [Processing Jobs](#processing-jobs)
   - [Progress Reporting](#progress-reporting)
-  - [Job Events](#job-events)
-  - [Queue Events](#queue-events)
+  - [Job & Queue Events](#job-and-queue-events)
   - [Stalled Jobs](#stalled-jobs)
 - [API Reference](#api-reference)
 - [Under The Hood](#under-the-hood)
@@ -493,7 +492,7 @@ The `isWorker` [setting](#settings) creates an extra Redis connection dedicated 
 
 The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs whose IDs are left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
 
-Bee-Queue requires the user to start the repeated checks on their own because if we did it automatically, every queue instance in the system would be doing the check. Checking from all instances is less efficient and provides weaker guarantees than just checking from one or two. For example, a `checkStalledJobs` interval of 5000ms running on 10 processes would average one check every 500ms, but would only guarantee that a check happens every 5000ms. Two instances checking every 1000ms would also average one check every 500ms, but would be more well-distributed across time and would guarantee a check every 1000ms. Though the check is not expensive, and it doesn't hurt to do it extremely often, avoiding needless inefficiency is a main point of this library, so we leave it to the user to control exactly which processes are doing the check and how often.
+Bee-Queue requires the user to start the repeated checks on their own because if we did it automatically, every queue instance in the system would be doing the check. Checking from all instances is less efficient and provides weaker guarantees than just checking from one or two. For example, a `checkStalledJobs` interval of 5000ms running on 10 processes would average one check every 500ms, but would only guarantee a check every 5000ms. Two instances checking every 1000ms would also average one check every 500ms, but would be more well-distributed across time and would guarantee a check every 1000ms. Though the check is not expensive, and it doesn't hurt to do it extremely often, avoiding needless inefficiency is a main point of this library, so we leave it to the user to control exactly which processes are doing the check and how often.
 
 # Contributing
 
