@@ -1,6 +1,6 @@
 {
   "name": "bee-queue",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
@@ -23,6 +23,8 @@
     "job",
     "queue",
     "worker",
+    "distributed",
+    "system",
     "redis",
     "lua"
   ],
