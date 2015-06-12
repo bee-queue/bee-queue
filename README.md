@@ -103,7 +103,7 @@ The Δ columns factor out the ~986KB of memory usage reported by Redis on a fres
 var Queue = require('bee-queue');
 var addQueue = new Queue('addition');
 ```
-Queues are very lightweight - the only significant overhead is connecting to Redis - so if you need to handle different types of jobs, just instantiate a queue for each:
+Queues are very lightweight — the only significant overhead is connecting to Redis — so if you need to handle different types of jobs, just instantiate a queue for each:
 ```javascript
 var subQueue = new Queue('subtraction', {
   redis: {
@@ -126,7 +126,7 @@ job.timeout(3000).retries(2).save(function (err, job) {
 });
 ```
 
-Jobs can later be retrieved from Redis using [Queue.getJob](#queuegetjobjobid-cberr-job), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
+Jobs can later be retrieved from Redis using [Queue.getJob](#queueprototypegetjobjobid-cberr-job), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
 
 ## Processing Jobs
 To start processing jobs, call `Queue.process` and provide a handler function:
@@ -136,7 +136,7 @@ addQueue.process(function (job, done) {
   return done(null, job.data.x + job.data.y);
 });
 ```
-The handler function is given the job it needs to process, including `job.data` from when the job was created. It should then pass results to the `done` callback. For more on handlers, see [Queue.process](queueprocessconcurrency-handlerjob-done).
+The handler function is given the job it needs to process, including `job.data` from when the job was created. It should then pass results to the `done` callback. For more on handlers, see [Queue.process](#queueprototypeprocessconcurrency-handlerjob-done).
 
 `.process` can only be called once per Queue instance, but we can process on as many instances as we like, spanning multiple processes or servers, as long as they all connect to the same Redis instance. From this, we can easily make a worker pool of machines who all run the same code and spend their lives processing our jobs, no matter where those jobs are created.
 
@@ -186,7 +186,7 @@ Note that Job events become unreliable across process restarts, since the queue'
 
 Bee-Queue attempts to provide ["at least once delivery"](http://www.cloudcomputingpatterns.org/At-least-once_Delivery), in the sense that any job enqueued should be processed at least once, even if a worker crashes, gets disconnected, or otherwise fails to confirm completion of the job.
 
-To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queue-prototype-checkStalledJobs-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, and re-enqueues them.
+To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queueprototypecheckstalledjobsinterval-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, and re-enqueues them.
 
 # API Reference
 
@@ -224,13 +224,13 @@ The `settings` fields are:
 - `getEvents`: boolean, default true. Disable if this queue does not need to receive job events.
 - `sendEvents`: boolean, default true. Disable if this worker does not need to send job events back to other queues.
 - `removeOnSuccess`: boolean, default false. Enable to keep memory usage down by automatically removing jobs from Redis when they succeed.
-- `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](#queueprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
+- `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](#queueprototypeprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
 
 ### Properties
 - `name`: string, the name passed to the constructor.
 - `keyPrefix`: string, the prefix used for all Redis keys associated with this queue.
 - `paused`: boolean, whether the queue instance is paused. Only true if the queue is in the process of closing.
-- `settings`: object; the settings determined between those passed and the defaults
+- `settings`: object, the settings determined between those passed and the defaults
 
 ### Queue Local Events
 
@@ -311,7 +311,7 @@ queue.on('job progress', function (jobId, progress) {
   console.log('Job ' + jobId + ' reported progress: ' + progress + '%');
 });
 ```
-Some worker is processing job `jobId`, and it sent a [progress report](#jobreportprogressn) of `progress` percent.
+Some worker is processing job `jobId`, and it sent a [progress report](#jobprototypereportprogressn) of `progress` percent.
 
 ### Methods
 
@@ -323,9 +323,9 @@ Used to instantiate a new queue; opens connections to Redis.
 ```javascript
 var job = queue.createJob({...});
 ```
-Returns a new [Job object](#job) with the associated [user data](#job).
+Returns a new [Job object](#job) with the associated user data.
 
-#### Queue.prototype.getJob(jobId, cb)
+#### Queue.prototype.getJob(jobId, cb(err, job))
 ```javascript
 queue.getJob(3, function (err, job) {
   console.log('Job 3 has status ' + job.status);
@@ -388,7 +388,7 @@ Closes the queue's connections to Redis.
 - `progress`: number; progress between 0 and 100, as reported by `reportProgress`.
 
 ### Job Events
-These are all Pub/Sub events like [Queue PubSub events](#pubsub-events) and are disabled when `getEvents` is false.
+These are all Pub/Sub events like [Queue PubSub events](#queue-pubsub-events) and are disabled when `getEvents` is false.
 
 #### succeeded
 ```javascript
@@ -421,7 +421,7 @@ job.on('progress', function (progress) {
   console.log('Job ' + job.id + ' reported progress: ' + progress + '%');
 });
 ```
-The job has sent a [progress report](#jobreportprogressn) of `progress` percent.
+The job has sent a [progress report](#jobprototypereportprogressn) of `progress` percent.
 
 ### Methods
 
