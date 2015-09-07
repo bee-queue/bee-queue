@@ -12,7 +12,7 @@ describe('Job', function () {
   var options = {test: 1};
 
   var clearKeys = function (done) {
-    queue.client.keys(queue.toKey('*'), function(err, keys) {
+    queue.client.keys(queue.toKey('*'), function (err, keys) {
       if (keys.length) {
         queue.client.del(keys, done);
       } else {
