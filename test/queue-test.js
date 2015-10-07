@@ -36,10 +36,9 @@ describe('Queue', function () {
     describe('Close', function () {
       it('should call end on the clients', function (done) {
         queue = Queue('test');
-        var clientSpy = sinon.spy(queue.client, 'end');
-        var bclientSpy = sinon.spy(queue.bclient, 'end');
-        var eclientSpy = sinon.spy(queue.eclient, 'end');
-
+        var clientSpy = sinon.spy(queue.client, 'disconnect');
+        var bclientSpy = sinon.spy(queue.bclient, 'disconnect');
+        var eclientSpy = sinon.spy(queue.eclient, 'disconnect');
         queue.on('ready', function () {
           queue.close(function (err) {
             assert.isNull(err);
@@ -57,7 +56,7 @@ describe('Queue', function () {
         queue.on('ready', function () {
           queue.close();
           setTimeout(function () {
-            assert.isFalse(queue.client.connected);
+            assert.isFalse(queue.client.status === 'ready');
             queue = undefined;
             done();
           }, 20);
@@ -77,29 +76,9 @@ describe('Queue', function () {
         done();
       });
 
-      queue.bclient.stream.end();
-      queue.bclient.emit('error', new Error('ECONNRESET'));
-
+      // simulating a crash
+      queue.bclient.set('foo');
       queue.createJob({foo: 'bar'}).save();
-    });
-
-
-    it('should reconnect when the blocking client triggers an "end" event', function (done) {
-      queue = Queue('test');
-
-      var jobSpy = sinon.spy(queue, 'getNextJob');
-      queue.process(function (job, jobDone) {
-        // First getNextJob fails on the disconnect, second should succeed
-        assert.strictEqual(jobSpy.callCount, 2);
-        jobDone();
-        done();
-      });
-
-      // Not called at all yet because queue.process uses setImmediate
-      assert.strictEqual(jobSpy.callCount, 0);
-
-      queue.createJob({foo: 'bar'}).save();
-      queue.bclient.emit('end');
     });
   });
 
@@ -107,12 +86,12 @@ describe('Queue', function () {
     it('creates a queue with default redis settings', function (done) {
       queue = Queue('test');
       queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, '127.0.0.1');
-        assert.strictEqual(queue.bclient.connectionOption.host, '127.0.0.1');
-        assert.strictEqual(queue.client.connectionOption.port, 6379);
-        assert.strictEqual(queue.bclient.connectionOption.port, 6379);
-        assert.strictEqual(queue.client.selected_db, 0);
-        assert.strictEqual(queue.bclient.selected_db, 0);
+        assert.strictEqual(queue.client.options.host, '127.0.0.1');
+        assert.strictEqual(queue.bclient.options.host, '127.0.0.1');
+        assert.strictEqual(queue.client.options.port, 6379);
+        assert.strictEqual(queue.bclient.options.port, 6379);
+        assert.strictEqual(queue.client.condition.select, 0);
+        assert.strictEqual(queue.bclient.condition.select, 0);
         done();
       });
     });
@@ -126,10 +105,10 @@ describe('Queue', function () {
       });
 
       queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, 'localhost');
-        assert.strictEqual(queue.bclient.connectionOption.host, 'localhost');
-        assert.strictEqual(queue.client.selected_db, 1);
-        assert.strictEqual(queue.bclient.selected_db, 1);
+        assert.strictEqual(queue.client.options.host, 'localhost');
+        assert.strictEqual(queue.bclient.options.host, 'localhost');
+        assert.strictEqual(queue.client.condition.select, 1);
+        assert.strictEqual(queue.bclient.condition.select, 1);
         done();
       });
     });
@@ -140,7 +119,7 @@ describe('Queue', function () {
       });
 
       queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, '127.0.0.1');
+        assert.strictEqual(queue.client.options.host, '127.0.0.1');
         assert.isUndefined(queue.bclient);
         done();
       });
