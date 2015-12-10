@@ -223,7 +223,7 @@ The `settings` fields are:
 - `isWorker`: boolean, default true. Disable if this queue will not process jobs.
 - `getEvents`: boolean, default true. Disable if this queue does not need to receive job events.
 - `sendEvents`: boolean, default true. Disable if this worker does not need to send job events back to other queues.
-- `removeOnSuccess`: boolean, default false. Enable to keep memory usage down by automatically removing jobs from Redis when they succeed.
+- `removeOnSuccess`: boolean, default false. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
 - `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](#queueprototypeprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
 
 ### Properties
