@@ -284,7 +284,7 @@ Note that Queue PubSub events pass the `jobId`, but do not have a reference to t
 #### job succeeded
 ```javascript
 queue.on('job succeeded', function (jobId, result) {
-  console.log('Job ' + job.id + ' succeeded with result: ' + result);
+  console.log('Job ' + jobId + ' succeeded with result: ' + result);
 });
 ```
 Some worker has successfully processed job `jobId`. If `result` is defined, the handler called `done(null, result)`.
