@@ -1,4 +1,7 @@
 <a name="top"></a>
+
+## forked from [LewisJEllis/bee-queue](https://github.com/LewisJEllis/bee-queue) , support delay job.
+
 ![bee-queue logo](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/bee-queue.png)
 [![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
@@ -121,7 +124,7 @@ Jobs have a chaining API with commands `.retries(n)` and `.timeout(ms)` for sett
 
 ```javascript
 var job = addQueue.createJob({x: 2, y: 3});
-job.timeout(3000).retries(2).save(function (err, job) {
+job.timeout(3000).retries(2).delay(30).save(function (err, job) {
   // job enqueued, job.id populated
 });
 ```
