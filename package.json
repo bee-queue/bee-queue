@@ -1,6 +1,6 @@
 {
   "name": "beequeue",
-  "version": "0.3.1",
+  "version": "0.3.2",
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
