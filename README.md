@@ -3,7 +3,7 @@
 [![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
-- Simple: ~500 LOC, and the only dependency is [node_redis](https://github.com/mranney/node_redis).
+- Simple: ~500 LOC, and the only dependency is [node_redis](https://github.com/NodeRedis/node_redis).
 - Fast: maximizes throughput by minimizing Redis and network overhead. [Benchmarks](#benchmarks) well.
 - Robust: designed with concurrency, atomicity, and failure in mind; 100% code coverage.
 
@@ -26,7 +26,7 @@ queue.process(function (job, done) {
 ## Introduction
 Bee-Queue is meant to power a distributed worker pool and was built with short, real-time jobs in mind. A web server can enqueue a job, wait for a worker process to complete it, and return its results within an HTTP request. Scaling is as simple as running more workers.
 
-[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/LearnBoost/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job scheduling and prioritization, which Bee-Queue [currently does not](#contributing). Bee-Queue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
+[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/Automattic/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job scheduling and prioritization, which Bee-Queue [currently does not](#contributing). Bee-Queue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
 
 - Create, save, and process jobs
 - Concurrent processing
@@ -219,7 +219,7 @@ The `settings` fields are:
   - `port`: number, Redis port.
   - `socket`: string, Redis socket to be used instead of a host and port.
   - `db`: number, Redis [DB index](http://redis.io/commands/SELECT).
-  - `options`: options object, passed to [node_redis](https://github.com/mranney/node_redis#rediscreateclient).
+  - `options`: options object, passed to [node_redis](https://github.com/NodeRedis/node_redis#rediscreateclient).
 - `isWorker`: boolean, default true. Disable if this queue will not process jobs.
 - `getEvents`: boolean, default true. Disable if this queue does not need to receive job events.
 - `sendEvents`: boolean, default true. Disable if this worker does not need to send job events back to other queues.
@@ -349,7 +349,7 @@ The handler function should:
   - Use `done()` or `done(null, result)` to indicate job success
     - `result` must be JSON-serializable (for `JSON.stringify`)
 - Never throw an exception, unless `catchExceptions` has been enabled.
-- Never ever [block](http://www.slideshare.net/async_io/practical-use-of-mongodb-for-nodejs/47) [the](http://blog.mixu.net/2011/02/01/understanding-the-node-js-event-loop/) [event](http://strongloop.com/strongblog/node-js-performance-event-loop-monitoring/) [loop](http://zef.me/blog/4561/node-js-and-the-case-of-the-blocked-event-loop) (for very long). If you do, the stall detection might think the job stalled, when it was really just blocking the event loop.
+- Never ever [block](http://www.slideshare.net/async_io/practical-use-of-mongodb-for-nodejs/47) [the](http://blog.mixu.net/2011/02/01/understanding-the-node-js-event-loop/) [event](https://strongloop.com/strongblog/node-js-performance-event-loop-monitoring/) [loop](http://zef.me/blog/4561/node-js-and-the-case-of-the-blocked-event-loop) (for very long). If you do, the stall detection might think the job stalled, when it was really just blocking the event loop.
 
 #### Queue.prototype.checkStalledJobs([interval], [cb])
 Checks for jobs that appear to be stalling and thus need to be retried, then re-enqueues them.
