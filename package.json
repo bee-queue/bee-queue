@@ -1,6 +1,6 @@
 {
-  "name": "bee-queue",
-  "version": "0.3.0",
+  "name": "beequeue",
+  "version": "0.3.2",
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
@@ -28,14 +28,14 @@
     "redis",
     "lua"
   ],
-  "author": "Lewis J Ellis <me@lewisjellis.com>",
+  "author": "Lewis J Ellis <me@lewisjellis.com>, Cherokee <successage@gmail.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LewisJEllis/bee-queue.git"
+    "url": "https://github.com/ahkimkoo/beequeue.git"
   },
   "bugs": {
-    "url": "https://github.com/LewisJEllis/bee-queue/issues"
+    "url": "https://github.com/ahkimkoo/beequeue/issues"
   },
-  "homepage": "https://github.com/LewisJEllis/bee-queue"
+  "homepage": "https://github.com/ahkimkoo/beequeue"
 }

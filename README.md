@@ -1,4 +1,7 @@
 <a name="top"></a>
+
+## forked from [LewisJEllis/bee-queue](https://github.com/LewisJEllis/bee-queue) , support delay job.
+
 ![bee-queue logo](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/bee-queue.png)
 [![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
@@ -121,12 +124,18 @@ Jobs have a chaining API with commands `.retries(n)` and `.timeout(ms)` for sett
 
 ```javascript
 var job = addQueue.createJob({x: 2, y: 3});
-job.timeout(3000).retries(2).save(function (err, job) {
+job.timeout(3000).retries(2).delay(30).save(function (err, job) {
   // job enqueued, job.id populated
 });
 ```
 
 Jobs can later be retrieved from Redis using [Queue.getJob](#queueprototypegetjobjobid-cberr-job), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
+
+## Schedule Delay Job
+### A queue only need to start a scheduler
+```javascript
+addQueue.schedule(3000);//schedule interval 3000ms
+```
 
 ## Processing Jobs
 To start processing jobs, call `Queue.process` and provide a handler function:
@@ -499,7 +508,7 @@ Bee-Queue requires the user to start the repeated checks on their own because if
 Pull requests are welcome; just make sure `grunt test` passes. For significant changes, open an issue for discussion first.
 
 Some significant non-features include:
-- Job scheduling: Kue and Bull do this.
+- Job scheduling: This forked project did this.
 - Worker tracking: Kue does this.
 - All-workers pause-resume: Bull does this.
 - Web interface:  Kue has a nice one built in, and someone made [one for Bull](https://github.com/ShaneK/Matador).
