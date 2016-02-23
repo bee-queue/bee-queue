@@ -292,7 +292,7 @@ Some worker has successfully processed job `jobId`. If `result` is defined, the 
 #### job retrying
 ```javascript
 queue.on('job retrying', function (jobId, err) {
-  console.log('Job ' + jobId + ' failed with error ' + err.message ' but is being retried!');
+  console.log('Job ' + jobId + ' failed with error ' + err.message + ' but is being retried!');
 });
 ```
 Some worker has processed job `jobId`, but it reported a failure and has been re-enqueued for another attempt.
