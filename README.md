@@ -208,7 +208,26 @@ var queue = Queue('test', {
   isWorker: true,
   sendEvents: true,
   removeOnSuccess: false,
-  catchExceptions: false
+  catchExceptions: false,
+  serializeError: function (err) {
+    return err instanceof Error ?
+      {
+        name: err.name,
+        message: err.message,
+        stack: err.stack
+      } :
+      err;
+  },
+  deserializeError: function (err) {
+    if (err.name && err.message && err.stack) {
+      var _err = err;
+      err = Error(_err.message);
+      err.name = _err.name;
+      err.stack = _err.stack;
+    }
+
+    return err;
+  }
 });
 ```
 The `settings` fields are:
@@ -225,6 +244,8 @@ The `settings` fields are:
 - `sendEvents`: boolean, default true. Disable if this worker does not need to send job events back to other queues.
 - `removeOnSuccess`: boolean, default false. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
 - `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](#queueprototypeprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
+- `serializeError`: function. Customizes how errors passed during job processing get serialized and stored in redis.
+- `deserializeError`: function. Customizes how errors stored in redis are passed to clients listening for failed job events.
 
 ### Properties
 - `name`: string, the name passed to the constructor.
