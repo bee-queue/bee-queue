@@ -1,8 +1,8 @@
 <a name="top"></a>
 
-## forked from [LewisJEllis/bee-queue](https://github.com/LewisJEllis/bee-queue) , support delay job.
+## forked from [LewisJEllis/beequeue](https://github.com/LewisJEllis/beequeue) , support delay job.
 
-![bee-queue logo](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/bee-queue.png)
+![beequeue logo](https://raw.githubusercontent.com/LewisJEllis/beequeue/master/beequeue.png)
 [![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
@@ -11,7 +11,7 @@ A simple, fast, robust job/task queue for Node.js, backed by Redis.
 - Robust: designed with concurrency, atomicity, and failure in mind; 100% code coverage.
 
 ```javascript
-var Queue = require('bee-queue');
+var Queue = require('beequeue');
 var queue = new Queue('example');
 
 var job = queue.createJob({x: 2, y: 3}).save();
@@ -27,9 +27,9 @@ queue.process(function (job, done) {
 ```
 
 ## Introduction
-Bee-Queue is meant to power a distributed worker pool and was built with short, real-time jobs in mind. A web server can enqueue a job, wait for a worker process to complete it, and return its results within an HTTP request. Scaling is as simple as running more workers.
+beequeue is meant to power a distributed worker pool and was built with short, real-time jobs in mind. A web server can enqueue a job, wait for a worker process to complete it, and return its results within an HTTP request. Scaling is as simple as running more workers.
 
-[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/LearnBoost/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job scheduling and prioritization, which Bee-Queue [currently does not](#contributing). Bee-Queue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
+[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/LearnBoost/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job scheduling and prioritization, which beequeue [currently does not](#contributing). beequeue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
 
 - Create, save, and process jobs
 - Concurrent processing
@@ -48,7 +48,7 @@ Bee-Queue is meant to power a distributed worker pool and was built with short, 
 
 ## Installation
 ```
-npm install bee-queue
+npm install beequeue
 ```
 You'll also need [Redis 2.8+](http://redis.io/topics/quickstart) running somewhere.
 
@@ -65,26 +65,26 @@ You'll also need [Redis 2.8+](http://redis.io/topics/quickstart) running somewhe
 - [API Reference](#api-reference)
 - [Under The Hood](#under-the-hood)
 - [Contributing](#contributing)
-- [License](https://github.com/LewisJEllis/bee-queue/blob/master/LICENSE)
+- [License](https://github.com/LewisJEllis/beequeue/blob/master/LICENSE)
 
 # Motivation
-Celery is for Python, and Resque is for Ruby, but [Kue](https://github.com/LearnBoost/kue) and [Bull](https://github.com/OptimalBits/bull) already exist for Node, and they're good at what they do, so why does Bee-Queue also need to exist?
+Celery is for Python, and Resque is for Ruby, but [Kue](https://github.com/LearnBoost/kue) and [Bull](https://github.com/OptimalBits/bull) already exist for Node, and they're good at what they do, so why does beequeue also need to exist?
 
-In short: we needed to mix and match things that Kue does well with things that Bull does well, and we needed to squeeze out more performance. There's also a [long version](https://github.com/LewisJEllis/bee-queue/wiki/Origin) with more details.
+In short: we needed to mix and match things that Kue does well with things that Bull does well, and we needed to squeeze out more performance. There's also a [long version](https://github.com/LewisJEllis/beequeue/wiki/Origin) with more details.
 
-Bee-Queue starts by combining Bull's simplicity and robustness with Kue's ability to send events back to job creators, then focuses heavily on minimizing overhead, and finishes by being strict about [code quality](https://github.com/LewisJEllis/bee-queue/blob/master/.eslintrc) and [testing](https://coveralls.io/r/LewisJEllis/bee-queue?branch=master). It compromises on breadth of features, so there are certainly cases where Kue or Bull might be preferable (see [Contributing](#contributing)).
+beequeue starts by combining Bull's simplicity and robustness with Kue's ability to send events back to job creators, then focuses heavily on minimizing overhead, and finishes by being strict about [code quality](https://github.com/LewisJEllis/beequeue/blob/master/.eslintrc) and [testing](https://coveralls.io/r/LewisJEllis/beequeue?branch=master). It compromises on breadth of features, so there are certainly cases where Kue or Bull might be preferable (see [Contributing](#contributing)).
 
-Bull and Kue do things really well and deserve a lot of credit. Bee-Queue borrows ideas from both, and Bull was an especially invaluable reference during initial development.
+Bull and Kue do things really well and deserve a lot of credit. beequeue borrows ideas from both, and Bull was an especially invaluable reference during initial development.
 
 #### Why Bees?
-Bee-Queue is like a bee because it:
+beequeue is like a bee because it:
 - is small and simple
 - is fast (bees can fly 20mph!)
 - carries pollen (messages) between flowers (servers)
 - something something "worker bees"
 
 # Benchmarks
-![benchmark chart](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/benchmark/benchmark-chart.png)
+![benchmark chart](https://raw.githubusercontent.com/LewisJEllis/beequeue/master/benchmark/benchmark-chart.png)
 
 These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with io.js 2.2.1 and Redis 3.0.2 running directly on a 13" MBPr. The numbers shown are averages of 3 runs; the raw data collected and code used are available in the benchmark folder.
 
@@ -92,7 +92,7 @@ For a quick idea of space efficiency, the following table contains Redis memory 
 
 | Library   | Memory After  | Memory Peak | Memory After Δ | Memory Peak Δ |
 | --------- | ------------- | ----------- | -------------- | ------------- |
-| Bee-Queue |        2.65MB |      2.73MB |         1.67MB |        1.75MB |
+| beequeue |        2.65MB |      2.73MB |         1.67MB |        1.75MB |
 | Bull      |        3.93MB |      5.09MB |         2.95MB |        4.11MB |
 | Kue       |        7.53MB |      7.86MB |         6.55MB |        6.88MB |
 
@@ -103,7 +103,7 @@ The Δ columns factor out the ~986KB of memory usage reported by Redis on a fres
 ## Creating Queues
 [Queue](#queue) objects are the starting point to everything this library does. To make one, we just need to give it a name, typically indicating the sort of job it will process:
 ```javascript
-var Queue = require('bee-queue');
+var Queue = require('beequeue');
 var addQueue = new Queue('addition');
 ```
 Queues are very lightweight — the only significant overhead is connecting to Redis — so if you need to handle different types of jobs, just instantiate a queue for each:
@@ -181,7 +181,7 @@ Just like `.process`, these `progress` events work across multiple processes or 
 
 ## Job and Queue Events
 
-There are three classes of events emitted by Bee-Queue objects: [Queue Local events](#queue-local-events), [Queue PubSub events](#queue-pubsub-events), and [Job events](#job-events). The linked API Reference sections provide a more complete overview of each.
+There are three classes of events emitted by beequeue objects: [Queue Local events](#queue-local-events), [Queue PubSub events](#queue-pubsub-events), and [Job events](#job-events). The linked API Reference sections provide a more complete overview of each.
 
 Progress reporting, demonstrated above, happens via Job events. Jobs also emit `succeeded` events, which we've seen in the [opening example](#top), and `failed` and `retrying` events.
 
@@ -193,7 +193,7 @@ Note that Job events become unreliable across process restarts, since the queue'
 
 ## Stalling Jobs
 
-Bee-Queue attempts to provide ["at least once delivery"](http://www.cloudcomputingpatterns.org/At-least-once_Delivery), in the sense that any job enqueued should be processed at least once, even if a worker crashes, gets disconnected, or otherwise fails to confirm completion of the job.
+beequeue attempts to provide ["at least once delivery"](http://www.cloudcomputingpatterns.org/At-least-once_Delivery), in the sense that any job enqueued should be processed at least once, even if a worker crashes, gets disconnected, or otherwise fails to confirm completion of the job.
 
 To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queueprototypecheckstalledjobsinterval-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, and re-enqueues them.
 
@@ -233,7 +233,7 @@ The `settings` fields are:
 - `getEvents`: boolean, default true. Disable if this queue does not need to receive job events.
 - `sendEvents`: boolean, default true. Disable if this worker does not need to send job events back to other queues.
 - `removeOnSuccess`: boolean, default false. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
-- `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](#queueprototypeprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
+- `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](#queueprototypeprocessconcurrency-handlerjob-done) to be caught by beequeue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
 
 ### Properties
 - `name`: string, the name passed to the constructor.
@@ -374,7 +374,7 @@ What happens after the check is determined by the parameters provided:
 - `interval` only: a timeout is set to call the method again in `interval` ms
 - `cb` and `interval`: a timeout is set, then `cb` is called
 
-Bee-Queue automatically calls this method once when a worker begins processing, so it will check once if a worker process restarts. You should also make your own call with an interval parameter to make the check happen repeatedly over time; see [Under the hood](#under-the-hood) for an explanation why.
+beequeue automatically calls this method once when a worker begins processing, so it will check once if a worker process restarts. You should also make your own call with an interval parameter to make the check happen repeatedly over time; see [Under the hood](#under-the-hood) for an explanation why.
 
 The maximum delay from when a job stalls until it will be retried is roughly `stallInterval` + `interval`, so to minimize that delay without calling `checkStalledJobs` unnecessarily often, set `interval` to be the same or a bit shorter than `stallInterval`. A good system-wide average frequency for the check is every 0.5-10 seconds, depending on how time-sensitive your jobs are in case of failure.
 
@@ -389,7 +389,7 @@ Closes the queue's connections to Redis.
   - Be JSON-serializable (for `JSON.stringify`)
   - Never be used to pass large pieces of data (100kB+)
   - Ideally be as small as possible (1kB or less)
-- `options`: object used by Bee-Queue to store timeout, retries, etc.
+- `options`: object used by beequeue to store timeout, retries, etc.
   - Do not modify directly; use job methods instead.
 - `queue`: the Queue responsible for this instance of the job. This is either:
   - the queue that called `createJob` to make the job
@@ -481,7 +481,7 @@ var defaultCb = function (err) {
 };
 ```
 
-Defaults for Queue `settings` live in `lib/defaults.js`. Changing that file will change Bee-Queue's default behavior.
+Defaults for Queue `settings` live in `lib/defaults.js`. Changing that file will change beequeue's default behavior.
 
 # Under the hood
 
@@ -495,13 +495,13 @@ Each Queue uses the following Redis keys:
 - `bq:name:stalling`: Set of IDs of jobs which haven't 'checked in' during this interval.
 - `bq:name:events`: Pub/Sub channel for workers to send out job results.
 
-Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon as they're enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. Bee-Queue generally follows the "Reliable Queue" pattern described [here](http://redis.io/commands/rpoplpush).
+beequeue is non-polling, so idle workers are listening to receive jobs as soon as they're enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. beequeue generally follows the "Reliable Queue" pattern described [here](http://redis.io/commands/rpoplpush).
 
 The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`, while `getEvents` creates one dedicated to receiving Pub/Sub events. As such, these settings should be disabled if you don't need them; in most cases, only one of them needs to be enabled.
 
 The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs whose IDs are left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
 
-Bee-Queue requires the user to start the repeated checks on their own because if we did it automatically, every queue instance in the system would be doing the check. Checking from all instances is less efficient and provides weaker guarantees than just checking from one or two. For example, a `checkStalledJobs` interval of 5000ms running on 10 processes would average one check every 500ms, but would only guarantee a check every 5000ms. Two instances checking every 1000ms would also average one check every 500ms, but would be more well-distributed across time and would guarantee a check every 1000ms. Though the check is not expensive, and it doesn't hurt to do it extremely often, avoiding needless inefficiency is a main point of this library, so we leave it to the user to control exactly which processes are doing the check and how often.
+beequeue requires the user to start the repeated checks on their own because if we did it automatically, every queue instance in the system would be doing the check. Checking from all instances is less efficient and provides weaker guarantees than just checking from one or two. For example, a `checkStalledJobs` interval of 5000ms running on 10 processes would average one check every 500ms, but would only guarantee a check every 5000ms. Two instances checking every 1000ms would also average one check every 500ms, but would be more well-distributed across time and would guarantee a check every 1000ms. Though the check is not expensive, and it doesn't hurt to do it extremely often, avoiding needless inefficiency is a main point of this library, so we leave it to the user to control exactly which processes are doing the check and how often.
 
 # Contributing
 
@@ -518,9 +518,9 @@ Some of these could be worthwhile additions; please comment if you're interested
 
 You'll need a local redis server to run the tests. Note that running them will delete any keys that start with `bq:test:`.
 
-[npm-image]: https://img.shields.io/npm/v/bee-queue.svg?style=flat
-[npm-url]: https://www.npmjs.com/package/bee-queue
-[travis-image]: https://img.shields.io/travis/LewisJEllis/bee-queue.svg?style=flat
-[travis-url]: https://travis-ci.org/LewisJEllis/bee-queue
-[coveralls-image]: https://coveralls.io/repos/LewisJEllis/bee-queue/badge.svg?branch=master
-[coveralls-url]: https://coveralls.io/r/LewisJEllis/bee-queue?branch=master
+[npm-image]: https://img.shields.io/npm/v/beequeue.svg?style=flat
+[npm-url]: https://www.npmjs.com/package/beequeue
+[travis-image]: https://img.shields.io/travis/LewisJEllis/beequeue.svg?style=flat
+[travis-url]: https://travis-ci.org/LewisJEllis/beequeue
+[coveralls-image]: https://coveralls.io/repos/LewisJEllis/beequeue/badge.svg?branch=master
+[coveralls-url]: https://coveralls.io/r/LewisJEllis/beequeue?branch=master
