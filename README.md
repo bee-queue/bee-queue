@@ -1,8 +1,8 @@
 <a name="top"></a>
 
-## forked from [LewisJEllis/beequeue](https://github.com/LewisJEllis/beequeue) , support delay job.
+## forked from [LewisJEllis/beequeue](https://github.com/ahkimkoo/beequeue) , support delay job.
 
-![beequeue logo](https://raw.githubusercontent.com/LewisJEllis/beequeue/master/beequeue.png)
+![beequeue logo](https://raw.githubusercontent.com/LewisJEllis/beequeue/master/bee-queue.png)
 [![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
@@ -84,7 +84,7 @@ beequeue is like a bee because it:
 - something something "worker bees"
 
 # Benchmarks
-![benchmark chart](https://raw.githubusercontent.com/LewisJEllis/beequeue/master/benchmark/benchmark-chart.png)
+![benchmark chart](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/benchmark/benchmark-chart.png)
 
 These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with io.js 2.2.1 and Redis 3.0.2 running directly on a 13" MBPr. The numbers shown are averages of 3 runs; the raw data collected and code used are available in the benchmark folder.
 
