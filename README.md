@@ -2,7 +2,7 @@
 
 ## forked from [LewisJEllis/beequeue](https://github.com/ahkimkoo/beequeue) , support delay job.
 
-![beequeue logo](https://raw.githubusercontent.com/LewisJEllis/beequeue/master/bee-queue.png)
+![beequeue logo](https://raw.githubusercontent.com/LewisJEllis/bee-queue/master/bee-queue.png)
 [![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
