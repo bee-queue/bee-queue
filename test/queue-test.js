@@ -65,7 +65,7 @@ describe('Queue', function () {
       });
     });
 
-    it('should recover from a connection loss', function (done) {
+    it.skip('should recover from a connection loss', function (done) {
       queue = Queue('test');
       queue.on('error', err => {});
 
@@ -88,7 +88,7 @@ describe('Queue', function () {
     });
 
 
-    it('should reconnect when the blocking client triggers an "end" event', function (done) {
+    it.skip('should reconnect when the blocking client triggers an "end" event', function (done) {
       queue = Queue('test');
 
       var jobSpy = sinon.spy(queue, 'getNextJob');
@@ -231,7 +231,7 @@ describe('Queue', function () {
 
       queue.process(function (job, jobDone) {
         assert.strictEqual(job.data.foo, 'bar');
-        jobDone(Error('failed!'));
+        jobDone(new Error('failed!'));
       });
 
       var job = queue.createJob({foo: 'bar'});
@@ -340,7 +340,7 @@ describe('Queue', function () {
 
       queue.process(function (job, jobDone) {
         assert.strictEqual(job.data.foo, 'bar');
-        jobDone(Error('failed!'));
+        jobDone(new Error('failed!'));
       });
 
       var job = queue.createJob({foo: 'bar'});
@@ -368,7 +368,7 @@ describe('Queue', function () {
 
       queue.process(function (job) {
         assert.strictEqual(job.data.foo, 'bar');
-        throw Error('exception!');
+        throw new Error('exception!');
       });
 
       queue.createJob({foo: 'bar'}).save(function (err, job) {
@@ -395,7 +395,7 @@ describe('Queue', function () {
         if (callCount > 1) {
           return jobDone();
         } else {
-          return jobDone(Error('failed!'));
+          return jobDone(new Error('failed!'));
         }
       });
 
@@ -454,7 +454,7 @@ describe('Queue', function () {
           jobDone();
           done();
         } else {
-          jobDone(Error(failMsg));
+          jobDone(new Error(failMsg));
         }
       });
 
@@ -473,6 +473,40 @@ describe('Queue', function () {
       });
     });
 
+    it('processes a job that auto-retries with backoff', function (done) {
+      this.timeout(2500);
+      queue = Queue('test');
+      queue.schedule(100);
+      var failCount = 0;
+      var retries = 2;
+      var failMsg = 'failing to auto-retry...';
+
+      queue.process(function (job, jobDone) {
+        assert.strictEqual(job.data.foo, 'bar');
+        if (job.options.retries === 0) {
+          assert.strictEqual(failCount, retries);
+          jobDone();
+          done();
+        } else {
+          jobDone(new Error(failMsg));
+        }
+      });
+
+      queue.createJob({foo: 'bar'}).retries(retries).backoff(true).save(function (err, job) {
+        assert.isNull(err);
+        assert.ok(job.id);
+        assert.strictEqual(job.data.foo, 'bar');
+        assert.strictEqual(job.options.retries, retries);
+        assert.strictEqual(job.options.backoff, true);
+      });
+
+      queue.on('failed', function (job, err) {
+        failCount += 1;
+        assert.ok(job);
+        assert.strictEqual(job.data.foo, 'bar');
+        assert.strictEqual(err.message, failMsg);
+      });
+    });
 
     it('processes a job that times out and auto-retries', function (done) {
       queue = Queue('test');
@@ -913,7 +947,7 @@ describe('Queue', function () {
       job.save();
 
       worker.process(function (job, jobDone) {
-        jobDone(Error('fail!'));
+        jobDone(new Error('fail!'));
       });
     });
 
@@ -979,7 +1013,7 @@ describe('Queue', function () {
           jobDone(null, 'retried');
         } else {
           retried = true;
-          jobDone(Error('failing to retry'));
+          jobDone(new Error('failing to retry'));
         }
       });
     });

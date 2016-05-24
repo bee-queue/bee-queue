@@ -3,6 +3,7 @@ key 1 -> bq:name:id (job ID counter)
 key 2 -> bq:name:jobs
 key 3 -> bq:name:schedule
 arg 1 -> job data
+arg 2 -> schedule timestamp
 ]]
 
 local jobId = redis.call("incr", KEYS[1])
