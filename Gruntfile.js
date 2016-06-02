@@ -4,15 +4,15 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-githooks');
 
   grunt.initConfig({
-    eslint: {
-      options: {
-        config: '.eslintrc'
-      },
-      target: [
-        'lib/**/*.js',
-        'test/**/*.js'
-      ]
-    },
+		eslint: {
+			options: {
+				config: '.eslintrc'
+			},
+			target: [
+				'lib/**/*.js',
+				'test/**/*.js'
+			]
+		},
     mochaTest: {
       test: {
         options: {
@@ -30,4 +30,5 @@ module.exports = function(grunt) {
 
   grunt.registerTask('default', ['eslint']);
   grunt.registerTask('test', ['eslint', 'mochaTest']);
+  grunt.registerTask('test-only', ['mochaTest']);
 };

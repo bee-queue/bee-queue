@@ -65,7 +65,7 @@ describe('Queue', function () {
       });
     });
 
-    it.skip('should recover from a connection loss', function (done) {
+    it('process should recover from a connection loss', function (done) {
       queue = Queue('test');
       queue.on('error', err => {});
 
@@ -75,20 +75,42 @@ describe('Queue', function () {
         done();
       });
 
-      var batch = queue.bclient.batch()
-          .client('kill', 'type', 'pubsub')
-          .client('kill', 'type', 'normal');
-      batch.exec(function(err) {
-        if(err) {
-          throw err;
-        }
-        queue.createJob({foo: 'bar'}).save();
-      });
-
+			var batch = queue.bclient.batch()
+					.client('kill', 'type', 'pubsub')
+					.client('kill', 'type', 'normal');
+			batch.exec(function(err) {
+				if(err) {
+					throw err;
+				}
+				queue.createJob({foo: 'bar'}).save();
+			});
     });
 
+    it('schedule should recover from a connection loss', function (done) {
+			this.timeout(40000);
+      queue = Queue('test');
+      queue.on('error', err => {});
 
-    it.skip('should reconnect when the blocking client triggers an "end" event', function (done) {
+			var afterError = false;
+
+      queue.schedule(1000, function (err) {
+				if (afterError) {
+					done();
+				}
+      });
+
+			var batch = queue.bclient.batch()
+					.client('kill', 'type', 'pubsub')
+					.client('kill', 'type', 'normal');
+			batch.exec(function(err) {
+				if(err) {
+					throw err;
+				}
+				afterError = true;
+			});
+    });
+
+    it('should reconnect when the blocking client triggers an "end" event', function (done) {
       queue = Queue('test');
 
       var jobSpy = sinon.spy(queue, 'getNextJob');
