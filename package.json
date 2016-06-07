@@ -5,7 +5,7 @@
   "main": "index.js",
   "dependencies": {
     "grunt-cli": "^1.2.0",
-    "redis": "2.6.0-2"
+    "redis": "2.6.1"
   },
   "devDependencies": {
     "chai": "^1.10.0",
