@@ -195,7 +195,7 @@ To make this happen, workers periodically phone home to Redis about each job the
 ### Settings
 The default Queue settings are:
 ```javascript
-var queue = Queue('test', {
+var queue = new Queue('test', {
   prefix: 'bq',
   stallInterval: 5000,
   redis: {
@@ -261,7 +261,7 @@ This queue has successfully processed `job`. If `result` is defined, the handler
 #### retrying
 ```javascript
 queue.on('retrying', function (job, err) {
-  console.log('Job ' + job.id + ' failed with error ' + err.message ' but is being retried!');
+  console.log('Job ' + job.id + ' failed with error ' + err.message + ' but is being retried!');
 });
 ```
 This queue has processed `job`, but it reported a failure and has been re-enqueued for another attempt. `job.options.retries` has been decremented accordingly.
