@@ -13,6 +13,11 @@ if a jobId is not removed from the stalling set within a stallInterval window,
 we assume the job has stalled and should be reset (moved from active back to waiting)
 --]]
 
+-- For now don't move stalling jobs back to waiting.
+-- This means we no longer have at least once delivery
+return 0
+
+
 local now = tonumber(ARGV[1])
 local stallTime = tonumber(redis.call("get", KEYS[1]) or 0)
 

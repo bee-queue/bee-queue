@@ -4,7 +4,8 @@ key 2 -> bq:test:failed
 key 3 -> bq:test:waiting
 key 4 -> bq:test:active
 key 5 -> bq:test:stalling
-key 6 -> bq:test:jobs
+key 6 -> bq:test:schedule
+key 7 -> bq:test:jobs
 arg 1 -> jobId
 ]]
 
@@ -18,4 +19,5 @@ end
 redis.call("srem", KEYS[1], jobId)
 redis.call("srem", KEYS[2], jobId)
 redis.call("srem", KEYS[5], jobId)
-redis.call("hdel", KEYS[6], jobId)
+redis.call("zrem", KEYS[6], jobId)
+redis.call("hdel", KEYS[7], jobId)

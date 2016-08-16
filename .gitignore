@@ -3,3 +3,4 @@ logs
 notes.txt
 node_modules
 dump.rdb
+.idea/
