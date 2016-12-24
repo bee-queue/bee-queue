@@ -70,14 +70,12 @@ describe('Queue', function () {
       queue.on('error', function () {
         // Prevent errors from bubbling up into exceptions
       });
-
       queue.process(function (job, jobDone) {
         assert.strictEqual(job.data.foo, 'bar');
-        jobDone();
         done();
+        jobDone();
       });
-
-      queue.bclient.stream.end();
+      queue.bclient.stream.destroy();
       queue.bclient.emit('error', new Error('ECONNRESET'));
 
       queue.createJob({foo: 'bar'}).save();
@@ -107,10 +105,10 @@ describe('Queue', function () {
     it('creates a queue with default redis settings', function (done) {
       queue = Queue('test');
       queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, '127.0.0.1');
-        assert.strictEqual(queue.bclient.connectionOption.host, '127.0.0.1');
-        assert.strictEqual(queue.client.connectionOption.port, 6379);
-        assert.strictEqual(queue.bclient.connectionOption.port, 6379);
+        assert.strictEqual(queue.client.connection_options.host, '127.0.0.1');
+        assert.strictEqual(queue.bclient.connection_options.host, '127.0.0.1');
+        assert.strictEqual(queue.client.connection_options.port, 6379);
+        assert.strictEqual(queue.bclient.connection_options.port, 6379);
         assert.strictEqual(queue.client.selected_db, 0);
         assert.strictEqual(queue.bclient.selected_db, 0);
         done();
@@ -126,8 +124,8 @@ describe('Queue', function () {
       });
 
       queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, 'localhost');
-        assert.strictEqual(queue.bclient.connectionOption.host, 'localhost');
+        assert.strictEqual(queue.client.connection_options.host, 'localhost');
+        assert.strictEqual(queue.bclient.connection_options.host, 'localhost');
         assert.strictEqual(queue.client.selected_db, 1);
         assert.strictEqual(queue.bclient.selected_db, 1);
         done();
@@ -140,7 +138,7 @@ describe('Queue', function () {
       });
 
       queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, '127.0.0.1');
+        assert.strictEqual(queue.client.connection_options.host, '127.0.0.1');
         assert.isUndefined(queue.bclient);
         done();
       });
@@ -156,7 +154,7 @@ describe('Queue', function () {
       assert.ok(job.id);
       queue.client.hget('bq:test:jobs', job.id, function (getErr, jobData) {
         assert.isNull(getErr);
-        assert.strictEqual(jobData, job.toData());
+        assert.strictEqual(jobData.toString(), job.toData().toString());
         done();
       });
     });
@@ -257,7 +255,7 @@ describe('Queue', function () {
         assert.ok(createdJob.id);
         queue.getJob(createdJob.id, function (getErr, job) {
           assert.isNull(getErr);
-          assert.strictEqual(job.toData(), createdJob.toData());
+          assert.strictEqual(job.toData().toString(), createdJob.toData().toString());
           done();
         });
       });
@@ -273,7 +271,7 @@ describe('Queue', function () {
         assert.ok(createdJob.id);
         reader.getJob(createdJob.id, function (getErr, job) {
           assert.isNull(getErr);
-          assert.strictEqual(job.toData(), createdJob.toData());
+          assert.strictEqual(job.toData().toString(), createdJob.toData().toString());
           done();
         });
       });
@@ -875,13 +873,13 @@ describe('Queue', function () {
       var job = queue.createJob({foo: 'bar'});
       job.on('succeeded', function (result) {
         assert.isTrue(queueEvent);
-        assert.strictEqual(result, undefined);
+        assert.strictEqual(result, null);
         worker.close(done);
       });
       queue.once('job succeeded', function (jobId, result) {
         queueEvent = true;
         assert.strictEqual(jobId, job.id);
-        assert.strictEqual(result, undefined);
+        assert.strictEqual(result, null);
       });
       job.save();
 
