@@ -4,17 +4,19 @@
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
-    "redis": "^2.6.3",
-	"msgpack-lite": "^0.1.26"
+    "grunt": "^1.0.1",
+    "msgpack-lite": "^0.1.26",
+    "redis": "^2.6.3"
   },
   "devDependencies": {
     "chai": "^3.5.0",
+    "coveralls": "^2.11.2",
     "grunt": "^1.0.1",
-    "grunt-eslint": "^19.0.0",
+    "grunt-cli": "^1.2.0",
+    "grunt-eslint": "^18.1.0",
     "grunt-githooks": "^0.6.0",
     "grunt-mocha-test": "^0.13.2",
-    "sinon": "^1.12.2",
-    "coveralls": "^2.11.2"
+    "sinon": "^1.12.2"
   },
   "scripts": {
     "test": "grunt test"
