@@ -402,7 +402,7 @@ The job has succeeded. If `result` is defined, the handler called `done(null, re
 #### retrying
 ```javascript
 job.on('retrying', function (err) {
-  console.log('Job ' + job.id + ' failed with error ' + err.message ' but is being retried!');
+  console.log('Job ' + job.id + ' failed with error ' + err.message ' + but is being retried!');
 });
 ```
 The job has failed, but it is being automatically re-enqueued for another attempt. `job.options.retries` has been decremented accordingly.
