@@ -58,7 +58,7 @@ You'll also need [Redis 2.8+](http://redis.io/topics/quickstart) running somewhe
   - [Processing Jobs](#processing-jobs)
   - [Progress Reporting](#progress-reporting)
   - [Job & Queue Events](#job-and-queue-events)
-  - [Stalled Jobs](#stalled-jobs)
+  - [Stalling Jobs](#stalling-jobs)
 - [API Reference](#api-reference)
 - [Under The Hood](#under-the-hood)
 - [Contributing](#contributing)
