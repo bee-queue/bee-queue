@@ -1,147 +1,356 @@
-/*eslint-disable no-shadow, handle-callback-err */
+const Queue = require('../lib/queue');
 
-var Queue = require('../lib/queue');
-var barrier = require('../lib/helpers').barrier;
+const sinon = require('sinon');
+const assert = require('chai').assert;
 
-var sinon = require('sinon');
-var chai = require('chai');
-var assert = chai.assert;
+const helpers = require('../lib/helpers');
+
+// Effectively _.after
+function barrier(n, done) {
+  return () => {
+    n -= 1;
+    if (n === 0) {
+      done();
+    }
+  };
+}
 
 describe('Queue', function () {
-  var pqueue = Queue('test');
-  var queue;
+  const pqueue = new Queue('test', {
+    isWorker: false,
+    getEvents: false,
+    sendEvents: false,
+  });
 
-  var clearKeys = function (done) {
-    var reportDone = barrier(2, done);
+  before(() => pqueue.ready());
+
+  function closeQueue() {
+    const queue = this.queue;
     if (queue) {
-      queue.close(reportDone);
-      queue = undefined;
-    } else {
-      reportDone();
+      this.queue = undefined;
+      if (!queue.paused) {
+        return queue.close();
+      }
     }
+  }
 
-    pqueue.client.keys(pqueue.toKey('*'), function (err, keys) {
+  function clearKeys(done) {
+    pqueue.client.keys(pqueue.toKey('*'), (err, keys) => {
+      if (err) return done(err);
       if (keys.length) {
-        pqueue.client.del(keys, reportDone);
+        pqueue.client.del(keys, done);
       } else {
-        reportDone();
+        done();
       }
     });
-  };
+  }
 
   before(clearKeys);
+  beforeEach(closeQueue);
+  afterEach(closeQueue);
   afterEach(clearKeys);
 
-  describe('Connection', function () {
-    describe('Close', function () {
-      it('should call end on the clients', function (done) {
-        queue = Queue('test');
-        var clientSpy = sinon.spy(queue.client, 'end');
-        var bclientSpy = sinon.spy(queue.bclient, 'end');
-        var eclientSpy = sinon.spy(queue.eclient, 'end');
+  it('should convert itself to a Queue instance', function () {
+    this.queue = Queue('test');
 
-        queue.on('ready', function () {
-          queue.close(function (err) {
-            assert.isNull(err);
-            assert.isTrue(clientSpy.calledOnce);
-            assert.isTrue(bclientSpy.calledOnce);
-            assert.isTrue(eclientSpy.calledOnce);
-            queue = undefined;
+    assert.isTrue(this.queue instanceof Queue);
+  });
+
+  it('should initialize without ensuring scripts', function () {
+    this.queue = new Queue('test', {
+      ensureScripts: false
+    });
+
+    return this.queue.ready();
+  });
+
+  it('should support a ready callback', function (done) {
+    this.timeout(500);
+    this.queue = new Queue('test');
+    this.queue.ready(done);
+  });
+
+  it('should indicate whether it is running', function () {
+    this.queue = new Queue('test');
+
+    // The queue should be "running" immediately - different from ready because it can accept jobs
+    // immediately.
+    assert.isTrue(this.queue.isRunning());
+    return this.queue.ready()
+      .then(() => {
+        assert.isTrue(this.queue.isRunning());
+        return this.queue.close();
+      })
+      .then(() => assert.isFalse(this.queue.isRunning()));
+  });
+
+  describe('Connection', function () {
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
+
+    describe('Close', function () {
+      beforeEach(closeQueue);
+      afterEach(closeQueue);
+
+      it('should close the redis clients', function (done) {
+        this.queue = new Queue('test');
+
+        this.queue.once('ready', () => {
+          assert.isTrue(this.queue.client.ready);
+          assert.isTrue(this.queue.bclient.ready);
+          assert.isTrue(this.queue.eclient.ready);
+          this.queue.close((err) => {
+            if (err) return done(err);
+            assert.isFalse(this.queue.client.ready);
+            assert.isFalse(this.queue.bclient.ready);
+            assert.isFalse(this.queue.eclient.ready);
             done();
           });
         });
       });
 
-      it('should work without a callback', function (done) {
-        queue = Queue('test');
-        queue.on('ready', function () {
-          queue.close();
-          setTimeout(function () {
-            assert.isFalse(queue.client.connected);
-            queue = undefined;
-            done();
-          }, 20);
+      it('should support promises', function () {
+        this.queue = new Queue('test');
+
+        return this.queue.ready()
+          .then(() => this.queue.close());
+      });
+
+      it('should not fail after a second call', function () {
+        this.queue = new Queue('test');
+
+        return this.queue.ready()
+          .then(() => this.queue.close())
+          .then(() => this.queue.close());
+      });
+
+      it('should stop processing even with a redis retry strategy', function () {
+        this.queue = new Queue('test', {
+          redis: {
+            // Retry after 1 millisecond.
+            retryStrategy: () => 1
+          }
         });
+
+        const processSpy = sinon.spy(() => Promise.resolve());
+        this.queue.process(processSpy);
+
+        return this.queue.createJob({is: 'first'}).save()
+          .then(() => helpers.waitOn(this.queue, 'succeeded', true))
+          .then(() => {
+            assert.isTrue(processSpy.calledOnce);
+            processSpy.reset();
+
+            this.queue.close();
+
+            this.queue2 = new Queue('test', {
+              // If the other queue is still somehow running, don't take work from it.
+              isWorker: false
+            });
+
+            return this.queue2.createJob({is: 'second'}).save();
+          })
+          .then(() => helpers.delay(50))
+          .then(() => this.queue2.close())
+          .then(() => {
+            this.queue3 = new Queue('test');
+
+            this.newSpy = sinon.spy(() => Promise.resolve());
+            this.queue3.process(this.newSpy);
+
+            return helpers.waitOn(this.queue3, 'succeeded', true);
+          })
+          .then(() => {
+            return this.queue3.close();
+          })
+          .then(() => {
+            assert.isTrue(this.newSpy.calledOnce);
+            assert.isFalse(processSpy.called);
+          });
+      });
+
+      it('should gracefully shut down', function () {
+        this.queue = new Queue('test');
+
+        const errorSpy = sinon.spy();
+        this.queue.on('error', errorSpy);
+
+        const started = helpers.deferred(), resume = helpers.deferred();
+        this.queue.process(() => {
+          setImmediate(started.defer(), null);
+          return resume;
+        });
+
+        const success = helpers.waitOn(this.queue, 'succeeded', true);
+
+        return this.queue.createJob({}).save()
+          .then(() => started)
+          .then(() => {
+            setTimeout(resume.defer(), 20, null);
+            return this.queue.close();
+          })
+          .then(() => success)
+          .then(() => {
+            if (errorSpy.called) {
+              throw errorSpy.firstCall.args[0];
+            }
+          });
+      });
+
+      it('should not accept new jobs while shutting down', function () {
+        this.queue = new Queue('test');
+
+        const errorSpy = sinon.spy();
+        this.queue.on('error', errorSpy);
+
+        const started = helpers.deferred(), resume = helpers.deferred();
+        const processSpy = sinon.spy(() => {
+          setImmediate(started.defer(), null);
+          return resume;
+        });
+        this.queue.process(processSpy);
+
+        const success = helpers.waitOn(this.queue, 'succeeded', true);
+
+        return this.queue.createJob({is: 'first'}).save()
+          .then(() => started)
+          .then(() => {
+            this.queue.createJob({is: 'second'}).save();
+            setTimeout(resume.defer(), 20, null);
+            return this.queue.close();
+          })
+          .then(() => success)
+          .then(() => {
+            assert.isTrue(processSpy.calledOnce);
+            assert.deepEqual(processSpy.firstCall.args[0].data, {is: 'first'});
+
+            if (errorSpy.called) {
+              throw errorSpy.firstCall.args[0];
+            }
+          });
+      });
+
+      it('should stop the check timer', function () {
+        this.queue = new Queue('test', {
+          stallInterval: 100
+        });
+
+        this.queue.checkStalledJobs(50);
+
+        return helpers.delay(25)
+          .then(() => {
+            this.spy = sinon.spy(this.queue, 'checkStalledJobs');
+            return this.queue.close();
+          })
+          .then(() => helpers.delay(50))
+          .then(() => {
+            assert.isFalse(this.spy.called);
+            this.spy.restore();
+          });
       });
     });
 
-    it('should recover from a connection loss', function (done) {
-      queue = Queue('test');
-      queue.on('error', function () {
-        // Prevent errors from bubbling up into exceptions
+    it('should not error on close', function (done) {
+      this.queue = new Queue('test');
+
+      // No errors!
+      this.queue.on('error', done);
+
+      // Close the queue
+      helpers.asCallback(this.queue.close()
+        .then(() => helpers.delay(30)), done);
+    });
+
+    it('should recover from a connection loss', function () {
+      this.queue = new Queue('test', {
+        redis: {
+          // Retry after 1 millisecond.
+          retryStrategy: () => 1
+        }
       });
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job) => {
         assert.strictEqual(job.data.foo, 'bar');
-        jobDone();
-        done();
+        return Promise.resolve();
       });
 
-      queue.bclient.stream.end();
-      queue.bclient.emit('error', new Error('ECONNRESET'));
+      this.queue.ready()
+        .then(() => this.queue.bclient.stream.destroy());
 
-      queue.createJob({foo: 'bar'}).save();
+      this.queue.createJob({foo: 'bar'}).save();
+
+      // We don't expect errors because destroy doesn't cause an actual error - it just forces redis
+      // to reconnect.
+      return helpers.waitOn(this.queue, 'succeeded', true);
     });
 
+    it('should reconnect when the blocking client disconnects', function () {
+      this.queue = new Queue('test');
 
-    it('should reconnect when the blocking client triggers an "end" event', function (done) {
-      queue = Queue('test');
+      const jobSpy = sinon.spy(this.queue, 'getNextJob');
 
-      var jobSpy = sinon.spy(queue, 'getNextJob');
-      queue.process(function (job, jobDone) {
+      this.queue.process(() => {
         // First getNextJob fails on the disconnect, second should succeed
         assert.strictEqual(jobSpy.callCount, 2);
-        jobDone();
-        done();
+        return Promise.resolve();
       });
 
       // Not called at all yet because queue.process uses setImmediate
       assert.strictEqual(jobSpy.callCount, 0);
 
-      queue.createJob({foo: 'bar'}).save();
-      queue.bclient.emit('end');
+      this.queue.createJob({foo: 'bar'}).save();
+      this.queue.ready()
+        .then(() => this.queue.bclient.stream.destroy());
+
+      return helpers.waitOn(this.queue, 'succeeded', true)
+        .then(() => {
+          assert.strictEqual(jobSpy.callCount, 2);
+        });
     });
   });
 
   describe('Constructor', function () {
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
+
     it('creates a queue with default redis settings', function (done) {
-      queue = Queue('test');
-      queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, '127.0.0.1');
-        assert.strictEqual(queue.bclient.connectionOption.host, '127.0.0.1');
-        assert.strictEqual(queue.client.connectionOption.port, 6379);
-        assert.strictEqual(queue.bclient.connectionOption.port, 6379);
-        assert.strictEqual(queue.client.selected_db, 0);
-        assert.strictEqual(queue.bclient.selected_db, 0);
+      this.queue = new Queue('test');
+      this.queue.once('ready', () => {
+        assert.strictEqual(this.queue.client.connection_options.host, '127.0.0.1');
+        assert.strictEqual(this.queue.bclient.connection_options.host, '127.0.0.1');
+        assert.strictEqual(this.queue.client.connection_options.port, 6379);
+        assert.strictEqual(this.queue.bclient.connection_options.port, 6379);
+        assert.isTrue(this.queue.client.selected_db == null);
+        assert.isTrue(this.queue.bclient.selected_db == null);
         done();
       });
     });
 
     it('creates a queue with passed redis settings', function (done) {
-      queue = Queue('test', {
+      this.queue = new Queue('test', {
         redis: {
           host: 'localhost',
           db: 1
         }
       });
 
-      queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, 'localhost');
-        assert.strictEqual(queue.bclient.connectionOption.host, 'localhost');
-        assert.strictEqual(queue.client.selected_db, 1);
-        assert.strictEqual(queue.bclient.selected_db, 1);
+      this.queue.once('ready', () => {
+        assert.strictEqual(this.queue.client.connection_options.host, 'localhost');
+        assert.strictEqual(this.queue.bclient.connection_options.host, 'localhost');
+        assert.strictEqual(this.queue.client.selected_db, 1);
+        assert.strictEqual(this.queue.bclient.selected_db, 1);
         done();
       });
     });
 
     it('creates a queue with isWorker false', function (done) {
-      queue = Queue('test', {
+      this.queue = new Queue('test', {
         isWorker: false
       });
 
-      queue.once('ready', function () {
-        assert.strictEqual(queue.client.connectionOption.host, '127.0.0.1');
-        assert.isUndefined(queue.bclient);
+      this.queue.once('ready', () => {
+        assert.strictEqual(this.queue.client.connection_options.host, '127.0.0.1');
+        assert.isUndefined(this.queue.bclient);
         done();
       });
     });
@@ -149,13 +358,13 @@ describe('Queue', function () {
   });
 
   it('adds a job with correct prefix', function (done) {
-    queue = Queue('test');
+    this.queue = new Queue('test');
 
-    queue.createJob({foo: 'bar'}).save(function (err, job) {
-      assert.isNull(err);
+    this.queue.createJob({foo: 'bar'}).save((err, job) => {
+      if (err) return done(err);
       assert.ok(job.id);
-      queue.client.hget('bq:test:jobs', job.id, function (getErr, jobData) {
-        assert.isNull(getErr);
+      this.queue.client.hget('bq:test:jobs', job.id, (getErr, jobData) => {
+        if (getErr) return done(getErr);
         assert.strictEqual(jobData, job.toData());
         done();
       });
@@ -163,15 +372,19 @@ describe('Queue', function () {
   });
 
   describe('Health Check', function () {
-    it('reports a waiting job', function (done) {
-      queue = Queue('test');
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
 
-      var job = queue.createJob({foo: 'bar'});
-      job.save(function (err, job) {
-        assert.isNull(err);
+    it('reports a waiting job', function (done) {
+      this.queue = new Queue('test', {
+        isWorker: false
+      });
+
+      this.queue.createJob({foo: 'bar'}).save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
-        queue.checkHealth(function (healthErr, counts) {
-          assert.isNull(healthErr);
+        this.queue.checkHealth((healthErr, counts) => {
+          if (err) return done(healthErr);
           assert.strictEqual(counts.waiting, 1);
           done();
         });
@@ -179,43 +392,43 @@ describe('Queue', function () {
     });
 
     it('reports an active job', function (done) {
-      queue = Queue('test');
+      this.queue = new Queue('test');
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
-        queue.checkHealth(function (healthErr, counts) {
-          assert.isNull(healthErr);
+        this.queue.checkHealth((healthErr, counts) => {
+          if (healthErr) return done(healthErr);
           assert.strictEqual(counts.active, 1);
           jobDone();
           done();
         });
       });
 
-      var job = queue.createJob({foo: 'bar'});
-      job.save(function (err, job) {
-        assert.isNull(err);
+      const job = this.queue.createJob({foo: 'bar'});
+      job.save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
       });
     });
 
     it('reports a succeeded job', function (done) {
-      queue = Queue('test');
+      this.queue = new Queue('test');
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
         jobDone();
       });
 
-      var job = queue.createJob({foo: 'bar'});
-      job.save(function (err, job) {
-        assert.isNull(err);
+      const job = this.queue.createJob({foo: 'bar'});
+      job.save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
       });
 
-      queue.on('succeeded', function (job) {
+      this.queue.once('succeeded', (job) => {
         assert.ok(job);
-        queue.checkHealth(function (healthErr, counts) {
-          assert.isNull(healthErr);
+        this.queue.checkHealth((healthErr, counts) => {
+          if (healthErr) return done(healthErr);
           assert.strictEqual(counts.succeeded, 1);
           done();
         });
@@ -223,23 +436,23 @@ describe('Queue', function () {
     });
 
     it('reports a failed job', function (done) {
-      queue = Queue('test');
+      this.queue = new Queue('test');
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
-        jobDone(Error('failed!'));
+        jobDone(new Error('failed!'));
       });
 
-      var job = queue.createJob({foo: 'bar'});
-      job.save(function (err, job) {
-        assert.isNull(err);
+      const job = this.queue.createJob({foo: 'bar'});
+      job.save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
       });
 
-      queue.on('failed', function (job) {
+      this.queue.once('failed', (job) => {
         assert.ok(job);
-        queue.checkHealth(function (healthErr, counts) {
-          assert.isNull(healthErr);
+        this.queue.checkHealth((healthErr, counts) => {
+          if (healthErr) return done(healthErr);
           assert.strictEqual(counts.failed, 1);
           done();
         });
@@ -248,83 +461,144 @@ describe('Queue', function () {
   });
 
   describe('getJob', function () {
-    it('gets an job created by the same queue instance', function (done) {
-      queue = Queue('test');
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
 
-      var createdJob = queue.createJob({foo: 'bar'});
-      createdJob.save(function (err, createdJob) {
-        assert.isNull(err);
+    it('gets an job created by the same queue instance', function (done) {
+      this.queue = new Queue('test');
+
+      const createdJob = this.queue.createJob({foo: 'bar'});
+      createdJob.save((err, createdJob) => {
+        if (err) return done(err);
         assert.ok(createdJob.id);
-        queue.getJob(createdJob.id, function (getErr, job) {
-          assert.isNull(getErr);
+        this.queue.getJob(createdJob.id, (getErr, job) => {
+          if (getErr) return done(getErr);
           assert.strictEqual(job.toData(), createdJob.toData());
           done();
         });
       });
     });
 
-    it('gets a job created by another queue instance', function (done) {
-      queue = Queue('test');
-      var reader = Queue('test');
+    it('should return null for a nonexistent job', function () {
+      this.queue = new Queue('test');
 
-      var job = queue.createJob({foo: 'bar'});
-      job.save(function (err, createdJob) {
-        assert.isNull(err);
+      return this.queue.getJob('deadbeef')
+        .then((job) => assert.strictEqual(job, null));
+    });
+
+    it('gets a job created by another queue instance', function (done) {
+      this.queue = new Queue('test', {
+        isWorker: false
+      });
+      const reader = new Queue('test', {
+        isWorker: false
+      });
+
+      const job = this.queue.createJob({foo: 'bar'});
+      job.save((err, createdJob) => {
+        if (err) return done(err);
         assert.ok(createdJob.id);
-        reader.getJob(createdJob.id, function (getErr, job) {
-          assert.isNull(getErr);
+        reader.getJob(createdJob.id, (getErr, job) => {
+          if (getErr) return done(getErr);
           assert.strictEqual(job.toData(), createdJob.toData());
           done();
         });
       });
+    });
+
+    it('should get a job with a specified id', function () {
+      this.queue = new Queue('test', {
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      return this.queue.createJob({foo: 'bar'}).setId('amazingjob').save()
+        .then(() => this.queue.getJob('amazingjob'))
+        .then((job) => {
+          assert.ok(job);
+          assert.strictEqual(job.id, 'amazingjob');
+          assert.deepEqual(job.data, {foo: 'bar'});
+        });
     });
   });
 
   describe('Processing jobs', function () {
-    it('processes a job', function (done) {
-      queue = Queue('test');
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
 
-      queue.process(function (job, jobDone) {
+    it('processes a job', function (done) {
+      this.queue = new Queue('test');
+
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
         jobDone(null, 'baz');
       });
 
-      var job = queue.createJob({foo: 'bar'});
-      job.save(function (err, job) {
-        assert.isNull(err);
+      const job = this.queue.createJob({foo: 'bar'});
+      job.save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
       });
 
-      queue.on('succeeded', function (job, data) {
+      this.queue.once('succeeded', (job, data) => {
         assert.ok(job);
         assert.strictEqual(data, 'baz');
-        job.isInSet('succeeded', function (err, isMember) {
+        job.isInSet('succeeded', (err, isMember) => {
+          if (err) return done(err);
           assert.isTrue(isMember);
           done();
         });
       });
     });
 
+    it('should process a job with a non-numeric id', function () {
+      this.queue = new Queue('test', {
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      this.queue.process((job) => {
+        assert.strictEqual(job.id, 'amazingjob');
+        assert.strictEqual(job.data.foo, 'baz');
+        return Promise.resolve();
+      });
+
+      const success = helpers.waitOn(this.queue, 'succeeded', true);
+
+      return this.queue.createJob({foo: 'baz'}).setId('amazingjob').save()
+        .then(() => success)
+        .then(() => this.queue.getJob('amazingjob'))
+        .then((job) => {
+          assert.ok(job);
+          assert.strictEqual(job.id, 'amazingjob');
+          assert.deepEqual(job.data, {foo: 'baz'});
+          return job.isInSet('succeeded');
+        })
+        .then((isMember) => assert.isTrue(isMember));
+    });
+
     it('processes a job with removeOnSuccess', function (done) {
-      queue = Queue('test', {
+      this.queue = new Queue('test', {
         removeOnSuccess: true
       });
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
         jobDone(null);
       });
 
-      queue.createJob({foo: 'bar'}).save(function (err, job) {
-        assert.isNull(err);
+      this.queue.createJob({foo: 'bar'}).save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
       });
 
-      queue.on('succeeded', function (job) {
-        queue.client.hget(queue.toKey('jobs'), job.id, function (err, jobData) {
-          assert.isNull(err);
+      this.queue.once('succeeded', (job) => {
+        this.queue.client.hget(this.queue.toKey('jobs'), job.id, (err, jobData) => {
+          if (err) return done(err);
           assert.isNull(jobData);
           done();
         });
@@ -332,25 +606,26 @@ describe('Queue', function () {
     });
 
     it('processes a job that fails', function (done) {
-      queue = Queue('test');
+      this.queue = new Queue('test');
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
-        jobDone(Error('failed!'));
+        jobDone(new Error('failed!'));
       });
 
-      var job = queue.createJob({foo: 'bar'});
-      job.save(function (err, job) {
-        assert.isNull(err);
+      const job = this.queue.createJob({foo: 'bar'});
+      job.save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
       });
 
-      queue.on('failed', function (job, err) {
+      this.queue.once('failed', (job, err) => {
         assert.ok(job);
         assert.strictEqual(job.data.foo, 'bar');
         assert.strictEqual(err.message, 'failed!');
-        job.isInSet('failed', function (err, isMember) {
+        job.isInSet('failed', (err, isMember) => {
+          if (err) return done(err);
           assert.isTrue(isMember);
           done();
         });
@@ -358,22 +633,24 @@ describe('Queue', function () {
     });
 
     it('processes a job that throws an exception', function (done) {
-      queue = Queue('test', {
+      this.queue = new Queue('test', {
         catchExceptions: true
       });
 
-      queue.process(function (job) {
-        assert.strictEqual(job.data.foo, 'bar');
-        throw Error('exception!');
+      this.queue.process((job) => {
+        setImmediate(() => {
+          assert.strictEqual(job.data.foo, 'bar');
+        });
+        throw new Error('exception!');
       });
 
-      queue.createJob({foo: 'bar'}).save(function (err, job) {
-        assert.isNull(err);
+      this.queue.createJob({foo: 'bar'}).save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
       });
 
-      queue.on('failed', function (job, err) {
+      this.queue.on('failed', (job, err) => {
         assert.ok(job);
         assert.strictEqual(job.data.foo, 'bar');
         assert.strictEqual(err.message, 'exception!');
@@ -382,54 +659,54 @@ describe('Queue', function () {
     });
 
     it('processes and retries a job that fails', function (done) {
-      queue = Queue('test');
-      var callCount = 0;
+      this.queue = new Queue('test');
+      let callCount = 0;
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job, jobDone) => {
         callCount++;
         assert.strictEqual(job.data.foo, 'bar');
         if (callCount > 1) {
           return jobDone();
         } else {
-          return jobDone(Error('failed!'));
+          return jobDone(new Error('failed!'));
         }
       });
 
-      queue.on('failed', function (job, err) {
+      this.queue.on('failed', (job, err) => {
         assert.ok(job);
         assert.strictEqual(job.data.foo, 'bar');
         assert.strictEqual(err.message, 'failed!');
         job.retry();
       });
 
-      queue.on('succeeded', function () {
+      this.queue.once('succeeded', () => {
         assert.strictEqual(callCount, 2);
         done();
       });
 
-      queue.createJob({foo: 'bar'}).save(function (err, job) {
-        assert.isNull(err);
+      this.queue.createJob({foo: 'bar'}).save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
       });
     });
 
     it('processes a job that times out', function (done) {
-      queue = Queue('test');
+      this.queue = new Queue('test');
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
         setTimeout(jobDone, 20);
       });
 
-      queue.createJob({foo: 'bar'}).timeout(10).save(function (err, job) {
-        assert.isNull(err);
+      this.queue.createJob({foo: 'bar'}).timeout(10).save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
         assert.strictEqual(job.options.timeout, 10);
       });
 
-      queue.on('failed', function (job, err) {
+      this.queue.on('failed', (job, err) => {
         assert.ok(job);
         assert.strictEqual(job.data.foo, 'bar');
         assert.strictEqual(err.message, 'Job 1 timed out (10 ms)');
@@ -438,30 +715,31 @@ describe('Queue', function () {
     });
 
     it('processes a job that auto-retries', function (done) {
-      queue = Queue('test');
-      var failCount = 0;
-      var retries = 1;
-      var failMsg = 'failing to auto-retry...';
+      this.queue = new Queue('test');
+      const retries = 1;
+      const failMsg = 'failing to auto-retry...';
 
-      queue.process(function (job, jobDone) {
+      let failCount = 0;
+
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
         if (job.options.retries === 0) {
           assert.strictEqual(failCount, retries);
           jobDone();
           done();
         } else {
-          jobDone(Error(failMsg));
+          jobDone(new Error(failMsg));
         }
       });
 
-      queue.createJob({foo: 'bar'}).retries(retries).save(function (err, job) {
-        assert.isNull(err);
+      this.queue.createJob({foo: 'bar'}).retries(retries).save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
         assert.strictEqual(job.options.retries, retries);
       });
 
-      queue.on('failed', function (job, err) {
+      this.queue.on('failed', (job, err) => {
         failCount += 1;
         assert.ok(job);
         assert.strictEqual(job.data.foo, 'bar');
@@ -471,11 +749,12 @@ describe('Queue', function () {
 
 
     it('processes a job that times out and auto-retries', function (done) {
-      queue = Queue('test');
-      var failCount = 0;
-      var retries = 1;
+      this.queue = new Queue('test');
+      const retries = 1;
 
-      queue.process(function (job, jobDone) {
+      let failCount = 0;
+
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
         if (job.options.retries === 0) {
           assert.strictEqual(failCount, retries);
@@ -486,53 +765,60 @@ describe('Queue', function () {
         }
       });
 
-      queue.createJob({foo: 'bar'}).timeout(10).retries(retries).save(function (err, job) {
-        assert.isNull(err);
+      this.queue.createJob({foo: 'bar'}).timeout(10).retries(retries).save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
         assert.strictEqual(job.options.retries, retries);
       });
 
-      queue.on('failed', function (job) {
+      this.queue.on('failed', (job) => {
         failCount += 1;
         assert.ok(job);
         assert.strictEqual(job.data.foo, 'bar');
       });
     });
 
-    it('Refuses to process when isWorker is false', function (done) {
-      queue = Queue('test', {
+    it('refuses to process when isWorker is false', function () {
+      this.queue = new Queue('test', {
         isWorker: false
       });
 
-      try {
-        queue.process();
-      } catch (err) {
-        assert.strictEqual(err.message, 'Cannot call Queue.prototype.process on a non-worker');
-        done();
-      }
+      const errorSpy = sinon.spy();
+      this.queue.on('error', errorSpy);
+
+      assert.throws(() => {
+        this.queue.process();
+      }, 'Cannot call Queue#process on a non-worker');
+      assert.isFalse(errorSpy.called);
     });
 
-    it('Refuses to be called twice', function (done) {
-      queue = Queue('test');
+    it('refuses to be called twice', function () {
+      this.queue = new Queue('test');
 
-      queue.process(function () {});
-      try {
-        queue.process();
-      } catch (err) {
-        assert.strictEqual(err.message, 'Cannot call Queue.prototype.process twice');
-        done();
-      }
+      const errorSpy = sinon.spy();
+      this.queue.on('error', errorSpy);
+
+      this.queue.process(() => {});
+
+      assert.throws(() => {
+        this.queue.process();
+      }, 'Cannot call Queue#process twice');
+      assert.isFalse(errorSpy.called);
     });
   });
 
   describe('Processing many jobs', function () {
-    it('processes many jobs in a row with one processor', function (done) {
-      queue = Queue('test');
-      var counter = 0;
-      var numJobs = 20;
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
 
-      queue.process(function (job, jobDone) {
+    it('processes many jobs in a row with one processor', function (done) {
+      this.queue = new Queue('test');
+      const numJobs = 20;
+
+      let counter = 0;
+
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.count, counter);
         counter++;
         jobDone();
@@ -541,20 +827,21 @@ describe('Queue', function () {
         }
       });
 
-      for (var i = 0; i < numJobs; i++) {
-        queue.createJob({count: i}).save();
+      for (let i = 0; i < numJobs; i++) {
+        this.queue.createJob({count: i}).save();
       }
     });
 
     it('processes many jobs with one concurrent processor', function (done) {
-      queue = Queue('test');
-      var counter = 0;
-      var concurrency = 5;
-      var numJobs = 20;
+      this.queue = new Queue('test');
+      const concurrency = 5;
+      const numJobs = 20;
 
-      queue.process(concurrency, function (job, jobDone) {
-        assert.isTrue(queue.running <= concurrency);
-        setTimeout(function () {
+      let counter = 0;
+
+      this.queue.process(concurrency, (job, jobDone) => {
+        assert.isTrue(this.queue.running <= concurrency);
+        setTimeout(() => {
           jobDone();
           assert.strictEqual(job.data.count, counter);
           counter++;
@@ -564,20 +851,21 @@ describe('Queue', function () {
         }, 10);
       });
 
-      for (var i = 0; i < numJobs; i++) {
-        queue.createJob({count: i}).save();
+      for (let i = 0; i < numJobs; i++) {
+        this.queue.createJob({count: i}).save();
       }
     });
 
     it('processes many randomly delayed jobs with one concurrent processor', function (done) {
-      queue = Queue('test');
-      var counter = 0;
-      var concurrency = 5;
-      var numJobs = 20;
+      this.queue = new Queue('test');
+      const concurrency = 5;
+      const numJobs = 20;
 
-      queue.process(concurrency, function (job, jobDone) {
-        assert.isTrue(queue.running <= concurrency);
-        setTimeout(function () {
+      let counter = 0;
+
+      this.queue.process(concurrency, (job, jobDone) => {
+        assert.isTrue(this.queue.running <= concurrency);
+        setTimeout(() => {
           jobDone();
           counter++;
           if (counter === numJobs) {
@@ -586,92 +874,377 @@ describe('Queue', function () {
         }, 10);
       });
 
-      var addJob = function (i) {
-        queue.createJob({count: i}).save();
-      };
-
-      for (var i = 0; i < numJobs; i++) {
-        setTimeout(addJob.bind(null, i), Math.random() * 50);
+      for (let i = 0; i < numJobs; i++) {
+        setTimeout(() => {
+          this.queue.createJob({count: i}).save();
+        }, Math.random() * 50);
       }
     });
 
     it('processes many jobs with multiple processors', function (done) {
-      queue = Queue('test');
-      var processors = [
-        Queue('test'),
-        Queue('test'),
-        Queue('test')
+      this.queue = new Queue('test');
+      const processors = [
+        new Queue('test'),
+        new Queue('test'),
+        new Queue('test')
       ];
-      var counter = 0;
-      var numJobs = 20;
-      var processed = [];
+      const numJobs = 20;
+      const processed = new Set();
 
-      var handleJob = function (job, jobDone) {
-        counter++;
-        processed[job.data.count] = true;
+      let counter = 0;
+
+      const handleJob = (job, jobDone) => {
         jobDone();
-
-        if (counter === numJobs) {
-          for (var i = 0; i < numJobs; i++) {
-            assert.isTrue(processed[i]);
-          }
-          var reportClosed = barrier(3, done);
-          processors.forEach(function (queue) {
-            queue.close(reportClosed);
-          });
-        }
       };
 
-      processors.forEach(function (queue) {
-        queue.process(handleJob);
+      const success = (job) => {
+        if (processed.has(job.data.count)) {
+          assert.fail('job already processed');
+        }
+        processed.add(job.data.count);
+        counter++;
+
+        if (counter < numJobs) return;
+        assert.strictEqual(counter, numJobs);
+
+        for (let i = 0; i < numJobs; i++) {
+          assert.isTrue(processed.has(i));
+        }
+        helpers.asCallback(Promise.all(processors.map((queue) => queue.close())), done);
+      };
+
+      processors.forEach((queue) => {
+        queue.process(handleJob).on('succeeded', success);
       });
 
-      for (var i = 0; i < numJobs; i++) {
-        queue.createJob({count: i}).save();
+      for (let i = 0; i < numJobs; i++) {
+        this.queue.createJob({count: i}).save();
       }
     });
   });
 
+  describe('Delayed jobs', function () {
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
+
+    it('should process delayed jobs', function () {
+      this.queue = new Queue('test', {
+        processDelayed: true,
+        getEvents: false
+      });
+
+      const errorSpy = sinon.spy();
+      this.queue.on('error', errorSpy);
+
+      const processSpy = sinon.spy(() => {
+        return Promise.resolve();
+      });
+      this.queue.process(processSpy);
+
+      const raised = helpers.waitOn(this.queue, 'raised jobs');
+      const succeeded = helpers.waitOn(this.queue, 'succeeded');
+
+      const start = Date.now();
+      return this.queue.createJob({iamdelayed: true})
+        .delayUntil(start + 50)
+        .save()
+        .then(() => {
+          return helpers.delay(start + 10 - Date.now());
+        })
+        .then(() => {
+          assert.isFalse(processSpy.called);
+          return helpers.delay(start + 51 - Date.now());
+        })
+        .then(() => {
+          return Promise.all([raised, succeeded]);
+        })
+        .then(() => {
+          assert.isTrue(processSpy.calledOnce);
+          assert.isTrue(processSpy.firstCall.args[0].data.iamdelayed);
+          if (errorSpy.called) {
+            throw errorSpy.firstCall.args[0];
+          }
+        });
+    });
+
+    it('should process two proximal delayed jobs', function () {
+      this.queue = new Queue('test', {
+        processDelayed: true,
+        delayedDebounce: 150,
+
+        // Set this far later than the timeout to ensure we pull the
+        nearTermWindow: 10000
+      });
+
+      const errorSpy = sinon.spy();
+      this.queue.on('error', errorSpy);
+
+      const processSpy = sinon.spy(() => {
+        return Promise.resolve();
+      });
+      this.queue.process(processSpy);
+
+      const successSpy = sinon.spy();
+      this.queue.on('succeeded', successSpy);
+
+
+      return this.queue.ready()
+        .then(() => {
+          sinon.spy(this.queue, '_evalScript');
+          this.start = Date.now();
+          return Promise.all([
+            this.queue.createJob({is: 'early'}).delayUntil(this.start + 10).save(),
+
+            // These should process together.
+            this.queue.createJob({is: 'late', uid: 1}).delayUntil(this.start + 200).save(),
+            this.queue.createJob({is: 'late', uid: 2}).delayUntil(this.start + 290).save(),
+          ]);
+        })
+        .then(() => helpers.waitOn(this.queue, 'succeeded', true))
+        .then(() => helpers.waitOn(this.queue, 'succeeded', true))
+        .then(() => helpers.waitOn(this.queue, 'succeeded', true))
+        .then(() => {
+          assert.isTrue(Date.now() >= this.start + 290);
+          assert.isTrue(processSpy.calledThrice);
+          assert.deepEqual(processSpy.firstCall.args[0].data, {is: 'early'});
+          assert.deepEqual(processSpy.secondCall.args[0].data.is, 'late');
+          assert.deepEqual(processSpy.thirdCall.args[0].data.is, 'late');
+          assert.isTrue(successSpy.calledThrice);
+          assert.deepEqual(successSpy.firstCall.args[0].data, {is: 'early'});
+          assert.deepEqual(successSpy.secondCall.args[0].data.is, 'late');
+          assert.deepEqual(successSpy.thirdCall.args[0].data.is, 'late');
+          if (errorSpy.called) {
+            throw errorSpy.firstCall.args[0];
+          }
+        });
+    });
+
+    it('should process a distant delayed job', function () {
+      this.queue = new Queue('test', {
+        processDelayed: true,
+        nearTermWindow: 100
+      });
+
+      const errorSpy = sinon.spy();
+      this.queue.on('error', errorSpy);
+
+      const processSpy = sinon.spy(() => Promise.resolve());
+      this.queue.process(processSpy);
+
+      sinon.spy(this.queue, '_evalScript');
+
+      const success = helpers.waitOn(this.queue, 'succeeded', true);
+
+      const start = Date.now();
+      const job = this.queue.createJob({is: 'distant'}).delayUntil(start + 150);
+      return job.save()
+        .then(() => helpers.delay(start + 80 - Date.now()))
+        .then(() => this.queue._evalScript.reset())
+        .then(() => helpers.delay(start + 120 - Date.now()))
+        .then(() => {
+          assert.isTrue(this.queue._evalScript.calledOnce);
+          assert.isTrue(this.queue._evalScript.calledWith('raiseDelayedJobs'));
+          return success;
+        })
+        .then(() => {
+          assert.isTrue(Date.now() >= start + 150);
+          assert.isTrue(processSpy.calledOnce);
+          assert.deepEqual(processSpy.firstCall.args[0].data, {is: 'distant'});
+          if (errorSpy.called) {
+            throw errorSpy.firstCall.args[0];
+          }
+        });
+    });
+
+    it('should process delayed jobs from other workers', function () {
+      this.queue = new Queue('test', {
+        getEvents: false,
+        processDelayed: false
+      });
+
+      const processSpy = sinon.spy(() => Promise.resolve());
+      this.queue.process(processSpy);
+
+      const success = helpers.waitOn(this.queue, 'succeeded', true);
+
+      this.queue2 = new Queue('test', {
+        isWorker: false,
+        getEvents: false,
+        processDelayed: true
+      });
+
+      const start = Date.now();
+      const job = this.queue.createJob({is: 'delayed'}).delayUntil(start + 150);
+      return this.queue2.ready()
+        // Save after the second queue is ready to avoid a race condition between the addDelayedJob
+        // script and the SUBSCRIBE command.
+        .then(() => job.save())
+        .then(() => success)
+        .then(() => this.queue2.close());
+    });
+
+    it('should process the delayed job the first time it was created', function () {
+      this.queue = new Queue('test', {
+        getEvents: false,
+        sendEvents: false,
+        processDelayed: true
+      });
+
+      const processSpy = sinon.spy(() => Promise.resolve());
+      this.queue.process(processSpy);
+
+      const success = helpers.waitOn(this.queue, 'succeeded', true);
+
+      return this.queue.ready()
+        .then(() => {
+          this.start = Date.now();
+          return this.queue.createJob({is: 'delayed'}).setId('awesomejob').delayUntil(this.start + 150).save();
+        })
+        .then(() => helpers.delay(Date.now() - this.start + 75))
+        // Verify that we don't overwrite the job.
+        .then(() => this.queue.createJob({is: 'delayed'}).setId('awesomejob').delayUntil(this.start + 10000).save())
+        .then(() => success);
+    });
+  });
+
+  describe('Backoff', function () {
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
+
+    it('should fail for invalid backoff strategies and delays', function () {
+      this.queue = new Queue('test');
+      assert.throws(() => this.queue.createJob({}).backoff('wow', 100), 'unknown strategy');
+      assert.throws(() => this.queue.createJob({}).backoff('fixed', -100), /positive integer/i);
+      assert.throws(() => this.queue.createJob({}).backoff('fixed', 44.5), /positive integer/i);
+    });
+
+    it('should handle fixed backoff', function () {
+      this.queue = new Queue('test', {
+        processDelayed: true
+      });
+
+      let calls = [];
+
+      this.queue.process((job) => {
+        assert.deepEqual(job.options.backoff, {
+          strategy: 'fixed',
+          delay: 100
+        });
+        assert.deepEqual(job.data, {is: 'fixed'});
+        calls.push(Date.now());
+        if (calls.length === 1) {
+          return Promise.reject(new Error('forced retry'));
+        }
+        assert.strictEqual(calls.length, 2);
+        return Promise.resolve();
+      });
+
+      const succeed = helpers.waitOn(this.queue, 'succeeded', true);
+
+      const job = this.queue.createJob({is: 'fixed'})
+        .retries(2)
+        .backoff('fixed', 100);
+
+      return job.save()
+        .then(() => succeed)
+        .then(() => {
+          assert.strictEqual(calls.length, 2);
+
+          // Ensure there was a delay.
+          assert.isTrue(calls[1] - calls[0] >= 100);
+        });
+    });
+
+    it('should handle exponential backoff', function () {
+      this.queue = new Queue('test', {
+        processDelayed: true
+      });
+
+      let calls = [];
+
+      this.queue.process((job) => {
+        assert.deepEqual(job.options.backoff, {
+          strategy: 'exponential',
+          delay: 30 * Math.pow(2, calls.length)
+        });
+        assert.deepEqual(job.data, {is: 'exponential'});
+        calls.push(Date.now());
+        if (calls.length < 3) {
+          return Promise.reject(new Error('forced retry'));
+        }
+        return Promise.resolve();
+      });
+
+      const succeed = helpers.waitOn(this.queue, 'succeeded', true);
+
+      const job = this.queue.createJob({is: 'exponential'})
+        .retries(3)
+        .backoff('exponential', 30);
+
+      return job.save()
+        .then(() => succeed)
+        .then(() => {
+          assert.strictEqual(calls.length, 3);
+
+          // Ensure there was a delay.
+          assert.isTrue(calls[1] - calls[0] >= 30);
+          assert.isTrue(calls[2] - calls[1] >= 60);
+        });
+    });
+  });
+
   describe('Resets', function () {
-    it('resets and processes stalled jobs when starting a queue', function (done) {
-      var deadQueue = Queue('test', {
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
+
+    it('should reset and process stalled jobs when starting a queue', function (done) {
+      const deadQueue = new Queue('test', {
         stallInterval: 0
       });
 
-      var processJobs = function () {
-        queue = Queue('test', {
+      const processJobs = () => {
+        this.queue = new Queue('test', {
           stallInterval: 0
         });
-        var reportDone = barrier(3, done);
-        queue.checkStalledJobs(function () {
-          queue.process(function (job, jobDone) {
+        const reportDone = barrier(3, () => {
+          helpers.asCallback(deadQueue.close(10)
+            .then(() => {
+              throw new Error('expected timeout');
+            }, (err) => {
+              assert.isTrue(err instanceof Error);
+              assert.strictEqual(err.message, 'Operation timed out.');
+            }), done);
+        });
+        this.queue.checkStalledJobs((err) => {
+          if (err) return done(err);
+          this.queue.process((job, jobDone) => {
             jobDone();
             reportDone();
           });
         });
       };
 
-      var processAndClose = function () {
-        deadQueue.process(function () {
-          deadQueue.close(processJobs);
-        });
-      };
+      // Disable stall prevention for the dead queue.
+      sinon.stub(deadQueue, '_preventStall', () => Promise.resolve());
 
-      var reportAdded = barrier(3, processAndClose);
-
-      deadQueue.createJob({foo: 'bar1'}).save(reportAdded);
-      deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
-      deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
+      Promise.all([
+        deadQueue.createJob({foo: 'bar1'}).save(),
+        deadQueue.createJob({foo: 'bar2'}).save(),
+        deadQueue.createJob({foo: 'bar3'}).save(),
+      ]).then(() => deadQueue.process(processJobs)).catch(done);
     });
 
-    it('resets and processes jobs from multiple stalled queues', function (done) {
-      var processJobs = function () {
-        queue = Queue('test', {
+    it('resets and processes jobs from multiple stalled queues', function () {
+      const final = helpers.deferred(), finalDone = final.defer();
+
+      const processJobs = () => {
+        this.queue = new Queue('test', {
           stallInterval: 0
         });
-        var reportDone = barrier(5, done);
-        queue.checkStalledJobs(function () {
-          queue.process(function (job, jobDone) {
+        this.queue.checkStalledJobs((err) => {
+          if (err) return finalDone(err);
+          const reportDone = barrier(5, finalDone);
+          this.queue.process((job, jobDone) => {
             assert.strictEqual(job.data.foo, 'bar');
             jobDone();
             reportDone();
@@ -679,290 +1252,325 @@ describe('Queue', function () {
         });
       };
 
-      var reportClosed = barrier(5, processJobs);
-
-      var createAndStall = function () {
-        var queue = Queue('test', {
+      const createAndStall = () => {
+        const queue = new Queue('test', {
           stallInterval: 0
         });
-        queue.createJob({foo: 'bar'}).save(function () {
-          queue.process(function () {
-            queue.close(reportClosed);
-          });
-        });
+
+        // Disable stall prevention for the queue.
+        sinon.stub(queue, '_preventStall', () => Promise.resolve());
+
+        final.catch(() => {}).then(() => queue.close());
+
+        // Do nada.
+        queue.process(() => {});
+
+        return queue.createJob({foo: 'bar'}).save();
       };
 
-      for (var i = 0; i < 5; i++) {
-        createAndStall();
+      const made = [];
+      for (let i = 0; i < 5; i++) {
+        made.push(createAndStall());
       }
+
+      Promise.all(made).then(() => processJobs()).catch(finalDone);
+
+      return final;
     });
 
-    it('resets and processes stalled jobs from concurrent processor', function (done) {
-      var deadQueue = Queue('test', {
+    it('resets and processes stalled jobs from concurrent processor', function () {
+      const final = helpers.deferred(), finalDone = final.defer();
+
+      const deadQueue = new Queue('test', {
         stallInterval: 0
       });
-      var counter = 0;
-      var concurrency = 5;
-      var numJobs = 10;
+      const concurrency = 5;
+      const numJobs = 10;
 
-      var processJobs = function () {
-        queue = Queue('test', {
+      let counter = 0;
+
+      final.then(() => deadQueue.close());
+
+      // Disable stall prevention for the dead queue.
+      sinon.stub(deadQueue, '_preventStall', () => Promise.resolve());
+
+      const processJobs = () => {
+        this.queue = new Queue('test', {
           stallInterval: 0
         });
-        queue.checkStalledJobs(function () {
-          queue.process(function (job, jobDone) {
+        this.queue.checkStalledJobs((err) => {
+          if (err) return finalDone(err);
+          this.queue.process((job, jobDone) => {
             counter += 1;
             jobDone();
-            if (counter === numJobs) {
-              done();
-            }
+            if (counter < numJobs) return;
+            assert.strictEqual(counter, numJobs);
+            finalDone();
           });
         });
       };
 
-      var processAndClose = function () {
-        deadQueue.process(concurrency, function () {
+      const processAndClose = () => {
+        deadQueue.process(concurrency, () => {
           // wait for it to get all spooled up...
           if (deadQueue.running === concurrency) {
-            deadQueue.close(processJobs);
+            processJobs();
           }
         });
       };
 
-      var reportAdded = barrier(numJobs, processAndClose);
-
-      for (var i = 0; i < numJobs; i++) {
-        deadQueue.createJob({count: i}).save(reportAdded);
+      const made = [];
+      for (let i = 0; i < numJobs; i++) {
+        made.push(deadQueue.createJob({count: i}).save());
       }
+
+      Promise.all(made).then(() => processAndClose()).catch(finalDone);
+
+      return final;
     });
 
     it('should reset without a callback', function (done) {
-      var deadQueue = Queue('test', {
+      const deadQueue = new Queue('test', {
         stallInterval: 0
       });
 
-      var processJobs = function () {
-        queue = Queue('test', {
+      // Disable stall prevention for the dead queue.
+      sinon.stub(deadQueue, '_preventStall', () => Promise.resolve());
+
+      const processJobs = () => {
+        this.queue = new Queue('test', {
           stallInterval: 0
         });
-        var reportDone = barrier(3, done);
-        queue.checkStalledJobs();
-        setTimeout(function () {
-          queue.process(function (job, jobDone) {
+        const reportDone = barrier(3, done);
+        this.queue.checkStalledJobs().then(() => {
+          const expected = new Set(['bar1', 'bar2', 'bar3']);
+          this.queue.process((job, jobDone) => {
+            assert.isTrue(expected.has(job.data.foo));
+            expected.delete(job.data.foo);
             reportDone();
             jobDone();
           });
-        }, 20);
+        }).catch(done);
       };
 
-      var processAndClose = function () {
-        deadQueue.process(function () {
-          deadQueue.close(processJobs);
+      const processAndClose = () => {
+        deadQueue.process(() => {
+          processJobs();
         });
       };
 
-      var reportAdded = barrier(3, processAndClose);
-
-      deadQueue.createJob({foo: 'bar1'}).save(reportAdded);
-      deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
-      deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
+      Promise.all([
+        deadQueue.createJob({foo: 'bar1'}).save(),
+        deadQueue.createJob({foo: 'bar2'}).save(),
+        deadQueue.createJob({foo: 'bar3'}).save(),
+      ]).then(() => processAndClose()).catch(done);
     });
 
     it('should reset with an interval', function (done) {
-      var deadQueue = Queue('test', {
+      const deadQueue = new Queue('test', {
         stallInterval: 0
       });
 
-      var processJobs = function () {
-        queue = Queue('test', {
+      deadQueue.on('error', done);
+
+      const processJobs = () => {
+        this.queue = new Queue('test', {
           stallInterval: 0
         });
-        var reportDone = barrier(6, done);
-        queue.checkStalledJobs(10, reportDone);
-        setTimeout(function () {
-          queue.process(function (job, jobDone) {
+        const reportDone = barrier(6, done);
+        this.queue.checkStalledJobs(10, reportDone);
+        setTimeout(() => {
+          this.queue.process((job, jobDone) => {
             reportDone();
             jobDone();
           });
         }, 20);
       };
 
-      var processAndClose = function () {
-        deadQueue.process(function () {
-          deadQueue.close(processJobs);
+      const processAndClose = () => {
+        deadQueue.process(() => {
+          processJobs();
         });
       };
 
-      var reportAdded = barrier(3, processAndClose);
-
-      deadQueue.createJob({foo: 'bar1'}).save(reportAdded);
-      deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
-      deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
+      Promise.all([
+        deadQueue.createJob({foo: 'bar1'}).save(),
+        deadQueue.createJob({foo: 'bar2'}).save(),
+        deadQueue.createJob({foo: 'bar3'}).save(),
+      ]).then(() => processAndClose()).catch(done);
     });
   });
 
   describe('Startup', function () {
-    it('processes pre-existing jobs when starting a queue', function (done) {
-      var deadQueue = Queue('test');
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
 
-      var processJobs = function () {
-        queue = Queue('test');
-        var jobCount = 0;
-        queue.process(function (job, jobDone) {
-          assert.strictEqual(job.data.foo, 'bar' + (++jobCount));
+    it('processes pre-existing jobs when starting a queue', function (done) {
+      const deadQueue = new Queue('test');
+
+      deadQueue.on('error', () => {});
+
+      const processJobs = () => {
+        this.queue = new Queue('test');
+        let jobCount = 0;
+        this.queue.process((job, jobDone) => {
+          assert.strictEqual(job.data.foo, 'bar' + ++jobCount);
           jobDone();
-          if (jobCount === 3) {
-            done();
-          }
+          if (jobCount < 3) return;
+          assert.strictEqual(jobCount, 3);
+          done();
         });
       };
 
-      var reportAdded = barrier(3, deadQueue.close.bind(deadQueue, processJobs));
-
-      deadQueue.createJob({foo: 'bar1'}).save(reportAdded);
-      deadQueue.createJob({foo: 'bar2'}).save(reportAdded);
-      deadQueue.createJob({foo: 'bar3'}).save(reportAdded);
+      Promise.all([
+        deadQueue.createJob({foo: 'bar1'}).save(),
+        deadQueue.createJob({foo: 'bar2'}).save(),
+        deadQueue.createJob({foo: 'bar3'}).save(),
+      ]).then(() => deadQueue.close(processJobs)).catch(done);
     });
 
     it('does not process an in-progress job when a new queue starts', function (done) {
-      queue = Queue('test');
-      queue.createJob({foo: 'bar'}).save(function () {
-        queue.process(function (job, jobDone) {
+      this.queue = new Queue('test');
+      this.queue.createJob({foo: 'bar'}).save(() => {
+        this.queue.process((job, jobDone) => {
           assert.strictEqual(job.data.foo, 'bar');
           setTimeout(jobDone, 30);
         });
 
-        var queue2 = Queue('test');
-        setTimeout(function () {
-          queue2.process(function () {
+        const queue2 = new Queue('test');
+        setTimeout(() => {
+          queue2.process(() => {
             assert.fail('queue2 should not process a job');
           });
-          queue.on('succeeded', queue2.close.bind(queue2, done));
+          this.queue.on('succeeded', () => queue2.close(done));
         }, 10);
       });
     });
   });
 
   describe('Pubsub events', function () {
-    it('emits a job succeeded event', function (done) {
-      queue = Queue('test');
-      var worker = Queue('test');
-      var queueEvent = false;
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
 
-      var job = queue.createJob({foo: 'bar'});
-      job.once('succeeded', function (result) {
+    it('emits a job succeeded event', function (done) {
+      this.queue = new Queue('test');
+      const worker = new Queue('test');
+      let queueEvent = false;
+
+      const job = this.queue.createJob({foo: 'bar'});
+      job.once('succeeded', (result) => {
         assert.isTrue(queueEvent);
         assert.strictEqual(result, 'barbar');
         worker.close(done);
       });
-      queue.once('job succeeded', function (jobId, result) {
+      this.queue.once('job succeeded', (jobId, result) => {
         queueEvent = true;
         assert.strictEqual(jobId, job.id);
         assert.strictEqual(result, 'barbar');
       });
       job.save();
 
-      worker.process(function (job, jobDone) {
+      worker.process((job, jobDone) => {
         jobDone(null, job.data.foo + job.data.foo);
       });
     });
 
     it('emits a job succeeded event with no result', function (done) {
-      queue = Queue('test');
-      var worker = Queue('test');
-      var queueEvent = false;
+      this.queue = new Queue('test');
+      const worker = new Queue('test');
+      let queueEvent = false;
 
-      var job = queue.createJob({foo: 'bar'});
-      job.on('succeeded', function (result) {
+      const job = this.queue.createJob({foo: 'bar'});
+      job.on('succeeded', (result) => {
         assert.isTrue(queueEvent);
         assert.strictEqual(result, undefined);
         worker.close(done);
       });
-      queue.once('job succeeded', function (jobId, result) {
+      this.queue.once('job succeeded', (jobId, result) => {
         queueEvent = true;
         assert.strictEqual(jobId, job.id);
         assert.strictEqual(result, undefined);
       });
       job.save();
 
-      worker.process(function (job, jobDone) {
+      worker.process((job, jobDone) => {
         jobDone(null);
       });
     });
 
     it('emits a job failed event', function (done) {
-      queue = Queue('test');
-      var worker = Queue('test');
-      var queueEvent = false;
+      this.queue = new Queue('test');
+      const worker = new Queue('test');
+      let queueEvent = false;
 
-      var job = queue.createJob({foo: 'bar'});
-      job.on('failed', function (err) {
+      const job = this.queue.createJob({foo: 'bar'});
+      job.on('failed', (err) => {
         assert.isTrue(queueEvent);
         assert.strictEqual(err.message, 'fail!');
         worker.close(done);
       });
-      queue.once('job failed', function (jobId, err) {
+      this.queue.once('job failed', (jobId, err) => {
         queueEvent = true;
         assert.strictEqual(jobId, job.id);
         assert.strictEqual(err.message, 'fail!');
       });
       job.save();
 
-      worker.process(function (job, jobDone) {
-        jobDone(Error('fail!'));
+      worker.process((job, jobDone) => {
+        jobDone(new Error('fail!'));
       });
     });
 
     it('emits a job progress event', function (done) {
-      queue = Queue('test');
-      var worker = Queue('test');
-      var reportedProgress = false;
-      var queueEvent = false;
+      this.queue = new Queue('test');
+      const worker = new Queue('test');
+      let reportedProgress = false;
+      let queueEvent = false;
 
-      var job = queue.createJob({foo: 'bar'});
-      job.on('progress', function (progress) {
+      const job = this.queue.createJob({foo: 'bar'});
+      job.on('progress', (progress) => {
         assert.isTrue(queueEvent);
         assert.strictEqual(progress, 20);
         reportedProgress = true;
       });
 
-      queue.once('job progress', function (jobId, progress) {
+      this.queue.once('job progress', (jobId, progress) => {
         queueEvent = true;
         assert.strictEqual(jobId, job.id);
         assert.strictEqual(progress, 20);
       });
 
 
-      job.on('succeeded', function () {
+      job.on('succeeded', () => {
         assert.isTrue(reportedProgress);
         assert.isTrue(queueEvent);
         worker.close(done);
       });
       job.save();
 
-      worker.process(function (job, jobDone) {
+      worker.process((job, jobDone) => {
         job.reportProgress(20);
         setTimeout(jobDone, 20);
       });
     });
 
     it('emits a job retrying event', function (done) {
-      queue = Queue('test');
-      var worker = Queue('test');
-      var retried = false;
-      var queueEvent = false;
+      this.queue = new Queue('test');
+      const worker = new Queue('test');
+      let retried = false;
+      let queueEvent = false;
 
-      var job = queue.createJob({foo: 'bar'}).retries(1);
-      job.on('retrying', function (err) {
+      const job = this.queue.createJob({foo: 'bar'}).retries(1);
+      job.on('retrying', (err) => {
         assert.strictEqual(job.options.retries, 0);
         assert.strictEqual(err.message, 'failing to retry');
       });
-      queue.once('job retrying', function (jobId, err) {
+      this.queue.once('job retrying', (jobId, err) => {
         queueEvent = true;
         assert.strictEqual(jobId, job.id);
         assert.strictEqual(err.message, 'failing to retry');
       });
-      job.on('succeeded', function (result) {
+      job.on('succeeded', (result) => {
         assert.isTrue(retried);
         assert.isTrue(queueEvent);
         assert.strictEqual(result, 'retried');
@@ -970,143 +1578,120 @@ describe('Queue', function () {
       });
       job.save();
 
-      worker.process(function (job, jobDone) {
+      worker.process((job, jobDone) => {
         if (retried) {
           jobDone(null, 'retried');
         } else {
           retried = true;
-          jobDone(Error('failing to retry'));
+          jobDone(new Error('failing to retry'));
         }
       });
     });
 
     it('are not received when getEvents is false', function (done) {
-      queue = Queue('test', {
+      this.queue = new Queue('test', {
         getEvents: false
       });
-      var worker = Queue('test');
+      const worker = new Queue('test');
 
-      assert.isUndefined(queue.eclient);
+      assert.isUndefined(this.queue.eclient);
 
-      var job = queue.createJob({foo: 'bar'});
-      job.on('succeeded', function () {
+      const job = this.queue.createJob({foo: 'bar'});
+      job.on('succeeded', () => {
         assert.fail();
       });
       job.save();
 
-      worker.process(function (job, jobDone) {
+      worker.process((job, jobDone) => {
         jobDone(null, job.data.foo);
         setTimeout(worker.close.bind(worker, done), 20);
       });
     });
 
     it('are not sent when sendEvents is false', function (done) {
-      queue = Queue('test');
-      var worker = Queue('test', {
+      this.queue = new Queue('test');
+      const worker = new Queue('test', {
         sendEvents: false
       });
 
-      var job = queue.createJob({foo: 'bar'});
-      job.on('succeeded', function () {
+      const job = this.queue.createJob({foo: 'bar'});
+      job.on('succeeded', () => {
         assert.fail();
       });
       job.save();
 
-      worker.process(function (job, jobDone) {
+      worker.process((job, jobDone) => {
         jobDone(null, job.data.foo);
         setTimeout(worker.close.bind(worker, done), 20);
       });
     });
 
     it('properly emits events with multiple jobs', function (done) {
-      queue = Queue('test');
-      var worker = Queue('test');
+      this.queue = new Queue('test');
+      const worker = new Queue('test');
 
-      var reported = 0;
-      var jobIdSum = 0;
-      var job1 = queue.createJob({foo: 'bar'});
-      var job2 = queue.createJob({foo: 'baz'});
-      job1.on('succeeded', function (result) {
-        reported += 1;
+      let reported = 0;
+      const jobIds = new Set();
+      const job1 = this.queue.createJob({foo: 'bar'});
+      const job2 = this.queue.createJob({foo: 'baz'});
+      job1.on('succeeded', (result) => {
         assert.strictEqual(result, 'barbar');
+        next();
       });
-      job2.on('succeeded', function (result) {
-        reported += 1;
+      job2.on('succeeded', (result) => {
         assert.strictEqual(result, 'bazbaz');
+        next();
       });
-      queue.on('job succeeded', function (id) {
-        jobIdSum += id;
+      this.queue.on('job succeeded', (id) => {
+        jobIds.add(id);
       });
       job1.save();
       job2.save();
 
-      worker.process(function (job, jobDone) {
+      function next() {
+        reported += 1;
+        if (reported < 2) return;
+        assert.deepEqual(jobIds, new Set(['1', '2']));
+        assert.strictEqual(reported, 2);
+        worker.close(done);
+      }
+
+      worker.process((job, jobDone) => {
         jobDone(null, job.data.foo + job.data.foo);
-        setTimeout(function () {
-          assert.strictEqual(jobIdSum, 3);
-          assert.strictEqual(reported, 2);
-          worker.close(done);
-        }, 20);
       });
     });
   });
 
   describe('Destroy', function () {
+    beforeEach(closeQueue);
+    afterEach(closeQueue);
+
     it('should remove all associated redis keys', function (done) {
-      queue = Queue('test');
+      this.queue = new Queue('test');
 
-      queue.process(function (job, jobDone) {
+      this.queue.process((job, jobDone) => {
         assert.strictEqual(job.data.foo, 'bar');
         jobDone();
       });
 
-      queue.createJob({foo: 'bar'}).save(function (err, job) {
-        assert.isNull(err);
+      this.queue.createJob({foo: 'bar'}).save((err, job) => {
+        if (err) return done(err);
         assert.ok(job.id);
         assert.strictEqual(job.data.foo, 'bar');
       });
 
-      var checkForKeys = function (err) {
-        assert.isNull(err);
-        queue.client.keys(queue.toKey('*'), function (keysErr, keys) {
-          assert.isNull(keysErr);
+      const checkForKeys = (err) => {
+        if (err) return done(err);
+        this.queue.client.keys(this.queue.toKey('*'), (keysErr, keys) => {
+          if (err) return done(keysErr);
           assert.deepEqual(keys, []);
           done();
         });
       };
 
-      queue.on('succeeded', function (job) {
+      this.queue.on('succeeded', (job) => {
         assert.ok(job);
-        queue.destroy(checkForKeys);
-      });
-    });
-
-    it('should work without a callback', function (done) {
-      queue = Queue('test');
-
-      queue.process(function (job, jobDone) {
-        assert.strictEqual(job.data.foo, 'bar');
-        jobDone();
-      });
-
-      queue.createJob({foo: 'bar'}).save(function (err, job) {
-        assert.isNull(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-      });
-
-      var checkForKeys = function () {
-        queue.client.keys(queue.toKey('*'), function (err, keys) {
-          assert.isNull(err);
-          assert.deepEqual(keys, []);
-          done();
-        });
-      };
-
-      queue.on('succeeded', function (job) {
-        assert.ok(job);
-        queue.destroy();
-        setTimeout(checkForKeys, 20);
+        this.queue.destroy(checkForKeys);
       });
     });
   });

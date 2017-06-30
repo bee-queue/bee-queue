@@ -1,5 +1,9 @@
 {
   "env": {
     "mocha": true
+  },
+  "rules": {
+    "handle-callback-err": 1,
+    "no-shadow": 0
   }
 }

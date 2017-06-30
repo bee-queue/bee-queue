@@ -29,6 +29,7 @@
     "no-underscore-dangle": 0,
     "no-unused-vars": [2, {"vars": "all", "args": "after-used"}],
     "no-use-before-define": [2, "nofunc"],
+    "no-var": 2,
     "no-warning-comments": [1, {"terms": ["todo"], "location": "anywhere"}],
     "object-curly-spacing": [2, "never"],
     "quotes": [2, "single"],

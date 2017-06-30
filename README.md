@@ -465,13 +465,6 @@ Reports job progress when called within a handler function. Causes a `progress` 
 
 ### Defaults
 
-All methods with an optional callback field will use the following default:
-```javascript
-var defaultCb = function (err) {
-  if (err) throw err;
-};
-```
-
 Defaults for Queue `settings` live in `lib/defaults.js`. Changing that file will change Bee-Queue's default behavior.
 
 # Under the hood
