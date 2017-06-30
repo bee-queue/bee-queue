@@ -1,0 +1,22 @@
+{
+  "folders": [{
+    "path": ".",
+    "folder_exclude_patterns": [
+      "node_modules",
+      "dist",
+      "coverage"
+    ],
+    "file_exclude_patterns": [
+      // Yarn lock file
+      "yarn.lock"
+    ]
+  }],
+  "settings": {
+    "tab_size": 2,
+    "ensure_newline_at_eof_on_save": true,
+    "translate_tabs_to_spaces": true,
+    "trim_trailing_white_space_on_save": true,
+    "detect_indentation": false,
+    "rulers": [100]
+  }
+}
