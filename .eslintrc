@@ -1,4 +1,8 @@
 {
+  "env": {
+    "node": true,
+    "es6": true
+  },
   "rules": {
     "array-bracket-spacing": [2, "never"],
     "brace-style": [2, "1tbs"],
@@ -36,8 +40,5 @@
     "space-in-parens": 2,
     "space-infix-ops": 2,
     "strict": 0
-  },
-  "env": {
-    "node": true
   }
 }
