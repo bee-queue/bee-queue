@@ -16,7 +16,8 @@
     "coveralls": "^2.11.2"
   },
   "scripts": {
-    "test": "grunt test"
+    "test": "grunt test",
+    "eslint": "grunt eslint"
   },
   "keywords": [
     "task",
