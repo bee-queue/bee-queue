@@ -3,9 +3,9 @@
 [![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
-- Simple: ~500 LOC, and the only dependency is [node_redis](https://github.com/NodeRedis/node_redis).
+- Simple: ~1000 LOC, and minimal dependencies.
 - Fast: maximizes throughput by minimizing Redis and network overhead. [Benchmarks](#benchmarks) well.
-- Robust: designed with concurrency, atomicity, and failure in mind; 100% code coverage.
+- Robust: designed with concurrency, atomicity, and failure in mind; close to full code coverage.
 
 ```javascript
 var Queue = require('bee-queue');
@@ -31,13 +31,14 @@ Bee-Queue is meant to power a distributed worker pool and was built with short, 
 - Create, save, and process jobs
 - Concurrent processing
 - Job timeouts and retries
+- Scheduled jobs
 - Pass events via Pub/Sub
   - Progress reporting
   - Send job results back to creators
 - Robust design
   - Strives for all atomic operations
   - Retries [stuck jobs](#under-the-hood)
-  - 100% code coverage
+  - High code coverage
 - Performance-focused
   - Keeps [Redis usage](#under-the-hood) to the bare minimum
   - Uses [Lua scripting](http://redis.io/commands/EVAL) and [pipelining](http://redis.io/topics/pipelining) to minimize network overhead
@@ -492,7 +493,7 @@ Bee-Queue requires the user to start the repeated checks on their own because if
 Pull requests are welcome; just make sure `grunt test` passes. For significant changes, open an issue for discussion first.
 
 Some significant non-features include:
-- Job scheduling: Kue and Bull do this.
+- ~Job scheduling: Kue and Bull do this.~
 - Worker tracking: Kue does this.
 - All-workers pause-resume: Bull does this.
 - Web interface:  Kue has a nice one built in, and someone made [one for Bull](https://github.com/ShaneK/Matador).
