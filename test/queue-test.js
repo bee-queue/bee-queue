@@ -967,6 +967,10 @@ describe('Queue', function () {
         });
     });
 
+    // This test cannot be as strict as we'd like, because we're dealing with the constraints of
+    // distributed systems and inconsistent clocks. As such, we can't reject delayed publish
+    // notifications, so if our local redis has a delayed publish, it'll show up and trigger an
+    // extra raiseDelayedJobs invocation.
     it('should process two proximal delayed jobs', function () {
       this.queue = new Queue('test', {
         processDelayed: true,

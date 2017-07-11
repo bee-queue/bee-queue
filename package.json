@@ -8,7 +8,7 @@
     "redis": "^2.7.1"
   },
   "devDependencies": {
-    "chai": "^1.10.0",
+    "chai": "^4.1.0",
     "coveralls": "^2.11.2",
     "grunt": "~0.4.5",
     "grunt-cli": "^1.2.0",

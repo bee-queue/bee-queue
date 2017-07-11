@@ -78,7 +78,7 @@ describe('Job', function () {
         assert.ok(storedJob);
         assert.property(storedJob, 'id');
         assert.deepEqual(storedJob.data, data);
-        assert.deepEqual(storedJob.options, options);
+        assert.deepInclude(storedJob.options, options);
       });
     });
   });
