@@ -843,6 +843,153 @@ describe('Queue', function () {
     });
   });
 
+  describe('Error serializing', function () {
+    it('throws error object as is', function (done) {
+      var queue = Queue('test');
+
+      var job = queue.createJob({foo: 'bar'});
+      queue.once('job failed', function (jobId, err) {
+        assert.strictEqual(jobId, job.id);
+        assert.deepEqual(err, {foo: 'bar', baz: 'qux'});
+
+        job.isInSet('failed', function (err, isMember) {
+          assert.isTrue(isMember);
+          queue.close(done);
+        });
+      });
+      job.save();
+
+      queue.process(function (job, jobDone) {
+        jobDone({foo: 'bar', baz: 'qux'});
+      });
+    });
+
+    it('throws an instance of Error', function (done) {
+      var queue = Queue('test');
+
+      var job = queue.createJob({foo: 'bar'});
+      queue.once('job failed', function (jobId, err) {
+        assert.strictEqual(jobId, job.id);
+        assert.strictEqual(err.name, 'Error');
+        assert.strictEqual(err.message, 'fail');
+        assert.isTrue(/at Queue\.handler/.test(err.stack));
+        assert.isTrue(/at Queue\.runJob/.test(err.stack));
+
+        job.isInSet('failed', function (err, isMember) {
+          assert.isTrue(isMember);
+          queue.close(done);
+        });
+      });
+      job.save();
+
+      queue.process(function (job, jobDone) {
+        jobDone(new Error('fail'));
+      });
+    });
+
+    it('should serialize custom instance of Error', function (done) {
+      var queue = Queue('test');
+
+      function MyError(message) {
+        this.name = 'MyError';
+        this.message = message || 'Default Message';
+        this.stack = (new Error()).stack;
+      }
+      MyError.prototype = Object.create(Error.prototype);
+      MyError.prototype.constructor = MyError;
+
+      var job = queue.createJob({foo: 'bar'});
+      queue.once('job failed', function (jobId, err) {
+        assert.strictEqual(jobId, job.id);
+        assert.strictEqual(err.name, 'MyError');
+        assert.strictEqual(err.message, 'Default Message');
+
+        job.isInSet('failed', function (err, isMember) {
+          assert.isTrue(isMember);
+          queue.close(done);
+        });
+      });
+      job.save();
+
+      queue.process(function (job, jobDone) {
+        jobDone(new MyError());
+      });
+    });
+
+    it('uses a custom serializeError function', function (done) {
+      var queue = Queue('test', {
+        serializeError: function (err) {
+          return {
+            name: err.name,
+            message: err.message,
+            custom: err.custom
+          };
+        }
+      });
+
+      function MyError(message) {
+        this.name = 'MyError';
+        this.message = message || 'Default Message';
+        this.stack = (new Error()).stack;
+        this.custom = 42;
+      }
+      MyError.prototype = Object.create(Error.prototype);
+      MyError.prototype.constructor = MyError;
+
+      var job = queue.createJob({foo: 'bar'});
+      queue.once('job failed', function (jobId, err) {
+        assert.strictEqual(jobId, job.id);
+        assert.deepEqual(err, {
+          name: 'MyError',
+          message: 'Default Message',
+          custom: 42
+        });
+
+        job.isInSet('failed', function (err, isMember) {
+          assert.isTrue(isMember);
+          queue.close(done);
+        });
+      });
+      job.save();
+
+      queue.process(function (job, jobDone) {
+        jobDone(new MyError());
+      });
+    });
+
+    it('uses a custom deserializeError object', function (done) {
+      var queue = new Queue('test', {
+        deserializeError: function (err) {
+          return new MyError(err.message);
+        }
+      });
+
+      function MyError(message) {
+        this.name = 'MyError';
+        this.message = message || 'Default Message';
+        this.stack = (new Error()).stack;
+      }
+      MyError.prototype = Object.create(Error.prototype);
+      MyError.prototype.constructor = MyError;
+
+      var job = queue.createJob({foo: 'bar'});
+      queue.once('job failed', function (jobId, err) {
+        assert.strictEqual(jobId, job.id);
+        assert.instanceOf(err, MyError);
+
+        job.isInSet('failed', function (err, isMember) {
+          assert.isTrue(isMember);
+          queue.close(done);
+        });
+      });
+      job.save();
+
+      queue.process(function (job, jobDone) {
+        jobDone(new MyError());
+      });
+    });
+  });
+
   describe('Pubsub events', function () {
     it('emits a job succeeded event', function (done) {
       queue = Queue('test');
