@@ -1,3 +1,5 @@
+'use strict';
+
 const Queue = require('../lib/queue');
 
 const sinon = require('sinon');

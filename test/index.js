@@ -1,3 +1,5 @@
+'use strict';
+
 require('chai').config.includeStack = true;
 
 process.on('unhandledRejection', (err) => {

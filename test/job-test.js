@@ -1,3 +1,5 @@
+'use strict';
+
 const Job = require('../lib/job');
 const Queue = require('../lib/queue');
 const helpers = require('../lib/helpers');

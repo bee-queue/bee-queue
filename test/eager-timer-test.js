@@ -1,3 +1,5 @@
+'use strict';
+
 const EagerTimer = require('../lib/eager-timer');
 
 const expect = require('chai').expect;
