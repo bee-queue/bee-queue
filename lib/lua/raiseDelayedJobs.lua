@@ -14,7 +14,7 @@ local raising = redis.call("zrangebyscore", KEYS[1], 0, ARGV[1])
 local numRaising = #raising
 
 if numRaising > 0 then
-  redis.call("rpush", KEYS[2], unpack(raising))
+  redis.call("lpush", KEYS[2], unpack(raising))
   redis.call("zremrangebyscore", KEYS[1], 0, ARGV[1])
 end
 
