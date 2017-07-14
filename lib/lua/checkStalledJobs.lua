@@ -1,10 +1,9 @@
 --[[
-key 1 -> bq:name:stallTime
+key 1 -> bq:name:stallBlock
 key 2 -> bq:name:stalling
 key 3 -> bq:name:waiting
 key 4 -> bq:name:active
-arg 1 -> ms timestamp ("now")
-arg 2 -> ms stallInterval
+arg 1 -> ms stallInterval
 
 returns {resetJobId1, resetJobId2, ...}
 
@@ -13,10 +12,8 @@ if a jobId is not removed from the stalling set within a stallInterval window,
 we assume the job has stalled and should be reset (moved from active back to waiting)
 --]]
 
-local now = tonumber(ARGV[1])
-local stallTime = tonumber(redis.call("get", KEYS[1]) or 0)
-
-if now < stallTime then
+-- try to update the stallBlock key
+if not redis.call("set", KEYS[1], "1", "PX", tonumber(ARGV[1]), "NX") then
   -- hasn't been long enough (stallInterval) since last check
   return {}
 end
@@ -48,7 +45,5 @@ local actives = redis.call("lrange", KEYS[4], 0, -1)
 if next(actives) ~= nil then
   redis.call("sadd", KEYS[2], unpack(actives))
 end
-
-redis.call("set", KEYS[1], now + ARGV[2])
 
 return stalled
