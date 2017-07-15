@@ -22,12 +22,23 @@ if now < stallTime then
 end
 
 -- reset any stalling jobs by moving from active to waiting
-local stalling = redis.call("smembers", KEYS[2])
+local stalling, stalled = redis.call("smembers", KEYS[2]), {}
 if next(stalling) ~= nil then
-  redis.call("rpush", KEYS[3], unpack(stalling))
   -- not worth optimizing - this should be a rare occurrence, better to keep it straightforward
+  local nextIndex = 1
   for i, jobId in ipairs(stalling) do
-    redis.call("lrem", KEYS[4], 0, jobId)
+    local removed = redis.call("lrem", KEYS[4], 0, jobId)
+    -- we only restart stalled jobs if we can find them in the active list - otherwise, the stalled
+    -- lrem may have been delayed, or may not have run after the last checkStalledJobs call despite
+    -- having ended. this can cause problems with static ids, and cause jobs to run again
+    if removed > 0 then
+      stalled[nextIndex] = jobId
+      nextIndex = nextIndex + 1
+    end
+  end
+  -- don't lpush zero jobs (the redis command will fail)
+  if nextIndex > 1 then
+    redis.call("rpush", KEYS[3], unpack(stalled))
   end
   redis.call("del", KEYS[2])
 end
@@ -40,4 +51,4 @@ end
 
 redis.call("set", KEYS[1], now + ARGV[2])
 
-return stalling
+return stalled
