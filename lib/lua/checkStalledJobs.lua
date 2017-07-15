@@ -38,7 +38,7 @@ if next(stalling) ~= nil then
   end
   -- don't lpush zero jobs (the redis command will fail)
   if nextIndex > 1 then
-    redis.call("rpush", KEYS[3], unpack(stalled))
+    redis.call("lpush", KEYS[3], unpack(stalled))
   end
   redis.call("del", KEYS[2])
 end
