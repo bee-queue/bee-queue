@@ -8,24 +8,25 @@
     "redis": "^2.7.1"
   },
   "devDependencies": {
-    "chai": "^4.1.0",
+    "ava": "^0.21.0",
+    "ava-spec": "^1.1.0",
     "coveralls": "^2.11.2",
     "grunt": "~0.4.5",
     "grunt-cli": "^1.2.0",
     "grunt-eslint": "^20.0.0",
     "grunt-githooks": "^0.3.1",
-    "grunt-mocha-test": "^0.12.6",
-    "istanbul": "^0.4.5",
-    "mocha": "^3.4.2",
-    "sinon": "^1.12.2"
+    "lolex": "^2.0.0",
+    "nyc": "^11.0.3",
+    "sandboxed-module": "^2.0.3",
+    "sinon": "^2.3.8"
   },
   "scripts": {
-    "test": "grunt test",
+    "test": "ava",
     "eslint": "grunt eslint",
-    "coverage": "istanbul cover _mocha --report lcovonly",
-    "publish-coverage": "coveralls < coverage/lcov.info && rm -rf coverage",
-    "report": "npm run coverage && istanbul report html",
-    "ci": "npm test && npm run coverage && npm run publish-coverage"
+    "coverage": "nyc ava",
+    "report": "npm run coverage && nyc report --reporter=html",
+    "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
+    "ci": "npm test && npm run coverage-and-publish"
   },
   "keywords": [
     "task",

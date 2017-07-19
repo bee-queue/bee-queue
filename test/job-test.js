@@ -1,126 +1,140 @@
-'use strict';
+import test, {describe} from 'ava-spec';
 
-const Job = require('../lib/job');
-const Queue = require('../lib/queue');
-const helpers = require('../lib/helpers');
+import Job from '../lib/job';
+import Queue from '../lib/queue';
+import helpers from '../lib/helpers';
 
-const assert = require('chai').assert;
+import {promisify} from 'promise-callbacks';
 
-describe('Job', function () {
+describe('Job', (it) => {
   const data = {foo: 'bar'};
   const options = {test: 1};
 
-  function clearKeys(done) {
-    this.queue.client.keys(this.queue.toKey('*'), (err, keys) => {
-      if (err) return done(err);
-      if (keys.length) {
-        this.queue.client.del(keys, done);
-      } else {
-        done();
-      }
-    });
-  }
+  let uid = 0;
 
-  before(function () {
-    this.queue = new Queue('test');
+  it.beforeEach(async(t) => {
+    const queue = new Queue(`test-job-${uid++}`);
 
-    this.makeJob = () => {
-      const job = this.queue.createJob(data);
+    function makeJob() {
+      const job = queue.createJob(data);
       job.options = options;
       return job.save();
-    };
+    }
 
-    return this.queue.ready();
+    await queue.ready();
+
+    Object.assign(t.context, {queue, makeJob});
   });
 
-  before(clearKeys);
-  afterEach(clearKeys);
-
-  it('creates a job', function () {
-    return this.makeJob().then((job) => {
-      assert.ok(job, 'fails to return a job');
-      assert.property(job, 'id', 'job has no id');
-      assert.property(job, 'data', 'job has no data');
-    });
+  it.afterEach.cb((t) => {
+    const {queue} = t.context;
+    clearKeys(queue.client, queue, t.end);
   });
 
-  it('creates a job without data', function () {
-    return this.queue.createJob().save().then((job) => {
-      assert.deepEqual(job.data, {});
-    });
+  it('creates a job', async(t) => {
+    const {queue, makeJob} = t.context;
+
+    const job = await makeJob();
+    t.truthy(job, 'fails to return a job');
+    t.true(helpers.has(job, 'id'), 'job has no id');
+    t.true(helpers.has(job, 'data'), 'job has no data');
   });
 
-  describe('Chaining', function () {
-    it('sets retries', function () {
-      const job = this.queue.createJob({foo: 'bar'}).retries(2);
-      assert.strictEqual(job.options.retries, 2);
+  it('creates a job without data', async(t) => {
+    const {queue, makeJob} = t.context;
+
+    const job = await queue.createJob().save();
+    t.deepEqual(job.data, {});
+  });
+
+  it.describe('Chaining', (it) => {
+    it('sets retries', (t) => {
+      const {queue, makeJob} = t.context;
+
+      const job = queue.createJob({foo: 'bar'}).retries(2);
+      t.is(job.options.retries, 2);
     });
 
-    it('rejects invalid retries count', function () {
-      assert.throws(() => {
-        this.queue.createJob({foo: 'bar'}).retries(-1);
+    it('rejects invalid retries count', (t) => {
+      const {queue, makeJob} = t.context;
+
+      t.throws(() => {
+        queue.createJob({foo: 'bar'}).retries(-1);
       }, 'Retries cannot be negative');
     });
 
-    it('sets timeout', function () {
-      const job = this.queue.createJob({foo: 'bar'}).timeout(5000);
-      assert.strictEqual(job.options.timeout, 5000);
+    it('sets timeout', (t) => {
+      const {queue, makeJob} = t.context;
+
+      const job = queue.createJob({foo: 'bar'}).timeout(5000);
+      t.is(job.options.timeout, 5000);
     });
 
-    it('rejects invalid timeout', function () {
-      assert.throws(() => {
-        this.queue.createJob({foo: 'bar'}).timeout(-1);
+    it('rejects invalid timeout', (t) => {
+      const {queue, makeJob} = t.context;
+
+      t.throws(() => {
+        queue.createJob({foo: 'bar'}).timeout(-1);
       }, 'Timeout cannot be negative');
     });
 
-    it('saves the job in redis', function () {
-      return this.makeJob().then((job) => {
-        return Job.fromId(this.queue, job.id);
-      }).then((storedJob) => {
-        assert.ok(storedJob);
-        assert.property(storedJob, 'id');
-        assert.deepEqual(storedJob.data, data);
-        assert.deepInclude(storedJob.options, options);
-      });
+    it('saves the job in redis', async(t) => {
+      const {queue, makeJob} = t.context;
+
+      const job = await makeJob();
+      const storedJob = await Job.fromId(queue, job.id);
+      t.truthy(storedJob);
+      t.true(helpers.has(storedJob, 'id'));
+      t.deepEqual(storedJob.data, data);
+      t.is(storedJob.options.test, options.test);
     });
   });
 
-  describe('Progress', function () {
-    it('rejects out-of-bounds progress', function (done) {
-      helpers.asCallback(this.makeJob().then((job) => {
-        return job.reportProgress(101);
-      }), (err) => {
-        assert.strictEqual(err.message, 'Progress must be between 0 and 100');
-        done();
-      });
+  it.describe('Progress', (it) => {
+    it('rejects out-of-bounds progress', async(t) => {
+      const {queue, makeJob} = t.context;
+
+      const job = await makeJob();
+      await t.throws(job.reportProgress(101), 'Progress must be between 0 and 100');
     });
   });
 
-  describe('Remove', function () {
-    it('removes the job from redis', function (done) {
-      this.makeJob().then((job) => {
-        return job.remove();
-      }).then((job) => {
-        this.queue.client.hget(this.queue.toKey('jobs'), job.id, (err, results) => {
-          if (err) return done(err);
-          assert.isNull(results);
-          done();
-        });
-      }).catch(done);
+  it.describe('Remove', (it) => {
+    it('removes the job from redis', async(t) => {
+      const {queue, makeJob} = t.context;
+
+      const {hget} = promisify.methods(queue.client, ['hget']);
+
+      const job = await makeJob();
+      t.is(job, await job.remove());
+
+      t.is(await hget(queue.toKey('jobs'), job.id), null);
     });
 
-    it('should work with a callback', function (done) {
-      this.makeJob().then((job) => {
-        job.remove((err) => {
-          if (err) return done(err);
-          this.queue.client.hget(this.queue.toKey('jobs'), job.id, (err, results) => {
-            if (err) return done(err);
-            assert.isNull(results);
-            done();
-          });
-        });
-      });
+    it('should work with a callback', async(t) => {
+      const {queue, makeJob} = t.context;
+
+      const {hget} = promisify.methods(queue.client, ['hget']);
+
+      const job = await makeJob();
+      const removed = helpers.deferred();
+      job.remove(removed.defer());
+      await removed;
+
+      t.is(await hget(queue.toKey('jobs'), job.id), null);
     });
   });
-
 });
+
+process.on('unhandledRejection', (err) => console.log(err.stack));
+
+function clearKeys(client, queue, done) {
+  client.keys(queue.toKey('*'), (err, keys) => {
+    if (err) return done(err);
+    if (keys.length) {
+      client.del(keys, done);
+    } else {
+      done();
+    }
+  });
+}

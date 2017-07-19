@@ -1,7 +1,5 @@
 {
-  "env": {
-    "mocha": true
-  },
+  "extends": "../.eslintrc",
   "rules": {
     "handle-callback-err": 1,
     "no-shadow": 0

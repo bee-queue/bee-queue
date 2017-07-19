@@ -1,11 +1,12 @@
-'use strict';
+import test, {describe} from 'ava-spec';
 
-const Queue = require('../lib/queue');
+import Queue from '../lib/queue';
+import helpers from '../lib/helpers';
+import sinon from 'sinon';
 
-const sinon = require('sinon');
-const assert = require('chai').assert;
+import {promisify} from 'promise-callbacks';
 
-const helpers = require('../lib/helpers');
+import redis from '../lib/redis';
 
 // Effectively _.after
 function barrier(n, done) {
@@ -17,1688 +18,1464 @@ function barrier(n, done) {
   };
 }
 
-describe('Queue', function () {
-  const pqueue = new Queue('test', {
-    isWorker: false,
-    getEvents: false,
-    sendEvents: false,
+// A promise-based barrier.
+function reef(n = 1) {
+  const done = helpers.deferred(), end = done.defer();
+  return {
+    done,
+    next() {
+      --n;
+      if (n < 0) return false;
+      if (n === 0) end();
+      return true;
+    }
+  };
+}
+
+async function recordUntil(emitter, trackedEvents, lastEvent) {
+  const recordedEvents = [];
+
+  const done = helpers.waitOn(emitter, lastEvent);
+  for (let event of trackedEvents) {
+    const handler = (...values) => {
+      recordedEvents.push([event, ...values]);
+    };
+    emitter.on(event, handler);
+    done.then(() => emitter.removeListener(event, handler));
+  }
+
+  await done;
+  return recordedEvents;
+}
+
+function delKeys(client, pattern) {
+  const promise = helpers.deferred(), done = promise.defer();
+  client.keys(pattern, (err, keys) => {
+    if (err) return done(err);
+    if (keys.length) {
+      client.del(keys, done);
+    } else {
+      done();
+    }
   });
+  return promise;
+}
 
-  before(() => pqueue.ready());
+describe('Queue', (it) => {
+  const gclient = redis.createClient();
 
-  function closeQueue() {
-    const queue = this.queue;
-    if (queue) {
-      this.queue = undefined;
-      if (!queue.paused) {
-        return queue.close();
+  it.before(() => gclient);
+
+  let uid = 0;
+  it.beforeEach((t) => {
+    const ctx = t.context;
+
+    Object.assign(ctx, {
+      queueName: `test-job-${uid++}`,
+      queues: [],
+      queueErrors: [],
+      makeQueue,
+      handleErrors,
+    });
+
+    function makeQueue(...args) {
+      const queue = new Queue(ctx.queueName, ...args);
+      queue.on('error', (err) => ctx.queueErrors.push(err));
+      ctx.queues.push(queue);
+      return queue;
+    }
+
+    function handleErrors(t) {
+      if (t) return t.notThrows(handleErrors);
+      if (ctx.queueErrors && ctx.queueErrors.length) {
+        throw ctx.queueErrors[0];
       }
     }
-  }
-
-  function clearKeys(done) {
-    pqueue.client.keys(pqueue.toKey('*'), (err, keys) => {
-      if (err) return done(err);
-      if (keys.length) {
-        pqueue.client.del(keys, done);
-      } else {
-        done();
-      }
-    });
-  }
-
-  before(clearKeys);
-  beforeEach(closeQueue);
-  afterEach(closeQueue);
-  afterEach(clearKeys);
-
-  it('should convert itself to a Queue instance', function () {
-    this.queue = Queue('test');
-
-    assert.isTrue(this.queue instanceof Queue);
   });
 
-  it('should initialize without ensuring scripts', function () {
-    this.queue = new Queue('test', {
+  it.afterEach((t) => {
+    const errs = t.context.queueErrors;
+    if (errs && errs.length) {
+      t.fail('errors were not cleaned up');
+    }
+
+    // Close all the queues that were created during the test, and wait for them to close before
+    // ending the test.
+    if (t.context.queues) {
+      return Promise.all(t.context.queues.map((queue) => {
+        if (!queue.paused) {
+          return queue.close();
+        }
+      }));
+    }
+  });
+
+  it.beforeEach(async(t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
+  it.afterEach(async(t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
+
+  it('should convert itself to a Queue instance', (t) => {
+    const queue = t.context.queue = Queue(t.context.queueName);
+
+    t.true(queue instanceof Queue);
+  });
+
+  it('should initialize without ensuring scripts', async(t) => {
+    const queue = t.context.makeQueue({
       ensureScripts: false
     });
 
-    return this.queue.ready();
+    await queue.ready();
+
+    t.context.handleErrors(t);
   });
 
-  it('should support a ready callback', function (done) {
-    this.timeout(500);
-    this.queue = new Queue('test');
-    this.queue.ready(done);
+  it.cb('should support a ready callback', (t) => {
+    const queue = t.context.makeQueue();
+    queue.ready(t.end);
   });
 
-  it('should indicate whether it is running', function () {
-    this.queue = new Queue('test');
+  it('should indicate whether it is running', async(t) => {
+    const queue = t.context.makeQueue();
 
     // The queue should be "running" immediately - different from ready because it can accept jobs
     // immediately.
-    assert.isTrue(this.queue.isRunning());
-    return this.queue.ready()
-      .then(() => {
-        assert.isTrue(this.queue.isRunning());
-        return this.queue.close();
-      })
-      .then(() => assert.isFalse(this.queue.isRunning()));
+    t.true(queue.isRunning());
+    await queue.ready();
+    t.true(queue.isRunning());
+    await queue.close();
+    t.false(queue.isRunning());
   });
 
-  describe('Connection', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
+  it.describe('Connection', (it) => {
+    it.describe('Close', (it) => {
+      it('should close the redis clients', async(t) => {
+        const queue = t.context.makeQueue();
 
-    describe('Close', function () {
-      beforeEach(closeQueue);
-      afterEach(closeQueue);
+        await queue.ready();
 
-      it('should close the redis clients', function (done) {
-        this.queue = new Queue('test');
+        t.true(queue.client.ready);
+        t.true(queue.bclient.ready);
+        t.true(queue.eclient.ready);
 
-        this.queue.once('ready', () => {
-          assert.isTrue(this.queue.client.ready);
-          assert.isTrue(this.queue.bclient.ready);
-          assert.isTrue(this.queue.eclient.ready);
-          this.queue.close((err) => {
-            if (err) return done(err);
-            assert.isFalse(this.queue.client.ready);
-            assert.isFalse(this.queue.bclient.ready);
-            assert.isFalse(this.queue.eclient.ready);
-            done();
-          });
-        });
+        await queue.close();
+
+        t.false(queue.client.ready);
+        t.false(queue.bclient.ready);
+        t.false(queue.eclient.ready);
       });
 
-      it('should support promises', function () {
-        this.queue = new Queue('test');
+      it.cb('should support callbacks', (t) => {
+        const queue = t.context.makeQueue();
 
-        return this.queue.ready()
-          .then(() => this.queue.close());
+        queue.ready().then(() => {
+          queue.close(t.end);
+        }).catch(t.end);
       });
 
-      it('should not fail after a second call', function () {
-        this.queue = new Queue('test');
+      it('should not fail after a second call', async(t) => {
+        const queue = t.context.makeQueue();
 
-        return this.queue.ready()
-          .then(() => this.queue.close())
-          .then(() => this.queue.close());
+        await queue.ready();
+
+        await queue.close();
+        await t.notThrows(queue.close());
       });
 
-      it('should stop processing even with a redis retry strategy', function () {
-        this.queue = new Queue('test', {
+      it('should stop processing even with a redis retry strategy', async(t) => {
+        const queue = t.context.makeQueue({
           redis: {
             // Retry after 1 millisecond.
             retryStrategy: () => 1
           }
         });
 
-        const processSpy = sinon.spy(() => Promise.resolve());
-        this.queue.process(processSpy);
+        const processSpy = sinon.spy(async() => {});
+        queue.process(processSpy);
 
-        return this.queue.createJob({is: 'first'}).save()
-          .then(() => helpers.waitOn(this.queue, 'succeeded', true))
-          .then(() => {
-            assert.isTrue(processSpy.calledOnce);
-            processSpy.reset();
+        await queue.createJob({is: 'first'}).save();
+        await helpers.waitOn(queue, 'succeeded', true);
+        t.true(processSpy.calledOnce);
+        processSpy.reset();
 
-            this.queue.close();
+        // Close the queue so queue3 will process later jobs.
+        queue.close();
 
-            this.queue2 = new Queue('test', {
-              // If the other queue is still somehow running, don't take work from it.
-              isWorker: false
-            });
+        const queue2 = t.context.makeQueue({
+          // If the other queue is still somehow running, ensure that we can't take work from it.
+          isWorker: false
+        });
 
-            return this.queue2.createJob({is: 'second'}).save();
-          })
-          .then(() => helpers.delay(50))
-          .then(() => this.queue2.close())
-          .then(() => {
-            this.queue3 = new Queue('test');
+        await queue2.createJob({is: 'second'}).save();
+        await helpers.delay(50);
 
-            this.newSpy = sinon.spy(() => Promise.resolve());
-            this.queue3.process(this.newSpy);
+        const queue3 = t.context.makeQueue();
 
-            return helpers.waitOn(this.queue3, 'succeeded', true);
-          })
-          .then(() => {
-            return this.queue3.close();
-          })
-          .then(() => {
-            assert.isTrue(this.newSpy.calledOnce);
-            assert.isFalse(processSpy.called);
-          });
+        const newSpy = sinon.spy(async() => {});
+        queue3.process(newSpy);
+
+        await helpers.waitOn(queue3, 'succeeded', true);
+        await queue3.close();
+
+        t.true(newSpy.calledOnce);
+        t.false(processSpy.called);
       });
 
-      it('should gracefully shut down', function () {
-        this.queue = new Queue('test');
-
-        const errorSpy = sinon.spy();
-        this.queue.on('error', errorSpy);
+      it('should gracefully shut down', async(t) => {
+        const queue = t.context.makeQueue();
 
         const started = helpers.deferred(), resume = helpers.deferred();
-        this.queue.process(() => {
+        queue.process(() => {
           setImmediate(started.defer(), null);
           return resume;
         });
 
-        const success = helpers.waitOn(this.queue, 'succeeded', true);
+        const successSpy = sinon.spy();
+        queue.on('succeeded', successSpy);
 
-        return this.queue.createJob({}).save()
-          .then(() => started)
-          .then(() => {
-            setTimeout(resume.defer(), 20, null);
-            return this.queue.close();
-          })
-          .then(() => success)
-          .then(() => {
-            if (errorSpy.called) {
-              throw errorSpy.firstCall.args[0];
-            }
-          });
+        await queue.createJob({}).save();
+        await started;
+
+        // Asynchronously wait 20 seconds, then complete the process handler.
+        setTimeout(resume.defer(), 20, null);
+
+        // Meanwhile, close the queue, and verify that success is called before close completes.
+        t.false(successSpy.called);
+        await queue.close();
+        t.true(successSpy.calledOnce);
       });
 
-      it('should not accept new jobs while shutting down', function () {
-        this.queue = new Queue('test');
+      it('should not process new jobs while shutting down', async(t) => {
+        const queue = t.context.makeQueue();
 
-        const errorSpy = sinon.spy();
-        this.queue.on('error', errorSpy);
-
-        const started = helpers.deferred(), resume = helpers.deferred();
+        const started = helpers.deferred(),
+          resumed = helpers.deferred(), resume = resumed.defer();
         const processSpy = sinon.spy(() => {
           setImmediate(started.defer(), null);
-          return resume;
+          return resumed;
         });
-        this.queue.process(processSpy);
+        queue.process(processSpy);
 
-        const success = helpers.waitOn(this.queue, 'succeeded', true);
+        const successSpy = sinon.spy();
+        queue.on('succeeded', successSpy);
 
-        return this.queue.createJob({is: 'first'}).save()
-          .then(() => started)
-          .then(() => {
-            this.queue.createJob({is: 'second'}).save();
-            setTimeout(resume.defer(), 20, null);
-            return this.queue.close();
-          })
-          .then(() => success)
-          .then(() => {
-            assert.isTrue(processSpy.calledOnce);
-            assert.deepEqual(processSpy.firstCall.args[0].data, {is: 'first'});
+        await queue.createJob({is: 'first'}).save();
+        await started;
 
-            if (errorSpy.called) {
-              throw errorSpy.firstCall.args[0];
-            }
-          });
+        // Close the queue, save a new job, and then complete the first job.
+        const closed = queue.close();
+        await queue.createJob({is: 'second'}).save();
+        resume(null);
+        await closed;
+
+        // Verify that the second job wasn't picked up for processing.
+        t.true(processSpy.calledOnce);
+        t.true(successSpy.calledOnce);
+        t.deepEqual(processSpy.firstCall.args[0].data, {is: 'first'});
       });
 
-      it('should stop the check timer', function () {
-        this.queue = new Queue('test', {
+      it('should stop the check timer', async(t) => {
+        const queue = t.context.makeQueue({
           stallInterval: 100
         });
 
-        this.queue.checkStalledJobs(50);
+        queue.checkStalledJobs(50);
 
-        return helpers.delay(25)
-          .then(() => {
-            this.spy = sinon.spy(this.queue, 'checkStalledJobs');
-            return this.queue.close();
-          })
-          .then(() => helpers.delay(50))
-          .then(() => {
-            assert.isFalse(this.spy.called);
-            this.spy.restore();
-          });
+        await helpers.delay(25);
+
+        const spy = sinon.spy(queue, 'checkStalledJobs');
+        await queue.close();
+
+        await helpers.delay(50);
+
+        t.false(spy.called);
+      });
+
+      it('should time out', async(t) => {
+        const queue = t.context.makeQueue();
+
+        // Intentionally stall the job.
+        queue.process(() => {});
+
+        await queue.createJob({}).save();
+
+        await t.throws(queue.close(10), 'Operation timed out.');
+
+        // Clean up the queues so we don't try to in the afterEach hook.
+        t.context.queues = null;
       });
     });
 
-    it('should not error on close', function (done) {
-      this.queue = new Queue('test');
+    it('should not error on close', async(t) => {
+      const queue = t.context.makeQueue();
 
-      // No errors!
-      this.queue.on('error', done);
+      await queue.close();
 
-      // Close the queue
-      helpers.asCallback(this.queue.close()
-        .then(() => helpers.delay(30)), done);
+      await helpers.delay(30);
+
+      t.context.handleErrors(t);
     });
 
-    it('should recover from a connection loss', function () {
-      this.queue = new Queue('test', {
+    it('should recover from a connection loss', async(t) => {
+      const queue = t.context.makeQueue({
         redis: {
           // Retry after 1 millisecond.
           retryStrategy: () => 1
         }
       });
 
-      this.queue.process((job) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        return Promise.resolve();
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
       });
 
-      this.queue.ready()
-        .then(() => this.queue.bclient.stream.destroy());
+      queue.ready()
+        .then(() => queue.bclient.stream.destroy());
 
-      this.queue.createJob({foo: 'bar'}).save();
+      queue.createJob({foo: 'bar'}).save();
 
       // We don't expect errors because destroy doesn't cause an actual error - it just forces redis
       // to reconnect.
-      return helpers.waitOn(this.queue, 'succeeded', true);
+      await helpers.waitOn(queue, 'succeeded', true);
+
+      t.context.handleErrors();
     });
 
-    it('should reconnect when the blocking client disconnects', function () {
-      this.queue = new Queue('test');
+    it('should reconnect when the blocking client disconnects', async(t) => {
+      const queue = t.context.makeQueue();
 
-      const jobSpy = sinon.spy(this.queue, 'getNextJob');
+      const jobSpy = sinon.spy(queue, 'getNextJob');
 
-      this.queue.process(() => {
-        // First getNextJob fails on the disconnect, second should succeed
-        assert.strictEqual(jobSpy.callCount, 2);
-        return Promise.resolve();
+      queue.process(async() => {
+        // First getNextJob fails on the disconnect, second should succeed.
+        t.is(jobSpy.callCount, 2);
       });
 
-      // Not called at all yet because queue.process uses setImmediate
-      assert.strictEqual(jobSpy.callCount, 0);
+      // Not called at all yet because queue.process uses setImmediate.
+      t.is(jobSpy.callCount, 0);
 
-      this.queue.createJob({foo: 'bar'}).save();
-      this.queue.ready()
-        .then(() => this.queue.bclient.stream.destroy());
+      queue.createJob({foo: 'bar'}).save();
+      queue.ready()
+        .then(() => queue.bclient.stream.destroy());
 
-      return helpers.waitOn(this.queue, 'succeeded', true)
-        .then(() => {
-          assert.strictEqual(jobSpy.callCount, 2);
-        });
+      await helpers.waitOn(queue, 'succeeded', true);
+
+      t.is(jobSpy.callCount, 2);
     });
   });
 
-  describe('Constructor', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
+  it.describe('Constructor', (it) => {
+    it('creates a queue with default redis settings', async(t) => {
+      const queue = t.context.makeQueue();
 
-    it('creates a queue with default redis settings', function (done) {
-      this.queue = new Queue('test');
-      this.queue.once('ready', () => {
-        assert.strictEqual(this.queue.client.connection_options.host, '127.0.0.1');
-        assert.strictEqual(this.queue.bclient.connection_options.host, '127.0.0.1');
-        assert.strictEqual(this.queue.client.connection_options.port, 6379);
-        assert.strictEqual(this.queue.bclient.connection_options.port, 6379);
-        assert.isTrue(this.queue.client.selected_db == null);
-        assert.isTrue(this.queue.bclient.selected_db == null);
-        done();
-      });
+      await queue.ready();
+
+      t.is(queue.client.connection_options.host, '127.0.0.1');
+      t.is(queue.bclient.connection_options.host, '127.0.0.1');
+      t.is(queue.client.connection_options.port, 6379);
+      t.is(queue.bclient.connection_options.port, 6379);
+      t.true(queue.client.selected_db == null);
+      t.true(queue.bclient.selected_db == null);
     });
 
-    it('creates a queue with passed redis settings', function (done) {
-      this.queue = new Queue('test', {
+    it('creates a queue with passed redis settings', async(t) => {
+      const queue = t.context.makeQueue({
         redis: {
           host: 'localhost',
           db: 1
         }
       });
 
-      this.queue.once('ready', () => {
-        assert.strictEqual(this.queue.client.connection_options.host, 'localhost');
-        assert.strictEqual(this.queue.bclient.connection_options.host, 'localhost');
-        assert.strictEqual(this.queue.client.selected_db, 1);
-        assert.strictEqual(this.queue.bclient.selected_db, 1);
-        done();
-      });
+      await queue.ready();
+
+      t.is(queue.client.connection_options.host, 'localhost');
+      t.is(queue.bclient.connection_options.host, 'localhost');
+      t.is(queue.client.selected_db, 1);
+      t.is(queue.bclient.selected_db, 1);
     });
 
-    it('creates a queue with isWorker false', function (done) {
-      this.queue = new Queue('test', {
+    it('creates a queue with isWorker false', async(t) => {
+      const queue = t.context.makeQueue({
         isWorker: false
       });
 
-      this.queue.once('ready', () => {
-        assert.strictEqual(this.queue.client.connection_options.host, '127.0.0.1');
-        assert.isUndefined(this.queue.bclient);
-        done();
-      });
-    });
+      await queue.ready();
 
-  });
-
-  it('adds a job with correct prefix', function (done) {
-    this.queue = new Queue('test');
-
-    this.queue.createJob({foo: 'bar'}).save((err, job) => {
-      if (err) return done(err);
-      assert.ok(job.id);
-      this.queue.client.hget('bq:test:jobs', job.id, (getErr, jobData) => {
-        if (getErr) return done(getErr);
-        assert.strictEqual(jobData, job.toData());
-        done();
-      });
+      t.is(queue.client.connection_options.host, '127.0.0.1');
+      t.is(queue.bclient, undefined);
     });
   });
 
-  describe('Health Check', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
+  it('adds a job with correct prefix', async(t) => {
+    const queue = t.context.makeQueue();
 
-    it('reports a waiting job', function (done) {
-      this.queue = new Queue('test', {
+    await queue.ready();
+
+    const {hget} = promisify.methods(queue.client, ['hget']);
+
+    const job = await queue.createJob({foo: 'bar'}).save();
+    t.truthy(job.id);
+
+    const jobData = await hget(`bq:${t.context.queueName}:jobs`, job.id);
+
+    t.is(jobData, job.toData());
+  });
+
+  it.describe('Health Check', (it) => {
+    it('reports a waiting job', async(t) => {
+      const queue = t.context.makeQueue({
         isWorker: false
       });
 
-      this.queue.createJob({foo: 'bar'}).save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        this.queue.checkHealth((healthErr, counts) => {
-          if (err) return done(healthErr);
-          assert.strictEqual(counts.waiting, 1);
-          done();
-        });
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      t.truthy(job.id);
+
+      const counts = await queue.checkHealth();
+
+      t.is(counts.waiting, 1);
     });
 
-    it('reports an active job', function (done) {
-      this.queue = new Queue('test');
+    it('reports an active job', async(t) => {
+      const queue = t.context.makeQueue();
+      const end = helpers.deferred(), finish = end.defer();
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        this.queue.checkHealth((healthErr, counts) => {
-          if (healthErr) return done(healthErr);
-          assert.strictEqual(counts.active, 1);
-          jobDone();
-          done();
-        });
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
+        const counts = await queue.checkHealth();
+        t.is(counts.active, 1);
+
+        finish();
       });
 
-      const job = this.queue.createJob({foo: 'bar'});
-      job.save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+
+      return end;
     });
 
-    it('reports a succeeded job', function (done) {
-      this.queue = new Queue('test');
+    it('reports a succeeded job', async(t) => {
+      const queue = t.context.makeQueue();
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        jobDone();
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
       });
 
-      const job = this.queue.createJob({foo: 'bar'});
-      job.save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
 
-      this.queue.once('succeeded', (job) => {
-        assert.ok(job);
-        this.queue.checkHealth((healthErr, counts) => {
-          if (healthErr) return done(healthErr);
-          assert.strictEqual(counts.succeeded, 1);
-          done();
-        });
-      });
+      const succeededJob = await helpers.waitOn(queue, 'succeeded');
+      t.is(succeededJob.id, job.id);
+
+      const counts = await queue.checkHealth();
+      t.is(counts.succeeded, 1);
     });
 
-    it('reports a failed job', function (done) {
-      this.queue = new Queue('test');
+    it('reports a failed job', async(t) => {
+      const queue = t.context.makeQueue();
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        jobDone(new Error('failed!'));
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
+        throw new Error('failed!');
       });
 
-      const job = this.queue.createJob({foo: 'bar'});
-      job.save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
 
-      this.queue.once('failed', (job) => {
-        assert.ok(job);
-        this.queue.checkHealth((healthErr, counts) => {
-          if (healthErr) return done(healthErr);
-          assert.strictEqual(counts.failed, 1);
-          done();
-        });
-      });
+      const failedJob = await helpers.waitOn(queue, 'failed');
+
+      const counts = await queue.checkHealth();
+      t.is(counts.failed, 1);
     });
   });
 
-  describe('getJob', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
+  it.describe('getJob', (it) => {
+    it('gets an job created by the same queue instance', async(t) => {
+      const queue = t.context.makeQueue();
 
-    it('gets an job created by the same queue instance', function (done) {
-      this.queue = new Queue('test');
+      const createdJob = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(createdJob.id);
 
-      const createdJob = this.queue.createJob({foo: 'bar'});
-      createdJob.save((err, createdJob) => {
-        if (err) return done(err);
-        assert.ok(createdJob.id);
-        this.queue.getJob(createdJob.id, (getErr, job) => {
-          if (getErr) return done(getErr);
-          assert.strictEqual(job.toData(), createdJob.toData());
-          done();
-        });
-      });
+      const job = await queue.getJob(createdJob.id);
+      t.is(job.toData(), createdJob.toData());
     });
 
-    it('should return null for a nonexistent job', function () {
-      this.queue = new Queue('test');
+    it('should return null for a nonexistent job', async(t) => {
+      const queue = t.context.makeQueue();
 
-      return this.queue.getJob('deadbeef')
-        .then((job) => assert.strictEqual(job, null));
+      const job = await queue.getJob('deadbeef');
+      t.is(job, null);
     });
 
-    it('gets a job created by another queue instance', function (done) {
-      this.queue = new Queue('test', {
+    it('gets a job created by another queue instance', async(t) => {
+      const queue = t.context.makeQueue({
         isWorker: false
       });
-      const reader = new Queue('test', {
+      const reader = t.context.makeQueue({
         isWorker: false
       });
 
-      const job = this.queue.createJob({foo: 'bar'});
-      job.save((err, createdJob) => {
-        if (err) return done(err);
-        assert.ok(createdJob.id);
-        reader.getJob(createdJob.id, (getErr, job) => {
-          if (getErr) return done(getErr);
-          assert.strictEqual(job.toData(), createdJob.toData());
-          done();
-        });
-      });
+      const createdJob = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(createdJob.id);
+
+      const job = await reader.getJob(createdJob.id);
+      t.is(job.toData(), createdJob.toData());
     });
 
-    it('should get a job with a specified id', function () {
-      this.queue = new Queue('test', {
+    it('should get a job with a specified id', async(t) => {
+      const queue = t.context.makeQueue({
         getEvents: false,
         sendEvents: false,
         storeJobs: false,
       });
 
-      return this.queue.createJob({foo: 'bar'}).setId('amazingjob').save()
-        .then(() => this.queue.getJob('amazingjob'))
-        .then((job) => {
-          assert.ok(job);
-          assert.strictEqual(job.id, 'amazingjob');
-          assert.deepEqual(job.data, {foo: 'bar'});
-        });
+      await queue.createJob({foo: 'bar'}).setId('amazingjob').save();
+
+      const job = await queue.getJob('amazingjob');
+      t.truthy(job);
+      t.is(job.id, 'amazingjob');
+      t.deepEqual(job.data, {foo: 'bar'});
     });
   });
 
-  describe('Processing jobs', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
+  it.describe('Processing jobs', (it) => {
+    it('processes a job', async(t) => {
+      const queue = t.context.makeQueue();
 
-    it('processes a job', function (done) {
-      this.queue = new Queue('test');
-
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        jobDone(null, 'baz');
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
+        return 'baz';
       });
 
-      const job = this.queue.createJob({foo: 'bar'});
-      job.save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
 
-      this.queue.once('succeeded', (job, data) => {
-        assert.ok(job);
-        assert.strictEqual(data, 'baz');
-        job.isInSet('succeeded', (err, isMember) => {
-          if (err) return done(err);
-          assert.isTrue(isMember);
-          done();
-        });
-      });
+      const success = sinon.spy();
+      queue.once('succeeded', success);
+      await helpers.waitOn(queue, 'succeeded');
+
+      const [[succeededJob, data]] = success.args;
+      t.truthy(succeededJob);
+      t.is(data, 'baz');
+
+      t.true(await succeededJob.isInSet('succeeded'));
     });
 
-    it('should process a job with a non-numeric id', function () {
-      this.queue = new Queue('test', {
+    it('should process a job with a non-numeric id', async(t) => {
+      const queue = t.context.makeQueue({
         getEvents: false,
         sendEvents: false,
         storeJobs: false,
       });
 
-      this.queue.process((job) => {
-        assert.strictEqual(job.id, 'amazingjob');
-        assert.strictEqual(job.data.foo, 'baz');
-        return Promise.resolve();
+      queue.process(async(job) => {
+        t.is(job.id, 'amazingjob');
+        t.is(job.data.foo, 'baz');
       });
 
-      const success = helpers.waitOn(this.queue, 'succeeded', true);
+      const success = helpers.waitOn(queue, 'succeeded', true);
 
-      return this.queue.createJob({foo: 'baz'}).setId('amazingjob').save()
-        .then(() => success)
-        .then(() => this.queue.getJob('amazingjob'))
-        .then((job) => {
-          assert.ok(job);
-          assert.strictEqual(job.id, 'amazingjob');
-          assert.deepEqual(job.data, {foo: 'baz'});
-          return job.isInSet('succeeded');
-        })
-        .then((isMember) => assert.isTrue(isMember));
+      await queue.createJob({foo: 'baz'}).setId('amazingjob').save();
+      await success;
+
+      const job = await queue.getJob('amazingjob');
+
+      t.truthy(job);
+      t.is(job.id, 'amazingjob');
+      t.deepEqual(job.data, {foo: 'baz'});
+      t.true(await job.isInSet('succeeded'));
     });
 
-    it('processes a job with removeOnSuccess', function (done) {
-      this.queue = new Queue('test', {
+    it('processes a job with removeOnSuccess', async(t) => {
+      const queue = t.context.makeQueue({
         removeOnSuccess: true
       });
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        jobDone(null);
+      await queue.ready();
+
+      const {hget} = promisify.methods(queue.client, ['hget']);
+
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
       });
 
-      this.queue.createJob({foo: 'bar'}).save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
 
-      this.queue.once('succeeded', (job) => {
-        this.queue.client.hget(this.queue.toKey('jobs'), job.id, (err, jobData) => {
-          if (err) return done(err);
-          assert.isNull(jobData);
-          done();
-        });
-      });
+      const succeededJob = await helpers.waitOn(queue, 'succeeded');
+      const jobData = await hget(queue.toKey('jobs'), job.id);
+      t.is(jobData, null);
     });
 
-    it('processes a job that fails', function (done) {
-      this.queue = new Queue('test');
+    it('processes a job that fails', async(t) => {
+      const queue = t.context.makeQueue();
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        jobDone(new Error('failed!'));
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
+        throw new Error('failed!');
       });
 
-      const job = this.queue.createJob({foo: 'bar'});
-      job.save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-      });
+      const fail = sinon.spy();
+      queue.once('failed', fail);
+      const failed = helpers.waitOn(queue, 'failed');
 
-      this.queue.once('failed', (job, err) => {
-        assert.ok(job);
-        assert.strictEqual(job.data.foo, 'bar');
-        assert.strictEqual(err.message, 'failed!');
-        job.isInSet('failed', (err, isMember) => {
-          if (err) return done(err);
-          assert.isTrue(isMember);
-          done();
-        });
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+
+      await failed;
+      const [[failedJob, err]] = fail.args;
+
+      t.truthy(failedJob);
+      t.is(failedJob.data.foo, 'bar');
+      t.is(err.message, 'failed!');
+      t.true(await failedJob.isInSet('failed'));
     });
 
-    it('processes a job that throws an exception', function (done) {
-      this.queue = new Queue('test', {
+    it('processes a job that throws an exception', async(t) => {
+      const queue = t.context.makeQueue({
         catchExceptions: true
       });
 
-      this.queue.process((job) => {
-        setImmediate(() => {
-          assert.strictEqual(job.data.foo, 'bar');
-        });
+      queue.process((job) => {
         throw new Error('exception!');
       });
 
-      this.queue.createJob({foo: 'bar'}).save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-      });
+      const fail = sinon.spy();
+      queue.once('failed', fail);
+      const failed = helpers.waitOn(queue, 'failed');
 
-      this.queue.on('failed', (job, err) => {
-        assert.ok(job);
-        assert.strictEqual(job.data.foo, 'bar');
-        assert.strictEqual(err.message, 'exception!');
-        done();
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+
+      await failed;
+      const [[failedJob, err]] = fail.args;
+
+      t.truthy(failedJob);
+      t.is(failedJob.data.foo, 'bar');
+      t.is(err.message, 'exception!');
     });
 
-    it('processes and retries a job that fails', function (done) {
-      this.queue = new Queue('test');
-      let callCount = 0;
+    it('processes and retries a job that fails', async(t) => {
+      const queue = t.context.makeQueue();
 
-      this.queue.process((job, jobDone) => {
+      let callCount = 0;
+      queue.process(async(job) => {
         callCount++;
-        assert.strictEqual(job.data.foo, 'bar');
-        if (callCount > 1) {
-          return jobDone();
-        } else {
-          return jobDone(new Error('failed!'));
+        t.is(job.data.foo, 'bar');
+        if (callCount <= 1) {
+          throw new Error('failed!');
         }
       });
 
-      this.queue.on('failed', (job, err) => {
-        assert.ok(job);
-        assert.strictEqual(job.data.foo, 'bar');
-        assert.strictEqual(err.message, 'failed!');
+      queue.on('failed', (job, err) => {
+        t.truthy(job);
+        t.is(job.data.foo, 'bar');
+        t.is(err.message, 'failed!');
         job.retry();
       });
 
-      this.queue.once('succeeded', () => {
-        assert.strictEqual(callCount, 2);
-        done();
-      });
+      const succeeded = helpers.waitOn(queue, 'succeeded');
 
-      this.queue.createJob({foo: 'bar'}).save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+
+      await succeeded;
+      t.is(callCount, 2);
     });
 
-    it('processes a job that times out', function (done) {
-      this.queue = new Queue('test');
+    it('processes a job that times out', async(t) => {
+      const queue = t.context.makeQueue();
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        setTimeout(jobDone, 20);
+      queue.process((job) => {
+        t.is(job.data.foo, 'bar');
+        return helpers.delay(20);
       });
 
-      this.queue.createJob({foo: 'bar'}).timeout(10).save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-        assert.strictEqual(job.options.timeout, 10);
-      });
+      const fail = sinon.spy();
+      queue.once('failed', fail);
+      const failed = helpers.waitOn(queue, 'failed');
 
-      this.queue.on('failed', (job, err) => {
-        assert.ok(job);
-        assert.strictEqual(job.data.foo, 'bar');
-        assert.strictEqual(err.message, 'Job 1 timed out (10 ms)');
-        done();
-      });
+      const job = await queue.createJob({foo: 'bar'}).timeout(10).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+      t.is(job.options.timeout, 10);
+
+      await failed;
+      const [[failedJob, err]] = fail.args;
+
+      t.truthy(failedJob);
+      t.is(job.id, '1');
+      t.is(failedJob.data.foo, 'bar');
+      t.is(err.message, `Job ${job.id} timed out (10 ms)`);
     });
 
-    it('processes a job that auto-retries', function (done) {
-      this.queue = new Queue('test');
+    it('processes a job that auto-retries', async(t) => {
+      const queue = t.context.makeQueue();
       const retries = 1;
       const failMsg = 'failing to auto-retry...';
 
+      const end = helpers.deferred(), finish = end.defer();
+
       let failCount = 0;
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        if (job.options.retries === 0) {
-          assert.strictEqual(failCount, retries);
-          jobDone();
-          done();
-        } else {
-          jobDone(new Error(failMsg));
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
+        if (job.options.retries) {
+          throw new Error(failMsg);
         }
+        t.is(failCount, retries);
+        finish();
       });
 
-      this.queue.createJob({foo: 'bar'}).retries(retries).save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-        assert.strictEqual(job.options.retries, retries);
+      queue.on('failed', (job, err) => {
+        ++failCount;
+        t.truthy(job);
+        t.is(job.data.foo, 'bar');
+        t.is(err.message, failMsg);
       });
 
-      this.queue.on('failed', (job, err) => {
-        failCount += 1;
-        assert.ok(job);
-        assert.strictEqual(job.data.foo, 'bar');
-        assert.strictEqual(err.message, failMsg);
-      });
+      const job = await queue.createJob({foo: 'bar'}).retries(retries).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+      t.is(job.options.retries, retries);
+
+      return end;
     });
 
 
-    it('processes a job that times out and auto-retries', function (done) {
-      this.queue = new Queue('test');
+    it('processes a job that times out and auto-retries', async(t) => {
+      const queue = t.context.makeQueue();
       const retries = 1;
 
+      const end = helpers.deferred(), finish = end.defer();
+
       let failCount = 0;
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        if (job.options.retries === 0) {
-          assert.strictEqual(failCount, retries);
-          jobDone();
-          done();
-        } else {
-          setTimeout(jobDone, 20);
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
+        if (job.options.retries) {
+          return helpers.defer(20);
         }
+        t.is(failCount, retries);
+        finish();
       });
 
-      this.queue.createJob({foo: 'bar'}).timeout(10).retries(retries).save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-        assert.strictEqual(job.options.retries, retries);
-      });
-
-      this.queue.on('failed', (job) => {
+      queue.on('failed', (job) => {
         failCount += 1;
-        assert.ok(job);
-        assert.strictEqual(job.data.foo, 'bar');
+        t.truthy(job);
+        t.is(job.data.foo, 'bar');
       });
+
+      const job = await queue.createJob({foo: 'bar'}).timeout(10).retries(retries).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+      t.is(job.options.retries, retries);
+
+      return end;
     });
 
-    it('refuses to process when isWorker is false', function () {
-      this.queue = new Queue('test', {
+    it('refuses to process when isWorker is false', (t) => {
+      const queue = t.context.makeQueue({
         isWorker: false
       });
 
-      const errorSpy = sinon.spy();
-      this.queue.on('error', errorSpy);
-
-      assert.throws(() => {
-        this.queue.process();
+      t.throws(() => {
+        queue.process();
       }, 'Cannot call Queue#process on a non-worker');
-      assert.isFalse(errorSpy.called);
+
+      t.context.handleErrors(t);
     });
 
-    it('refuses to be called twice', function () {
-      this.queue = new Queue('test');
+    it('refuses to be called twice', (t) => {
+      const queue = t.context.makeQueue();
 
-      const errorSpy = sinon.spy();
-      this.queue.on('error', errorSpy);
+      queue.process(() => {});
 
-      this.queue.process(() => {});
-
-      assert.throws(() => {
-        this.queue.process();
+      t.throws(() => {
+        queue.process();
       }, 'Cannot call Queue#process twice');
-      assert.isFalse(errorSpy.called);
+
+      t.context.handleErrors(t);
     });
   });
 
-  describe('Processing many jobs', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
-
-    it('processes many jobs in a row with one processor', function (done) {
-      this.queue = new Queue('test');
+  it.describe('Processing many jobs', (it) => {
+    it('processes many jobs in a row with one processor', async(t) => {
+      const queue = t.context.makeQueue();
       const numJobs = 20;
+
+      const end = helpers.deferred(), finish = end.defer();
 
       let counter = 0;
 
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.count, counter);
+      queue.process(async(job) => {
+        t.is(job.data.count, counter);
         counter++;
-        jobDone();
         if (counter === numJobs) {
-          done();
+          finish();
+        }
+      });
+
+      const jobs = [];
+      for (let i = 0; i < numJobs; i++) {
+        jobs.push(queue.createJob({count: i}));
+      }
+
+      // Save all the jobs.
+      await Promise.all(jobs.map((job) => job.save()));
+
+      return end;
+    });
+
+    it('processes many jobs with one concurrent processor', async(t) => {
+      const queue = t.context.makeQueue();
+      const concurrency = 5;
+      const numJobs = 20;
+
+      const end = helpers.deferred(), finish = end.defer();
+
+      let counter = 0;
+
+      queue.process(concurrency, async(job) => {
+        t.true(queue.running <= concurrency);
+        await helpers.delay(10);
+        t.is(job.data.count, counter);
+        counter++;
+        if (counter === numJobs) {
+          finish();
         }
       });
 
       for (let i = 0; i < numJobs; i++) {
-        this.queue.createJob({count: i}).save();
+        await queue.createJob({count: i}).save();
       }
+
+      return end;
     });
 
-    it('processes many jobs with one concurrent processor', function (done) {
-      this.queue = new Queue('test');
+    it('processes many randomly offset jobs with one concurrent processor', async(t) => {
+      const queue = t.context.makeQueue();
       const concurrency = 5;
       const numJobs = 20;
 
-      let counter = 0;
-
-      this.queue.process(concurrency, (job, jobDone) => {
-        assert.isTrue(this.queue.running <= concurrency);
-        setTimeout(() => {
-          jobDone();
-          assert.strictEqual(job.data.count, counter);
-          counter++;
-          if (counter === numJobs) {
-            done();
-          }
-        }, 10);
-      });
-
-      for (let i = 0; i < numJobs; i++) {
-        this.queue.createJob({count: i}).save();
-      }
-    });
-
-    it('processes many randomly delayed jobs with one concurrent processor', function (done) {
-      this.queue = new Queue('test');
-      const concurrency = 5;
-      const numJobs = 20;
+      const end = helpers.deferred(), finish = end.defer();
 
       let counter = 0;
 
-      this.queue.process(concurrency, (job, jobDone) => {
-        assert.isTrue(this.queue.running <= concurrency);
-        setTimeout(() => {
-          jobDone();
-          counter++;
-          if (counter === numJobs) {
-            done();
-          }
-        }, 10);
+      queue.process(concurrency, async(job) => {
+        t.true(queue.running <= concurrency);
+        await helpers.delay(10);
+        counter++;
+        if (counter === numJobs) {
+          finish();
+        }
       });
 
       for (let i = 0; i < numJobs; i++) {
         setTimeout(() => {
-          this.queue.createJob({count: i}).save();
+          queue.createJob({count: i}).save().catch(finish);
         }, Math.random() * 50);
       }
+
+      return end;
     });
 
-    it('processes many jobs with multiple processors', function (done) {
-      this.queue = new Queue('test');
+    it('processes many jobs with multiple processors', async(t) => {
+      const queue = t.context.makeQueue();
       const processors = [
-        new Queue('test'),
-        new Queue('test'),
-        new Queue('test')
+        t.context.makeQueue(),
+        t.context.makeQueue(),
+        t.context.makeQueue(),
       ];
       const numJobs = 20;
       const processed = new Set();
 
+      const end = helpers.deferred(), finish = end.defer();
+
       let counter = 0;
 
-      const handleJob = (job, jobDone) => {
-        jobDone();
-      };
+      const handleJob = async() => {};
 
       const success = (job) => {
         if (processed.has(job.data.count)) {
-          assert.fail('job already processed');
+          t.fail('job already processed');
         }
         processed.add(job.data.count);
         counter++;
 
+        // Don't verify that we've finished until we've processed enough jobs.
         if (counter < numJobs) return;
-        assert.strictEqual(counter, numJobs);
+        t.is(counter, numJobs);
 
+        // Make sure every job has actually been processed.
         for (let i = 0; i < numJobs; i++) {
-          assert.isTrue(processed.has(i));
+          t.true(processed.has(i));
         }
-        helpers.asCallback(Promise.all(processors.map((queue) => queue.close())), done);
+        finish(null, Promise.all(processors.map((queue) => queue.close())));
       };
 
-      processors.forEach((queue) => {
+      for (let queue of processors) {
         queue.process(handleJob).on('succeeded', success);
-      });
+      }
 
       for (let i = 0; i < numJobs; i++) {
-        this.queue.createJob({count: i}).save();
+        queue.createJob({count: i}).save();
       }
+
+      return end;
     });
   });
 
-  describe('Delayed jobs', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
-
-    it('should process delayed jobs', function () {
-      this.queue = new Queue('test', {
-        processDelayed: true,
+  it.describe('Backoff', (it) => {
+    it('should fail for invalid backoff strategies and delays', (t) => {
+      const queue = t.context.makeQueue({
+        isWorker: false,
         getEvents: false
       });
 
-      const errorSpy = sinon.spy();
-      this.queue.on('error', errorSpy);
-
-      const processSpy = sinon.spy(() => {
-        return Promise.resolve();
-      });
-      this.queue.process(processSpy);
-
-      const raised = helpers.waitOn(this.queue, 'raised jobs');
-      const succeeded = helpers.waitOn(this.queue, 'succeeded');
-
-      const start = Date.now();
-      return this.queue.createJob({iamdelayed: true})
-        .delayUntil(start + 50)
-        .save()
-        .then(() => {
-          return helpers.delay(start + 10 - Date.now());
-        })
-        .then(() => {
-          assert.isFalse(processSpy.called);
-          return helpers.delay(start + 51 - Date.now());
-        })
-        .then(() => {
-          return Promise.all([raised, succeeded]);
-        })
-        .then(() => {
-          assert.isTrue(processSpy.calledOnce);
-          assert.isTrue(processSpy.firstCall.args[0].data.iamdelayed);
-          if (errorSpy.called) {
-            throw errorSpy.firstCall.args[0];
-          }
-        });
+      const job = queue.createJob({});
+      t.throws(() => job.backoff('wow', 100), 'unknown strategy');
+      t.throws(() => job.backoff('fixed', -100), /positive integer/i);
+      t.throws(() => job.backoff('fixed', 44.5), /positive integer/i);
     });
 
-    // This test cannot be as strict as we'd like, because we're dealing with the constraints of
-    // distributed systems and inconsistent clocks. As such, we can't reject delayed publish
-    // notifications, so if our local redis has a delayed publish, it'll show up and trigger an
-    // extra raiseDelayedJobs invocation.
-    it('should process two proximal delayed jobs', function () {
-      this.queue = new Queue('test', {
-        processDelayed: true,
-        delayedDebounce: 150,
-
-        // Set this far later than the timeout to ensure we pull the
-        nearTermWindow: 10000
-      });
-
-      const errorSpy = sinon.spy();
-      this.queue.on('error', errorSpy);
-
-      const processSpy = sinon.spy(() => {
-        return Promise.resolve();
-      });
-      this.queue.process(processSpy);
-
-      const successSpy = sinon.spy();
-      this.queue.on('succeeded', successSpy);
-
-
-      return this.queue.ready()
-        .then(() => {
-          sinon.spy(this.queue, '_evalScript');
-          this.start = Date.now();
-          return Promise.all([
-            this.queue.createJob({is: 'early'}).delayUntil(this.start + 10).save(),
-
-            // These should process together.
-            this.queue.createJob({is: 'late', uid: 1}).delayUntil(this.start + 200).save(),
-            this.queue.createJob({is: 'late', uid: 2}).delayUntil(this.start + 290).save(),
-          ]);
-        })
-        .then(() => helpers.waitOn(this.queue, 'succeeded', true))
-        .then(() => helpers.waitOn(this.queue, 'succeeded', true))
-        .then(() => helpers.waitOn(this.queue, 'succeeded', true))
-        .then(() => {
-          assert.isTrue(Date.now() >= this.start + 290);
-          assert.isTrue(processSpy.calledThrice);
-          assert.deepEqual(processSpy.firstCall.args[0].data, {is: 'early'});
-          assert.deepEqual(processSpy.secondCall.args[0].data.is, 'late');
-          assert.deepEqual(processSpy.thirdCall.args[0].data.is, 'late');
-          assert.isTrue(successSpy.calledThrice);
-          assert.deepEqual(successSpy.firstCall.args[0].data, {is: 'early'});
-          assert.deepEqual(successSpy.secondCall.args[0].data.is, 'late');
-          assert.deepEqual(successSpy.thirdCall.args[0].data.is, 'late');
-          if (errorSpy.called) {
-            throw errorSpy.firstCall.args[0];
-          }
-        });
-    });
-
-    it('should process a distant delayed job', function () {
-      this.queue = new Queue('test', {
-        processDelayed: true,
-        nearTermWindow: 100
-      });
-
-      const errorSpy = sinon.spy();
-      this.queue.on('error', errorSpy);
-
-      const processSpy = sinon.spy(() => Promise.resolve());
-      this.queue.process(processSpy);
-
-      sinon.spy(this.queue, '_evalScript');
-
-      const success = helpers.waitOn(this.queue, 'succeeded', true);
-
-      const start = Date.now();
-      const job = this.queue.createJob({is: 'distant'}).delayUntil(start + 150);
-      return job.save()
-        .then(() => helpers.delay(start + 80 - Date.now()))
-        .then(() => this.queue._evalScript.reset())
-        .then(() => helpers.delay(start + 120 - Date.now()))
-        .then(() => {
-          assert.isTrue(this.queue._evalScript.calledOnce);
-          assert.isTrue(this.queue._evalScript.calledWith('raiseDelayedJobs'));
-          return success;
-        })
-        .then(() => {
-          assert.isTrue(Date.now() >= start + 150);
-          assert.isTrue(processSpy.calledOnce);
-          assert.deepEqual(processSpy.firstCall.args[0].data, {is: 'distant'});
-          if (errorSpy.called) {
-            throw errorSpy.firstCall.args[0];
-          }
-        });
-    });
-
-    it('should process delayed jobs from other workers', function () {
-      this.queue = new Queue('test', {
-        getEvents: false,
-        processDelayed: false
-      });
-
-      const processSpy = sinon.spy(() => Promise.resolve());
-      this.queue.process(processSpy);
-
-      const success = helpers.waitOn(this.queue, 'succeeded', true);
-
-      this.queue2 = new Queue('test', {
-        isWorker: false,
-        getEvents: false,
+    it('should handle fixed backoff', async(t) => {
+      const queue = t.context.makeQueue({
         processDelayed: true
       });
 
-      const start = Date.now();
-      const job = this.queue.createJob({is: 'delayed'}).delayUntil(start + 150);
-      return this.queue2.ready()
-        // Save after the second queue is ready to avoid a race condition between the addDelayedJob
-        // script and the SUBSCRIBE command.
-        .then(() => job.save())
-        .then(() => success)
-        .then(() => this.queue2.close());
-    });
+      const calls = [];
 
-    it('should process the delayed job the first time it was created', function () {
-      this.queue = new Queue('test', {
-        getEvents: false,
-        sendEvents: false,
-        processDelayed: true
-      });
-
-      const processSpy = sinon.spy(() => Promise.resolve());
-      this.queue.process(processSpy);
-
-      const success = helpers.waitOn(this.queue, 'succeeded', true);
-
-      return this.queue.ready()
-        .then(() => {
-          this.start = Date.now();
-          return this.queue.createJob({is: 'delayed'}).setId('awesomejob').delayUntil(this.start + 150).save();
-        })
-        .then(() => helpers.delay(Date.now() - this.start + 75))
-        // Verify that we don't overwrite the job.
-        .then(() => this.queue.createJob({is: 'delayed'}).setId('awesomejob').delayUntil(this.start + 10000).save())
-        .then(() => success);
-    });
-  });
-
-  describe('Backoff', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
-
-    it('should fail for invalid backoff strategies and delays', function () {
-      this.queue = new Queue('test');
-      assert.throws(() => this.queue.createJob({}).backoff('wow', 100), 'unknown strategy');
-      assert.throws(() => this.queue.createJob({}).backoff('fixed', -100), /positive integer/i);
-      assert.throws(() => this.queue.createJob({}).backoff('fixed', 44.5), /positive integer/i);
-    });
-
-    it('should handle fixed backoff', function () {
-      this.queue = new Queue('test', {
-        processDelayed: true
-      });
-
-      let calls = [];
-
-      this.queue.process((job) => {
-        assert.deepEqual(job.options.backoff, {
+      queue.process(async(job) => {
+        t.deepEqual(job.options.backoff, {
           strategy: 'fixed',
           delay: 100
         });
-        assert.deepEqual(job.data, {is: 'fixed'});
+        t.deepEqual(job.data, {is: 'fixed'});
         calls.push(Date.now());
         if (calls.length === 1) {
-          return Promise.reject(new Error('forced retry'));
+          throw new Error('forced retry');
         }
-        assert.strictEqual(calls.length, 2);
-        return Promise.resolve();
+        t.is(calls.length, 2);
       });
 
-      const succeed = helpers.waitOn(this.queue, 'succeeded', true);
+      const succeed = helpers.waitOn(queue, 'succeeded', true);
 
-      const job = this.queue.createJob({is: 'fixed'})
+      await queue.createJob({is: 'fixed'})
         .retries(2)
-        .backoff('fixed', 100);
+        .backoff('fixed', 100)
+        .save();
 
-      return job.save()
-        .then(() => succeed)
-        .then(() => {
-          assert.strictEqual(calls.length, 2);
+      await succeed;
 
-          // Ensure there was a delay.
-          assert.isTrue(calls[1] - calls[0] >= 100);
-        });
+      t.is(calls.length, 2);
+
+      // Ensure there was a delay.
+      t.true(calls[1] - calls[0] >= 100);
     });
 
-    it('should handle exponential backoff', function () {
-      this.queue = new Queue('test', {
+    it('should handle exponential backoff', async(t) => {
+      const queue = t.context.makeQueue({
         processDelayed: true
       });
 
       let calls = [];
 
-      this.queue.process((job) => {
-        assert.deepEqual(job.options.backoff, {
+      queue.process(async(job) => {
+        t.deepEqual(job.options.backoff, {
           strategy: 'exponential',
           delay: 30 * Math.pow(2, calls.length)
         });
-        assert.deepEqual(job.data, {is: 'exponential'});
+        t.deepEqual(job.data, {is: 'exponential'});
         calls.push(Date.now());
         if (calls.length < 3) {
-          return Promise.reject(new Error('forced retry'));
+          throw new Error('forced retry');
         }
-        return Promise.resolve();
       });
 
-      const succeed = helpers.waitOn(this.queue, 'succeeded', true);
+      const succeed = helpers.waitOn(queue, 'succeeded', true);
 
-      const job = this.queue.createJob({is: 'exponential'})
+      await queue.createJob({is: 'exponential'})
         .retries(3)
-        .backoff('exponential', 30);
+        .backoff('exponential', 30)
+        .save();
 
-      return job.save()
-        .then(() => succeed)
-        .then(() => {
-          assert.strictEqual(calls.length, 3);
+      await succeed;
 
-          // Ensure there was a delay.
-          assert.isTrue(calls[1] - calls[0] >= 30);
-          assert.isTrue(calls[2] - calls[1] >= 60);
-        });
+      t.is(calls.length, 3);
+
+      // Ensure there was a delay.
+      t.true(calls[1] - calls[0] >= 30);
+      t.true(calls[2] - calls[1] >= 60);
     });
   });
 
-  describe('Resets', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
+  it.describe('Resets', (it) => {
+    it('should reset and process stalled jobs when starting a queue', async(t) => {
+      t.plan(0);
 
-    it('should reset and process stalled jobs when starting a queue', function (done) {
-      const deadQueue = new Queue('test', {
-        stallInterval: 0
+      const queue = t.context.makeQueue({
+        stallInterval: 1
       });
 
-      const processJobs = () => {
-        this.queue = new Queue('test', {
-          stallInterval: 0
-        });
-        const reportDone = barrier(3, () => {
-          helpers.asCallback(deadQueue.close(10)
-            .then(() => {
-              throw new Error('expected timeout');
-            }, (err) => {
-              assert.isTrue(err instanceof Error);
-              assert.strictEqual(err.message, 'Operation timed out.');
-            }), done);
-        });
-        this.queue.checkStalledJobs((err) => {
-          if (err) return done(err);
-          this.queue.process((job, jobDone) => {
-            jobDone();
-            reportDone();
-          });
-        });
-      };
+      const jobs = [
+        queue.createJob({foo: 'bar1'}),
+        queue.createJob({foo: 'bar2'}),
+        queue.createJob({foo: 'bar3'}),
+      ];
 
-      // Disable stall prevention for the dead queue.
-      sinon.stub(deadQueue, '_preventStall', () => Promise.resolve());
+      // Save the three jobs.
+      await Promise.all(jobs.map((job) => job.save()));
 
-      Promise.all([
-        deadQueue.createJob({foo: 'bar1'}).save(),
-        deadQueue.createJob({foo: 'bar2'}).save(),
-        deadQueue.createJob({foo: 'bar3'}).save(),
-      ]).then(() => deadQueue.process(processJobs)).catch(done);
+      // Artificially move to active.
+      await queue.getNextJob();
+
+      // Mark the jobs as stalling, so that Queue#process immediately detects them as stalled.
+      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
+      await queue.checkStalledJobs();
+      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
+
+      const resumePromise = helpers.deferred(), resume = resumePromise.defer();
+
+      const {done, next} = reef(jobs.length);
+      queue.process(async(job) => {
+        next();
+      });
+
+      return done;
     });
 
-    it('resets and processes jobs from multiple stalled queues', function () {
-      const final = helpers.deferred(), finalDone = final.defer();
-
-      const processJobs = () => {
-        this.queue = new Queue('test', {
-          stallInterval: 0
-        });
-        this.queue.checkStalledJobs((err) => {
-          if (err) return finalDone(err);
-          const reportDone = barrier(5, finalDone);
-          this.queue.process((job, jobDone) => {
-            assert.strictEqual(job.data.foo, 'bar');
-            jobDone();
-            reportDone();
-          });
-        });
-      };
-
-      const createAndStall = () => {
-        const queue = new Queue('test', {
-          stallInterval: 0
-        });
-
-        // Disable stall prevention for the queue.
-        sinon.stub(queue, '_preventStall', () => Promise.resolve());
-
-        final.catch(() => {}).then(() => queue.close());
-
-        // Do nada.
-        queue.process(() => {});
-
-        return queue.createJob({foo: 'bar'}).save();
-      };
-
-      const made = [];
+    it('resets and processes jobs from multiple stalled queues', async(t) => {
+      const queues = [];
       for (let i = 0; i < 5; i++) {
-        made.push(createAndStall());
+        queues.push(t.context.makeQueue());
       }
 
-      Promise.all(made).then(() => processJobs()).catch(finalDone);
+      await Promise.all(queues.map(async(stallQueue) => {
+        await stallQueue.ready();
 
-      return final;
+        await Promise.all([
+          // Do nada.
+          stallQueue.getNextJob(),
+          stallQueue.createJob({foo: 'bar'}).save(),
+        ]);
+
+        await stallQueue.close();
+      }));
+
+      const queue = t.context.makeQueue({
+        stallInterval: 1
+      });
+
+      await queue.checkStalledJobs();
+      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
+
+      const {done, next} = reef(queues.length);
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
+        next();
+      });
+
+      return done;
     });
 
-    it('resets and processes stalled jobs from concurrent processor', function () {
-      const final = helpers.deferred(), finalDone = final.defer();
-
-      const deadQueue = new Queue('test', {
-        stallInterval: 0
+    it('resets and processes stalled jobs from concurrent processor', async(t) => {
+      const deadQueue = t.context.makeQueue({
+        stallInterval: 1
       });
       const concurrency = 5;
       const numJobs = 10;
 
-      let counter = 0;
-
-      final.then(() => deadQueue.close());
-
       // Disable stall prevention for the dead queue.
-      sinon.stub(deadQueue, '_preventStall', () => Promise.resolve());
+      sinon.stub(deadQueue, '_preventStall').callsFake(async() => {});
 
-      const processJobs = () => {
-        this.queue = new Queue('test', {
-          stallInterval: 0
-        });
-        this.queue.checkStalledJobs((err) => {
-          if (err) return finalDone(err);
-          this.queue.process((job, jobDone) => {
-            counter += 1;
-            jobDone();
-            if (counter < numJobs) return;
-            assert.strictEqual(counter, numJobs);
-            finalDone();
-          });
-        });
-      };
-
-      const processAndClose = () => {
-        deadQueue.process(concurrency, () => {
-          // wait for it to get all spooled up...
-          if (deadQueue.running === concurrency) {
-            processJobs();
-          }
-        });
-      };
-
-      const made = [];
+      const jobs = [];
       for (let i = 0; i < numJobs; i++) {
-        made.push(deadQueue.createJob({count: i}).save());
+        jobs.push(deadQueue.createJob({count: i}));
       }
 
-      Promise.all(made).then(() => processAndClose()).catch(finalDone);
+      // Save all the jobs.
+      await Promise.all(jobs.map((job) => job.save()));
 
-      return final;
-    });
-
-    it('should reset without a callback', function (done) {
-      const deadQueue = new Queue('test', {
-        stallInterval: 0
-      });
-
-      // Disable stall prevention for the dead queue.
-      sinon.stub(deadQueue, '_preventStall', () => Promise.resolve());
-
-      const processJobs = () => {
-        this.queue = new Queue('test', {
-          stallInterval: 0
-        });
-        const reportDone = barrier(3, done);
-        this.queue.checkStalledJobs().then(() => {
-          const expected = new Set(['bar1', 'bar2', 'bar3']);
-          this.queue.process((job, jobDone) => {
-            assert.isTrue(expected.has(job.data.foo));
-            expected.delete(job.data.foo);
-            reportDone();
-            jobDone();
-          });
-        }).catch(done);
-      };
-
-      const processAndClose = () => {
-        deadQueue.process(() => {
-          processJobs();
-        });
-      };
-
-      Promise.all([
-        deadQueue.createJob({foo: 'bar1'}).save(),
-        deadQueue.createJob({foo: 'bar2'}).save(),
-        deadQueue.createJob({foo: 'bar3'}).save(),
-      ]).then(() => processAndClose()).catch(done);
-    });
-
-    it('should reset with an interval', function (done) {
-      const deadQueue = new Queue('test', {
-        stallInterval: 0
-      });
-
-      deadQueue.on('error', done);
-
-      const processJobs = () => {
-        this.queue = new Queue('test', {
-          stallInterval: 0
-        });
-        const reportDone = barrier(6, done);
-        this.queue.checkStalledJobs(10, reportDone);
-        setTimeout(() => {
-          this.queue.process((job, jobDone) => {
-            reportDone();
-            jobDone();
-          });
-        }, 20);
-      };
-
-      const processAndClose = () => {
-        deadQueue.process(() => {
-          processJobs();
-        });
-      };
-
-      Promise.all([
-        deadQueue.createJob({foo: 'bar1'}).save(),
-        deadQueue.createJob({foo: 'bar2'}).save(),
-        deadQueue.createJob({foo: 'bar3'}).save(),
-      ]).then(() => processAndClose()).catch(done);
-    });
-  });
-
-  describe('Startup', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
-
-    it('processes pre-existing jobs when starting a queue', function (done) {
-      const deadQueue = new Queue('test');
-
-      deadQueue.on('error', () => {});
-
-      const processJobs = () => {
-        this.queue = new Queue('test');
-        let jobCount = 0;
-        this.queue.process((job, jobDone) => {
-          assert.strictEqual(job.data.foo, 'bar' + ++jobCount);
-          jobDone();
-          if (jobCount < 3) return;
-          assert.strictEqual(jobCount, 3);
-          done();
-        });
-      };
-
-      Promise.all([
-        deadQueue.createJob({foo: 'bar1'}).save(),
-        deadQueue.createJob({foo: 'bar2'}).save(),
-        deadQueue.createJob({foo: 'bar3'}).save(),
-      ]).then(() => deadQueue.close(processJobs)).catch(done);
-    });
-
-    it('does not process an in-progress job when a new queue starts', function (done) {
-      this.queue = new Queue('test');
-      this.queue.createJob({foo: 'bar'}).save(() => {
-        this.queue.process((job, jobDone) => {
-          assert.strictEqual(job.data.foo, 'bar');
-          setTimeout(jobDone, 30);
-        });
-
-        const queue2 = new Queue('test');
-        setTimeout(() => {
-          queue2.process(() => {
-            assert.fail('queue2 should not process a job');
-          });
-          this.queue.on('succeeded', () => queue2.close(done));
-        }, 10);
-      });
-    });
-  });
-
-  describe('Pubsub events', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
-
-    it('emits a job succeeded event', function (done) {
-      this.queue = new Queue('test');
-      const worker = new Queue('test');
-      let queueEvent = false;
-
-      const job = this.queue.createJob({foo: 'bar'});
-      job.once('succeeded', (result) => {
-        assert.isTrue(queueEvent);
-        assert.strictEqual(result, 'barbar');
-        worker.close(done);
-      });
-      this.queue.once('job succeeded', (jobId, result) => {
-        queueEvent = true;
-        assert.strictEqual(jobId, job.id);
-        assert.strictEqual(result, 'barbar');
-      });
-      job.save();
-
-      worker.process((job, jobDone) => {
-        jobDone(null, job.data.foo + job.data.foo);
-      });
-    });
-
-    it('emits a job succeeded event with no result', function (done) {
-      this.queue = new Queue('test');
-      const worker = new Queue('test');
-      let queueEvent = false;
-
-      const job = this.queue.createJob({foo: 'bar'});
-      job.on('succeeded', (result) => {
-        assert.isTrue(queueEvent);
-        assert.strictEqual(result, undefined);
-        worker.close(done);
-      });
-      this.queue.once('job succeeded', (jobId, result) => {
-        queueEvent = true;
-        assert.strictEqual(jobId, job.id);
-        assert.strictEqual(result, undefined);
-      });
-      job.save();
-
-      worker.process((job, jobDone) => {
-        jobDone(null);
-      });
-    });
-
-    it('emits a job failed event', function (done) {
-      this.queue = new Queue('test');
-      const worker = new Queue('test');
-      let queueEvent = false;
-
-      const job = this.queue.createJob({foo: 'bar'});
-      job.on('failed', (err) => {
-        assert.isTrue(queueEvent);
-        assert.strictEqual(err.message, 'fail!');
-        worker.close(done);
-      });
-      this.queue.once('job failed', (jobId, err) => {
-        queueEvent = true;
-        assert.strictEqual(jobId, job.id);
-        assert.strictEqual(err.message, 'fail!');
-      });
-      job.save();
-
-      worker.process((job, jobDone) => {
-        jobDone(new Error('fail!'));
-      });
-    });
-
-    it('emits a job progress event', function (done) {
-      this.queue = new Queue('test');
-      const worker = new Queue('test');
-      let reportedProgress = false;
-      let queueEvent = false;
-
-      const job = this.queue.createJob({foo: 'bar'});
-      job.on('progress', (progress) => {
-        assert.isTrue(queueEvent);
-        assert.strictEqual(progress, 20);
-        reportedProgress = true;
-      });
-
-      this.queue.once('job progress', (jobId, progress) => {
-        queueEvent = true;
-        assert.strictEqual(jobId, job.id);
-        assert.strictEqual(progress, 20);
-      });
-
-
-      job.on('succeeded', () => {
-        assert.isTrue(reportedProgress);
-        assert.isTrue(queueEvent);
-        worker.close(done);
-      });
-      job.save();
-
-      worker.process((job, jobDone) => {
-        job.reportProgress(20);
-        setTimeout(jobDone, 20);
-      });
-    });
-
-    it('emits a job retrying event', function (done) {
-      this.queue = new Queue('test');
-      const worker = new Queue('test');
-      let retried = false;
-      let queueEvent = false;
-
-      const job = this.queue.createJob({foo: 'bar'}).retries(1);
-      job.on('retrying', (err) => {
-        assert.strictEqual(job.options.retries, 0);
-        assert.strictEqual(err.message, 'failing to retry');
-      });
-      this.queue.once('job retrying', (jobId, err) => {
-        queueEvent = true;
-        assert.strictEqual(jobId, job.id);
-        assert.strictEqual(err.message, 'failing to retry');
-      });
-      job.on('succeeded', (result) => {
-        assert.isTrue(retried);
-        assert.isTrue(queueEvent);
-        assert.strictEqual(result, 'retried');
-        worker.close(done);
-      });
-      job.save();
-
-      worker.process((job, jobDone) => {
-        if (retried) {
-          jobDone(null, 'retried');
-        } else {
-          retried = true;
-          jobDone(new Error('failing to retry'));
+      const {done: resume, next: spooled} = reef();
+      deadQueue.process(concurrency, (job) => {
+        // Wait for it to get all spooled up...
+        if (deadQueue.running === concurrency) {
+          spooled();
         }
       });
+
+      await resume;
+      await t.throws(deadQueue.close(1), 'Operation timed out.');
+
+      const queue = t.context.makeQueue({
+        stallInterval: 1
+      });
+
+      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
+      await queue.checkStalledJobs();
+      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
+
+      const {done, next} = reef(numJobs);
+      queue.process(async(job) => {
+        next() || t.fail('processed too many jobs');
+      });
+
+      return done;
     });
 
-    it('are not received when getEvents is false', function (done) {
-      this.queue = new Queue('test', {
+    it('should reset with an interval', async(t) => {
+      const deadQueue = t.context.makeQueue({
+        stallInterval: 0
+      });
+
+      const jobs = [
+        deadQueue.createJob({foo: 'bar1'}),
+        deadQueue.createJob({foo: 'bar2'}),
+        deadQueue.createJob({foo: 'bar3'}),
+      ];
+
+      // Save all the jobs.
+      await Promise.all(jobs.map((job) => job.save()));
+
+      const {done: resume, next: spooled} = reef();
+      deadQueue.process(() => {
+        spooled();
+      });
+
+      await resume;
+      await t.throws(deadQueue.close(1), 'Operation timed out.');
+
+      const queue = t.context.makeQueue({
+        stallInterval: 0
+      });
+      const {done, next} = reef(6);
+
+      const start = Date.now();
+
+      const stallCheck = sinon.spy();
+      queue.checkStalledJobs(10, stallCheck);
+
+      await queue.createJob({nota: 'foo'}).save();
+      queue.process(async(job) => {});
+
+      await helpers.delay(Date.now() - start + 20);
+
+      t.true(stallCheck.callCount > 2);
+
+      t.context.handleErrors(t);
+    });
+  });
+
+  it.describe('Startup', (it) => {
+    it('processes pre-existing jobs when starting a queue', async(t) => {
+      const deadQueue = t.context.makeQueue();
+
+      const jobs = [
+        deadQueue.createJob({foo: 'bar1'}),
+        deadQueue.createJob({foo: 'bar2'}),
+        deadQueue.createJob({foo: 'bar3'}),
+      ];
+
+      // Save all the jobs.
+      await Promise.all(jobs.map((job) => job.save()));
+      await deadQueue.close();
+
+      const queue = t.context.makeQueue();
+      let jobCount = 0;
+
+      const {done, next} = reef();
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar' + ++jobCount);
+        if (jobCount < 3) return;
+        t.is(jobCount, 3);
+        next();
+      });
+
+      await done;
+
+      t.context.handleErrors(t);
+    });
+
+    it('does not process an in-progress job when a new queue starts', async(t) => {
+      const queue = t.context.makeQueue();
+
+      await queue.createJob({foo: 'bar'}).save();
+
+      const jobDone = helpers.deferred(), finishJob = jobDone.defer();
+      queue.process((job) => {
+        t.is(job.data.foo, 'bar');
+        return jobDone;
+      });
+
+      const queue2 = t.context.makeQueue();
+      queue2.process(() => {
+        t.fail('queue2 should not process a job');
+      });
+
+      await helpers.delay(20);
+      finishJob();
+
+      await helpers.waitOn(queue, 'succeeded', true);
+    });
+  });
+
+  it.describe('Pubsub events', (it) => {
+    it('emits a job succeeded event', async(t) => {
+      const queue = t.context.makeQueue();
+      const worker = t.context.makeQueue();
+
+      const job = queue.createJob({foo: 'bar'});
+      const record = Promise.all([
+        recordUntil(job, ['succeeded'], 'succeeded'),
+        recordUntil(queue, ['job succeeded'], 'job succeeded'),
+      ]);
+
+      worker.process(async(job) => job.data.foo + job.data.foo);
+      await job.save();
+
+      // Wait for the event to show up in both, but only bind the value from the event on the job
+      // object.
+      const [jobEvents, queueEvents] = await record;
+
+      t.deepEqual(jobEvents, [
+        ['succeeded', 'barbar'],
+      ]);
+
+      t.deepEqual(queueEvents, [
+        ['job succeeded', job.id, 'barbar'],
+      ]);
+    });
+
+    it('emits a job succeeded event with no result', async(t) => {
+      const queue = t.context.makeQueue();
+      const worker = t.context.makeQueue();
+
+      const job = queue.createJob({foo: 'bar'});
+      const record = Promise.all([
+        recordUntil(job, ['succeeded'], 'succeeded'),
+        recordUntil(queue, ['job succeeded'], 'job succeeded'),
+      ]);
+
+      worker.process(async(job) => {});
+      await job.save();
+
+      // Wait for the event to show up in both, but only bind the value from the event on the job
+      // object.
+      const [jobEvents, queueEvents] = await record;
+
+      t.deepEqual(jobEvents, [
+        ['succeeded', undefined],
+      ]);
+
+      t.deepEqual(queueEvents, [
+        ['job succeeded', job.id, undefined],
+      ]);
+    });
+
+    it('emits a job failed event', async(t) => {
+      const queue = t.context.makeQueue();
+      const worker = t.context.makeQueue();
+
+      const job = queue.createJob({foo: 'bar'});
+      const record = Promise.all([
+        recordUntil(job, ['failed'], 'failed'),
+        recordUntil(queue, ['job failed'], 'job failed'),
+      ]);
+
+      worker.process(async(job) => {
+        throw new Error('fail!');
+      });
+      await job.save();
+
+      // Wait for the event to show up in both, but only bind the value from the event on the job
+      // object.
+      const [jobEvents, queueEvents] = await record;
+
+      const jobErr = jobEvents[0][1];
+      t.is(jobErr.message, 'fail!');
+      t.deepEqual(jobEvents, [
+        ['failed', jobErr],
+      ]);
+
+      const queueErr = queueEvents[0][2];
+      t.is(queueErr.message, 'fail!');
+      t.deepEqual(queueEvents, [
+        ['job failed', job.id, queueErr],
+      ]);
+    });
+
+    it('emits a job progress event', async(t) => {
+      const queue = t.context.makeQueue();
+      const worker = t.context.makeQueue();
+
+      const job = queue.createJob({foo: 'bar'});
+      const record = Promise.all([
+        recordUntil(job, ['progress', 'succeeded'], 'succeeded'),
+        recordUntil(queue, ['job progress', 'job succeeded'], 'job succeeded'),
+      ]);
+
+      worker.process((job) => {
+        job.reportProgress(20);
+        return helpers.delay(20);
+      });
+      await job.save();
+
+      // Wait for the event to show up in both, but only bind the value from the event on the job
+      // object.
+      const [jobEvents, queueEvents] = await record;
+
+      t.deepEqual(jobEvents, [
+        ['progress', 20],
+        ['succeeded', undefined],
+      ]);
+
+      t.deepEqual(queueEvents, [
+        ['job progress', job.id, 20],
+        ['job succeeded', job.id, undefined],
+      ]);
+    });
+
+    it('emits a job retrying event', async(t) => {
+      const queue = t.context.makeQueue();
+      const worker = t.context.makeQueue();
+
+      const job = queue.createJob({foo: 'bar'}).retries(1);
+      const record = Promise.all([
+        recordUntil(job, ['retrying', 'succeeded'], 'succeeded'),
+        recordUntil(queue, ['job retrying', 'job succeeded'], 'job succeeded'),
+      ]);
+
+      let retried = false;
+      worker.process(async(job) => {
+        if (!retried) {
+          retried = true;
+          throw new Error('failing job to trigger retry');
+        }
+      });
+      await job.save();
+
+      // Wait for the event to show up in both, but only bind the value from the event on the job
+      // object.
+      const [jobEvents, queueEvents] = await record;
+
+      t.is(job.options.retries, 0);
+
+      const jobErr = jobEvents[0][1];
+      t.is(jobErr.message, 'failing job to trigger retry');
+      t.deepEqual(jobEvents, [
+        ['retrying', jobErr],
+        ['succeeded', undefined],
+      ]);
+
+      const queueErr = queueEvents[0][2];
+      t.is(queueErr.message, 'failing job to trigger retry');
+      t.deepEqual(queueEvents, [
+        ['job retrying', job.id, queueErr],
+        ['job succeeded', job.id, undefined],
+      ]);
+    });
+
+    it('are not received when getEvents is false', async(t) => {
+      const queue = t.context.makeQueue({
         getEvents: false
       });
-      const worker = new Queue('test');
+      const worker = t.context.makeQueue();
 
-      assert.isUndefined(this.queue.eclient);
+      t.is(queue.eclient, undefined);
 
-      const job = this.queue.createJob({foo: 'bar'});
-      job.on('succeeded', () => {
-        assert.fail();
+      await queue.createJob({foo: 'bar'})
+        // Holy race condition, batman!
+        .on('succeeded', () => t.fail('should not trigger a succeeded event'))
+        .save();
+
+      worker.process(async(job) => {
+        return job.data.foo;
       });
-      job.save();
 
-      worker.process((job, jobDone) => {
-        jobDone(null, job.data.foo);
-        setTimeout(worker.close.bind(worker, done), 20);
-      });
+      await helpers.waitOn(worker, 'succeeded');
+      await helpers.delay(20);
     });
 
-    it('are not sent when sendEvents is false', function (done) {
-      this.queue = new Queue('test');
-      const worker = new Queue('test', {
+    it('are not sent when sendEvents is false', async(t) => {
+      t.plan(0);
+
+      const queue = t.context.makeQueue();
+      const worker = t.context.makeQueue({
         sendEvents: false
       });
 
-      const job = this.queue.createJob({foo: 'bar'});
-      job.on('succeeded', () => {
-        assert.fail();
-      });
-      job.save();
+      await queue.createJob({foo: 'bar'})
+        .on('succeeded', () => t.fail('should not trigger a succeeded event'))
+        .save();
 
-      worker.process((job, jobDone) => {
-        jobDone(null, job.data.foo);
-        setTimeout(worker.close.bind(worker, done), 20);
+      worker.process(async(job) => {
+        return job.data.foo;
       });
+
+      await helpers.waitOn(worker, 'succeeded');
+      await helpers.delay(20);
     });
 
-    it('properly emits events with multiple jobs', function (done) {
-      this.queue = new Queue('test');
-      const worker = new Queue('test');
+    it('properly emits events with multiple jobs', async(t) => {
+      const queue = t.context.makeQueue();
+      const worker = t.context.makeQueue();
 
-      let reported = 0;
-      const jobIds = new Set();
-      const job1 = this.queue.createJob({foo: 'bar'});
-      const job2 = this.queue.createJob({foo: 'baz'});
-      job1.on('succeeded', (result) => {
-        assert.strictEqual(result, 'barbar');
-        next();
-      });
-      job2.on('succeeded', (result) => {
-        assert.strictEqual(result, 'bazbaz');
-        next();
-      });
-      this.queue.on('job succeeded', (id) => {
-        jobIds.add(id);
-      });
-      job1.save();
-      job2.save();
+      const job1 = queue.createJob({foo: 'bar'});
+      const job2 = queue.createJob({foo: 'baz'});
+      const record = Promise.all([
+        recordUntil(job1, ['succeeded'], 'succeeded'),
+        recordUntil(job2, ['succeeded'], 'succeeded'),
+        recordUntil(queue, ['job succeeded'], 'derped'),
+      ]);
 
-      function next() {
-        reported += 1;
-        if (reported < 2) return;
-        assert.deepEqual(jobIds, new Set(['1', '2']));
-        assert.strictEqual(reported, 2);
-        worker.close(done);
-      }
+      worker.process(async(job) => job.data.foo + job.data.foo);
+      await Promise.all([job1.save(), job2.save()]);
 
-      worker.process((job, jobDone) => {
-        jobDone(null, job.data.foo + job.data.foo);
-      });
+      queue.once('job succeeded', () => queue.once('job succeeded', () => queue.emit('derped')));
+
+      // Wait for the event to show up in both, but only bind the value from the event on the job
+      // object.
+      const [job1Events, job2Events, queueEvents] = await record;
+
+      t.deepEqual(job1Events, [
+        ['succeeded', 'barbar'],
+      ]);
+
+      t.deepEqual(job2Events, [
+        ['succeeded', 'bazbaz'],
+      ]);
+
+      // Ordering here is guaranteed assuming no network errors.
+      t.deepEqual(queueEvents, [
+        ['job succeeded', job1.id, 'barbar'],
+        ['job succeeded', job2.id, 'bazbaz'],
+      ]);
     });
   });
 
-  describe('Destroy', function () {
-    beforeEach(closeQueue);
-    afterEach(closeQueue);
+  it.describe('Destroy', (it) => {
+    it('should remove all associated redis keys', async(t) => {
+      const queue = t.context.makeQueue();
 
-    it('should remove all associated redis keys', function (done) {
-      this.queue = new Queue('test');
-
-      this.queue.process((job, jobDone) => {
-        assert.strictEqual(job.data.foo, 'bar');
-        jobDone();
+      queue.process(async(job) => {
+        t.is(job.data.foo, 'bar');
       });
 
-      this.queue.createJob({foo: 'bar'}).save((err, job) => {
-        if (err) return done(err);
-        assert.ok(job.id);
-        assert.strictEqual(job.data.foo, 'bar');
-      });
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
 
-      const checkForKeys = (err) => {
-        if (err) return done(err);
-        this.queue.client.keys(this.queue.toKey('*'), (keysErr, keys) => {
-          if (err) return done(keysErr);
-          assert.deepEqual(keys, []);
-          done();
-        });
-      };
+      const successJob = await helpers.waitOn(queue, 'succeeded');
+      t.truthy(successJob);
+      await queue.destroy();
 
-      this.queue.on('succeeded', (job) => {
-        assert.ok(job);
-        this.queue.destroy(checkForKeys);
-      });
+      const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
+      const keys = await getKeys(queue.toKey('*'));
+      t.deepEqual(keys, []);
     });
   });
 

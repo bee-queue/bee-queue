@@ -1,6 +1,5 @@
 module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-eslint');
-  grunt.loadNpmTasks('grunt-mocha-test');
   grunt.loadNpmTasks('grunt-githooks');
 
   grunt.initConfig({
@@ -13,14 +12,6 @@ module.exports = function(grunt) {
         'test/**/*.js'
       ]
     },
-    mochaTest: {
-      test: {
-        options: {
-          reporter: 'spec'
-        },
-        src: ['test/**/*.js']
-      }
-    },
     githooks: {
       all: {
         'pre-commit': 'eslint',
@@ -29,5 +20,4 @@ module.exports = function(grunt) {
   });
 
   grunt.registerTask('default', ['eslint']);
-  grunt.registerTask('test', ['eslint', 'mochaTest']);
 };
