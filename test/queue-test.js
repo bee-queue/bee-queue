@@ -8,16 +8,6 @@ import {promisify} from 'promise-callbacks';
 
 import redis from '../lib/redis';
 
-// Effectively _.after
-function barrier(n, done) {
-  return () => {
-    n -= 1;
-    if (n === 0) {
-      done();
-    }
-  };
-}
-
 // A promise-based barrier.
 function reef(n = 1) {
   const done = helpers.deferred(), end = done.defer();
@@ -59,6 +49,34 @@ function delKeys(client, pattern) {
     }
   });
   return promise;
+}
+
+function spitter() {
+  const values = [], resume = [];
+
+  function push(value) {
+    if (resume.length) {
+      resume.shift()(value);
+    } else {
+      values.push(value);
+    }
+  }
+
+  return {
+    push,
+    pushSuspend(value) {
+      return new Promise((resolve) => push([value, resolve]));
+    },
+    count() {
+      return values.length;
+    },
+    shift() {
+      if (values.length) {
+        return Promise.resolve(values.shift());
+      }
+      return new Promise((resolve) => resume.push(resolve));
+    }
+  };
 }
 
 describe('Queue', (it) => {
@@ -1130,44 +1148,102 @@ describe('Queue', (it) => {
       return done;
     });
 
-    it('should reset with an interval', async(t) => {
-      const deadQueue = t.context.makeQueue({
-        stallInterval: 0
+    it('should reset with an interval', async (t) => {
+      // Open two queues:
+      // - a queue that stalls all jobs
+      // - a queue that processes all jobs
+      // Produce two jobs such that the "bad" queue receives a job.
+      // Safely finish the job in the "good" queue.
+      // Close the "bad queue".
+      // Run checkStalledJobs with an interval.
+      // Once the queue emits a "stalled" event, create a new "bad" queue.
+      // Publish another two jobs as above.
+      // Once the "bad" queue has received a job, close it.
+      // Ensure the jobs both process, and that the "good" queue emits a stalled event.
+
+      const goodQueue = t.context.makeQueue({
+        stallInterval: 50
       });
 
-      const jobs = [
-        deadQueue.createJob({foo: 'bar1'}),
-        deadQueue.createJob({foo: 'bar2'}),
-        deadQueue.createJob({foo: 'bar3'}),
-      ];
+      const failStalled = () => t.fail('no job should stall yet');
+      goodQueue.on('stalled', failStalled);
 
-      // Save all the jobs.
-      await Promise.all(jobs.map((job) => job.save()));
+      const goodJobs = spitter();
+      goodQueue.process((job) => goodJobs.pushSuspend(job));
 
-      const {done: resume, next: spooled} = reef();
-      deadQueue.process(() => {
-        spooled();
+      let deadQueue = t.context.makeQueue({
+        stallInterval: 50
       });
 
-      await resume;
+      let deadJobs = spitter();
+      deadQueue.process((job) => deadJobs.pushSuspend(job));
+
+      // Save the two jobs.
+      const firstJobs = await Promise.all([
+        deadQueue.createJob({foo: 'bar1'}).save(),
+        deadQueue.createJob({foo: 'bar2'}).save(),
+      ]);
+
+      await deadJobs.shift();
+
+      const [, finishFirstGood] = await goodJobs.shift();
+
+      // Finish the job in the good queue.
+      finishFirstGood(null);
+
+      // Force the dead queue to close with a timeout.
       await t.throws(deadQueue.close(1), 'Operation timed out.');
 
-      const queue = t.context.makeQueue({
-        stallInterval: 0
+      const stalls = spitter();
+      goodQueue.removeListener('stalled', failStalled);
+      goodQueue.on('stalled', stalls.push);
+
+      goodQueue.checkStalledJobs(120);
+
+      // We now have a stalled job, and the good queue has already completed its initial stalled
+      // jobs check.
+      const firstStalledJobId = await stalls.shift();
+      t.true(firstJobs.some((job) => job.id === firstStalledJobId));
+
+      // Process the stalled job.
+      (await goodJobs.shift())[1](null);
+
+      deadQueue = t.context.makeQueue({
+        stallInterval: 50
       });
-      const {done, next} = reef(6);
 
-      const start = Date.now();
+      deadJobs = spitter();
+      deadQueue.process((job) => deadJobs.pushSuspend(job));
 
-      const stallCheck = sinon.spy();
-      queue.checkStalledJobs(10, stallCheck);
+      const secondJobs = await Promise.all([
+        deadQueue.createJob({foo: 'bar1'}).save(),
+        deadQueue.createJob({foo: 'bar2'}).save(),
+      ]);
 
-      await queue.createJob({nota: 'foo'}).save();
-      queue.process(async(job) => {});
+      const secondJobIds = new Set(secondJobs.map((job) => job.id));
 
-      await helpers.delay(Date.now() - start + 20);
+      const [deadJob,] = await deadJobs.shift();
+      await t.throws(deadQueue.close(1), 'Operation timed out.');
 
-      t.true(stallCheck.callCount > 2);
+      const secondGoodBatch = new Set();
+
+      const [secondGoodJob, secondGoodJobFinish] = await goodJobs.shift();
+      secondGoodBatch.add(secondGoodJob.id);
+      secondGoodJobFinish(null);
+
+      const secondStalledJobId = await stalls.shift();
+      t.is(secondStalledJobId, deadJob.id);
+      t.not(secondStalledJobId, secondGoodJob.id);
+      t.true(secondJobIds.has(secondStalledJobId));
+
+      const [retriedJob, retriedJobFinish] = await goodJobs.shift();
+      secondGoodBatch.add(retriedJob.id);
+      retriedJobFinish(null);
+
+      t.deepEqual(secondGoodBatch, secondJobIds);
+
+      t.is(stalls.count(), 0);
+      t.is(goodJobs.count(), 0);
 
       t.context.handleErrors(t);
     });
