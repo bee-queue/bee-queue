@@ -126,8 +126,6 @@ describe('Job', (it) => {
   });
 });
 
-process.on('unhandledRejection', (err) => console.log(err.stack));
-
 function clearKeys(client, queue, done) {
   client.keys(queue.toKey('*'), (err, keys) => {
     if (err) return done(err);
