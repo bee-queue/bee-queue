@@ -1,7 +1,13 @@
 {
-  "extends": "../.eslintrc",
+  "extends": [
+    "../.eslintrc.json"
+  ],
   "rules": {
     "handle-callback-err": 1,
     "no-shadow": 0
+  },
+  "parserOptions": {
+    "ecmaVersion": 2017,
+    "sourceType": "module"
   }
 }

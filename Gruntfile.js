@@ -5,7 +5,7 @@ module.exports = function(grunt) {
   grunt.initConfig({
     eslint: {
       options: {
-        config: '.eslintrc'
+        config: '.eslintrc.json'
       },
       target: [
         'lib/**/*.js',
