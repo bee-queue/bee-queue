@@ -481,6 +481,7 @@ describe('Queue', (it) => {
       t.truthy(job.id);
 
       const failedJob = await helpers.waitOn(queue, 'failed');
+      t.is(failedJob.id, job.id);
 
       const counts = await queue.checkHealth();
       t.is(counts.failed, 1);
@@ -603,6 +604,8 @@ describe('Queue', (it) => {
       t.is(job.data.foo, 'bar');
 
       const succeededJob = await helpers.waitOn(queue, 'succeeded');
+      t.is(succeededJob.id, job.id);
+
       const jobData = await hget(queue.toKey('jobs'), job.id);
       t.is(jobData, null);
     });
@@ -1037,8 +1040,6 @@ describe('Queue', (it) => {
       await helpers.delay(1); // Just in case - somehow - we end up going too fast.
       await queue.checkStalledJobs();
       await helpers.delay(1); // Just in case - somehow - we end up going too fast.
-
-      const resumePromise = helpers.deferred(), resume = resumePromise.defer();
 
       const {done, next} = reef(jobs.length);
       queue.process(async () => {
