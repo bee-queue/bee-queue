@@ -25,7 +25,6 @@ describe('EagerTimer', (it) => {
   });
 
   it('should trigger in the future', (t) => {
-    // console.log('firstd');
     const {clock, timer, start, trigger} = t.context;
 
     timer.schedule(start + 200);
@@ -35,7 +34,6 @@ describe('EagerTimer', (it) => {
   });
 
   it('should not trigger after the maximum delay', (t) => {
-    // console.log('firste');
     const {clock, timer, start, trigger} = t.context;
 
     timer.schedule(start + 600);
