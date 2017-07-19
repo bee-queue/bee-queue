@@ -21,7 +21,7 @@
     "sinon": "^2.3.8"
   },
   "scripts": {
-    "test": "ava",
+    "test": "npm run eslint && ava",
     "eslint": "grunt eslint",
     "coverage": "nyc ava",
     "report": "npm run coverage && nyc report --reporter=html",
