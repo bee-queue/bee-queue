@@ -1,4 +1,4 @@
-import test, {describe} from 'ava-spec';
+import {describe} from 'ava-spec';
 import sandbox from 'sandboxed-module';
 import lolex from 'lolex';
 import sinon from 'sinon';

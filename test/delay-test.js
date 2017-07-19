@@ -1,9 +1,8 @@
-import test, {describe} from 'ava-spec';
+import {describe} from 'ava-spec';
 
 import Queue from '../lib/queue';
 import helpers from '../lib/helpers';
 import sinon from 'sinon';
-import defaults from '../lib/defaults';
 
 import redis from '../lib/redis';
 
@@ -85,16 +84,16 @@ describe('Delayed jobs', (it) => {
     }
   });
 
-  it.beforeEach(async(t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
-  it.afterEach(async(t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
+  it.beforeEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
+  it.afterEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
 
-  it('should process delayed jobs', async(t) => {
+  it('should process delayed jobs', async (t) => {
     const queue = t.context.makeQueue({
       processDelayed: true,
       getEvents: false
     });
 
-    const processSpy = sinon.spy(async() => {});
+    const processSpy = sinon.spy(async () => {});
     queue.process(processSpy);
 
     const raised = helpers.waitOn(queue, 'raised jobs');
@@ -116,7 +115,7 @@ describe('Delayed jobs', (it) => {
   // distributed systems and inconsistent clocks. As such, we can't reject delayed publish
   // notifications, so if our local redis has a delayed publish, it'll show up and trigger an
   // extra raiseDelayedJobs invocation.
-  it('should process two proximal delayed jobs', async(t) => {
+  it('should process two proximal delayed jobs', async (t) => {
     const queue = t.context.makeQueue({
       processDelayed: true,
       delayedDebounce: 150,
@@ -125,7 +124,7 @@ describe('Delayed jobs', (it) => {
       nearTermWindow: 10000
     });
 
-    const processSpy = sinon.spy(async() => {});
+    const processSpy = sinon.spy(async () => {});
     queue.process(processSpy);
 
     const successSpy = sinon.spy();
@@ -162,7 +161,7 @@ describe('Delayed jobs', (it) => {
     t.context.handleErrors(t);
   });
 
-  it('should process a distant delayed job', async(t) => {
+  it('should process a distant delayed job', async (t) => {
     const queue = t.context.makeQueue({
       processDelayed: true,
       nearTermWindow: 100
@@ -180,7 +179,7 @@ describe('Delayed jobs', (it) => {
 
     await queue.ready();
 
-    const processSpy = sinon.spy(async() => {});
+    const processSpy = sinon.spy(async () => {});
     queue.process(processSpy);
 
     const success = helpers.waitOn(queue, 'succeeded', true);
@@ -214,13 +213,13 @@ describe('Delayed jobs', (it) => {
     t.context.handleErrors(t);
   });
 
-  it('should process delayed jobs from other workers', async(t) => {
+  it('should process delayed jobs from other workers', async (t) => {
     const queue = t.context.makeQueue({
       getEvents: false,
       processDelayed: false
     });
 
-    const processSpy = sinon.spy(async() => {});
+    const processSpy = sinon.spy(async () => {});
     queue.process(processSpy);
 
     const success = helpers.waitOn(queue, 'succeeded', true);
@@ -241,14 +240,14 @@ describe('Delayed jobs', (it) => {
     t.true(processSpy.calledOnce);
   });
 
-  it('should process the delayed job the first time it was created', async(t) => {
+  it('should process the delayed job the first time it was created', async (t) => {
     const queue = t.context.makeQueue({
       getEvents: false,
       sendEvents: false,
       processDelayed: true
     });
 
-    const processSpy = sinon.spy(async() => {});
+    const processSpy = sinon.spy(async () => {});
     queue.process(processSpy);
 
     const success = helpers.waitOn(queue, 'succeeded', true);
