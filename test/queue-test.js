@@ -294,9 +294,11 @@ describe('Queue', (it) => {
         const queue = t.context.makeQueue();
 
         // Intentionally stall the job.
-        queue.process(() => {});
+        const jobs = spitter();
+        queue.process((job) => jobs.pushSuspend(job));
 
         await queue.createJob({}).save();
+        await jobs.shift();
 
         await t.throws(queue.close(10), 'Operation timed out.');
 
