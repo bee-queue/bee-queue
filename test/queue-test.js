@@ -948,7 +948,7 @@ describe('Queue', (it) => {
         queue.createJob({count: i}).save();
       }
 
-      return end;
+      return end.then(() => t.context.handleErrors(t));
     });
   });
 
