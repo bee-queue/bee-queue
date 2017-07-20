@@ -27,6 +27,7 @@
     "no-shadow": 1,
     "no-spaced-func": 2,
     "no-trailing-spaces": 2,
+    "no-undef": 2,
     "no-underscore-dangle": 0,
     "no-unused-vars": [2, {"vars": "all", "args": "after-used"}],
     "no-use-before-define": [2, "nofunc"],
