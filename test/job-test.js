@@ -63,6 +63,16 @@ describe('Job', (it) => {
       }, 'Retries cannot be negative');
     });
 
+    it('should reject invalid delay timestamps', (t) => {
+      const {queue} = t.context;
+
+      const job = queue.createJob({foo: 'bar'});
+      t.throws(() => job.delayUntil(null), /timestamp/i);
+      t.throws(() => job.delayUntil(NaN), /timestamp/i);
+      t.throws(() => job.delayUntil('wobble'), /timestamp/i);
+      t.throws(() => job.delayUntil(-8734), /timestamp/i);
+    });
+
     it('sets timeout', (t) => {
       const {queue} = t.context;
 
