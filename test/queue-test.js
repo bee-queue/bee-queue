@@ -89,7 +89,7 @@ describe('Queue', (it) => {
     const ctx = t.context;
 
     Object.assign(ctx, {
-      queueName: `test-job-${uid++}`,
+      queueName: `test-queue-${uid++}`,
       queues: [],
       queueErrors: [],
       makeQueue,
