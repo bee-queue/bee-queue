@@ -319,20 +319,52 @@ describe('Queue', (it) => {
         await jobs.shift();
 
         await t.throws(queue.close(10), 'Operation timed out.');
-
-        // Clean up the queues so we don't try to in the afterEach hook.
-        t.context.queues = null;
       });
-    });
 
-    it('should not error on close', async (t) => {
-      const queue = t.context.makeQueue();
+      it('should not time out when a job fails', async (t) => {
+        const queue = t.context.makeQueue();
 
-      await queue.close();
+        const jobs = spitter();
+        queue.process((job) => jobs.pushSuspend(job));
 
-      await helpers.delay(30);
+        await queue.createJob({}).save();
+        const [, finishJob] = await jobs.shift();
 
-      t.context.handleErrors(t);
+        process.nextTick(finishJob, new Error('fails the job'));
+        await t.notThrows(queue.close(100));
+      });
+
+      it('should error if a job completes after the timeout', async (t) => {
+        const queue = t.context.makeQueue();
+
+        const jobs = spitter();
+        queue.process((job) => jobs.pushSuspend(job));
+
+        await queue.createJob({}).save();
+        const [, finishJob] = await jobs.shift();
+
+        await t.throws(queue.close(10));
+        finishJob(null);
+
+        await helpers.delay(5);
+
+        const errors = t.context.queueErrors, count = errors.length;
+        t.context.queueErrors = errors.filter((err) => {
+          return err.message !== 'unable to update the status of succeeded job 1';
+        });
+        t.is(t.context.queueErrors.length, count - 1);
+        t.context.handleErrors(t);
+      });
+
+      it('should not error on close', async (t) => {
+        const queue = t.context.makeQueue();
+
+        await queue.close();
+
+        await helpers.delay(30);
+
+        t.context.handleErrors(t);
+      });
     });
 
     it('should recover from a connection loss', async (t) => {
@@ -505,6 +537,15 @@ describe('Queue', (it) => {
 
       const counts = await queue.checkHealth();
       t.is(counts.failed, 1);
+    });
+
+    it('should not report the latest job for custom job ids', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await queue.createJob({}).setId('noot').save();
+
+      const counts = await queue.checkHealth();
+      t.is(counts.newestJob, 0);
     });
   });
 
@@ -1555,6 +1596,14 @@ describe('Queue', (it) => {
       const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
       const keys = await getKeys(queue.toKey('*'));
       t.deepEqual(keys, []);
+    });
+
+    it('should fail after closed', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await queue.close();
+
+      await t.throws(queue.destroy(), 'closed');
     });
   });
 
