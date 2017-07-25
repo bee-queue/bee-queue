@@ -9,17 +9,17 @@ A simple, fast, robust job/task queue for Node.js, backed by Redis.
 - Robust: designed with concurrency, atomicity, and failure in mind; close to full code coverage.
 
 ```js
-var Queue = require('bee-queue');
-var queue = new Queue('example');
+const Queue = require('bee-queue');
+const queue = new Queue('example');
 
-var job = queue.createJob({x: 2, y: 3}).save();
-job.on('succeeded', function (result) {
-  console.log('Received result for job ' + job.id + ': ' + result);
+const job = queue.createJob({x: 2, y: 3}).save();
+job.on('succeeded', (result) => {
+  console.log(`Received result for job ${job.id}: result`);
 });
 
 // Process jobs from as many servers or processes as you like
 queue.process(function (job, done) {
-  console.log('Processing job ' + job.id);
+  console.log(`Processing job ${job.id}`);
   return done(null, job.data.x + job.data.y);
 });
 ```
@@ -123,14 +123,14 @@ Check out the [Arena](https://github.com/bee-queue/arena) web interface to manag
 [Queue](#queue) objects are the starting point to everything this library does. To make one, we just need to give it a name, typically indicating the sort of job it will process:
 
 ```js
-var Queue = require('bee-queue');
-var addQueue = new Queue('addition');
+const Queue = require('bee-queue');
+const addQueue = new Queue('addition');
 ```
 
 Queues are very lightweight — the only significant overhead is connecting to Redis — so if you need to handle different types of jobs, just instantiate a queue for each:
 
 ```js
-var subQueue = new Queue('subtraction', {
+const subQueue = new Queue('subtraction', {
   redis: {
     host: 'somewhereElse'
   },
@@ -190,7 +190,7 @@ The handler function is given the job it needs to process, including `job.data` 
 `.process` can also take a concurrency parameter. If your jobs spend most of their time just waiting on external resources, you might want each processor instance to handle at most 10 at a time:
 
 ```js
-var baseUrl = 'http://www.google.com/search?q=';
+const baseUrl = 'http://www.google.com/search?q=';
 subQueue.process(10, function (job, done) {
   http.get(`${baseUrl}${job.data.x}-${job.data.y}`, function (res) {
     // parse the difference out of the response...
@@ -247,7 +247,7 @@ To make this happen, workers periodically phone home to Redis about each job the
 The default Queue settings are:
 
 ```js
-var queue = new Queue('test', {
+const queue = new Queue('test', {
   prefix: 'bq',
   stallInterval: 5000,
   nearTermWindow: 1200000,
@@ -305,7 +305,7 @@ The `settings` fields are:
 Instead of listening to this event, consider calling `Queue#ready([cb])`, which returns a Promise that resolves once the Queue is ready. If the Queue is already ready, then the Promise will be already resolved.
 
 ```js
-queue.on('ready', function () {
+queue.on('ready', () => {
   console.log('queue now ready to start doing things');
 });
 ```
@@ -315,7 +315,7 @@ The queue has connected to Redis and ensured that the [Lua scripts are cached](h
 #### error
 
 ```js
-queue.on('error', function (err) {
+queue.on('error', (err) => {
   console.log(`A queue error happened: ${err.message}`);
 });
 ```
@@ -325,7 +325,7 @@ Any Redis errors are re-emitted from the Queue. Note that this event will not be
 #### succeeded
 
 ```js
-queue.on('succeeded', function (job, result) {
+queue.on('succeeded', (job, result) => {
   console.log(`Job ${job.id} succeeded with result: ${result}`);
 });
 ```
@@ -335,7 +335,7 @@ This queue has successfully processed `job`. If `result` is defined, the handler
 #### retrying
 
 ```js
-queue.on('retrying', function (job, err) {
+queue.on('retrying', (job, err) => {
   console.log(`Job ${job.id} failed with error ${err.message} but is being retried!`);
 });
 ```
@@ -345,7 +345,7 @@ This queue has processed `job`, but it reported a failure and has been re-enqueu
 #### failed
 
 ```js
-queue.on('failed', function (job, err) {
+queue.on('failed', (job, err) => {
   console.log(`Job ${job.id} failed with error ${err.message}`);
 });
 ```
@@ -363,7 +363,7 @@ Note that Queue PubSub events pass the `jobId`, but do not have a reference to t
 #### job succeeded
 
 ```js
-queue.on('job succeeded', function (jobId, result) {
+queue.on('job succeeded', (jobId, result) => {
   console.log(`Job ${jobId} succeeded with result: ${result}`);
 });
 ```
@@ -373,7 +373,7 @@ Some worker has successfully processed job `jobId`. If `result` is defined, the 
 #### job retrying
 
 ```js
-queue.on('job retrying', function (jobId, err) {
+queue.on('job retrying', (jobId, err) => {
   console.log(`Job ${jobId} failed with error ${err.message} but is being retried!`);
 });
 ```
@@ -383,7 +383,7 @@ Some worker has processed job `jobId`, but it reported a failure and has been re
 #### job failed
 
 ```js
-queue.on('job failed', function (jobId, err) {
+queue.on('job failed', (jobId, err) => {
   console.log(`Job ${jobId} failed with error ${err.message}`);
 });
 ```
@@ -393,7 +393,7 @@ Some worker has processed `job`, but its handler reported a failure with `done(e
 #### job progress
 
 ```js
-queue.on('job progress', function (jobId, progress) {
+queue.on('job progress', (jobId, progress) => {
   console.log(`Job ${jobId} reported progress: ${progress}%`);
 });
 ```
@@ -625,9 +625,11 @@ Defaults to no timeout.
 
 ```js
 const job = queue.createJob({...});
-job.save(function (err, job) {
-  console.log('Saved job ' + job.id);
+job.save((err, job) => {
+  console.log(`Saved job ${job.id}`);
 });
+
+job.save().then((job) => console.log(`Saved job ${job.id}`));
 ```
 
 Saves a job, queueing it up for processing. After the callback fires (and associated Promise resolves), `job.id` will be populated.
@@ -637,13 +639,13 @@ Saves a job, queueing it up for processing. After the callback fires (and associ
 ```js
 queue.process(async (job, done) => {
   await doSomethingQuick();
-  
+
   job.reportProgress(10);
-  
+
   await doSomethingBigger();
-  
+
   job.reportProgress(50);
-  
+
   await doFinalizeStep();
 });
 ```
