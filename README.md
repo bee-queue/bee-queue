@@ -463,6 +463,8 @@ Bee-Queue automatically calls this method once when a worker begins processing, 
 
 The maximum delay from when a job stalls until it will be retried is roughly `stallInterval` + `interval`, so to minimize that delay without calling `checkStalledJobs` unnecessarily often, set `interval` to be the same or a bit shorter than `stallInterval`. A good system-wide average frequency for the check is every 0.5-10 seconds, depending on how time-sensitive your jobs are in case of failure.
 
+Note that for calls that specify an interval, you must provide a callback if you want results from each subsequent check - the returned `Promise` can and will only resolve for the first check. If and only if you specify an `interval` and no `cb`, then errors encountered after the first check will be emitted as `error` events.
+
 #### Queue#close([cb])
 
 Closes the queue's connections to Redis. Idempotent.
