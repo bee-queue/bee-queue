@@ -98,6 +98,8 @@ Bee-Queue is like a bee because it:
 
 ![benchmark chart](https://raw.githubusercontent.com/bee-queue/bee-queue/master/benchmark/benchmark-chart.png)
 
+See the raw data [here](https://raw.githubusercontent.com/bee-queue/bee-queue/master/summary-2017-07-20.txt).
+
 These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with Node.js (v6.9.1, v7.6.0, and v8.2.0) and Redis 3.2.9 running directly on an AWS m4.xlarge. The numbers shown are averages of 3 runs; the raw data collected and code used are available in the benchmark folder.
 
 For a rough idea of space efficiency, the following table contains Redis memory usage as reported by [INFO](http://redis.io/commands/INFO) after doing a [FLUSHALL](http://redis.io/commands/FLUSHALL), restarting Redis, and running a single basic 10k job benchmark:
@@ -108,7 +110,7 @@ For a rough idea of space efficiency, the following table contains Redis memory 
 | Bull      |        3.93MB |      5.09MB |         2.95MB |        4.11MB |
 | Kue       |        7.53MB |      7.86MB |         6.55MB |        6.88MB |
 
-The Δ columns factor out the ~986KB of memory usage reported by Redis on a fresh startup.
+The Δ columns factor out the ~986KB of memory usage reported by Redis on a fresh startup. Note that this data was collected in 2015, but should still accurately reflect the memory usage of Bee-Queue.
 
 # Web Interface
 
@@ -300,7 +302,7 @@ The `settings` fields are:
 
 #### ready
 
-Instead of listening to this event, consider calling `ready([cb])`, which returns a Promise that resolves once the Queue is ready. If the Queue is already ready, then the Promise will be already resolved.
+Instead of listening to this event, consider calling `Queue#ready([cb])`, which returns a Promise that resolves once the Queue is ready. If the Queue is already ready, then the Promise will be already resolved.
 
 ```js
 queue.on('ready', function () {
@@ -398,6 +400,14 @@ queue.on('job progress', function (jobId, progress) {
 
 Some worker is processing job `jobId`, and it sent a [progress report](#jobprototypereportprogressn) of `progress` percent.
 
+### Queue Delayed Job activation
+
+The `Queue` will activate no delayed jobs unless `processDelayed` is set to `true`.
+
+The promptness of the job activation is controlled with the `delayedDebounce` setting on the `Queue`. This setting defines a window across which to group delayed jobs. If three jobs are enqueued for 10s, 10.5s, and 12s in the future, then a `delayedDebounce` of `1000` will cause the first two jobs to activate when the timestamp of the second job passes.
+
+The `nearTermWindow` setting on the `Queue` determines the maximum duration the `Queue` should wait before attempting to activate any of the elapsed delayed jobs in Redis. This setting is to control for network failures in the delivery of the `earlierDelayed` event in conjunction with the death of the publishing `Queue`.
+
 ### Methods
 
 #### Queue(name, [settings])
@@ -418,11 +428,14 @@ Returns a new [Job object](#job) with the associated user data.
 queue.getJob(3, function (err, job) {
   console.log(`Job 3 has status ${job.status}`);
 });
+
+queue.getJob(3)
+  .then((job) => console.log(`Job 3 has status ${job.status}`));
 ```
 
 Looks up a job by its `jobId`. The returned job will emit events if `getEvents` and `storeJobs` is true.
 
-Be careful with this method; most potential uses would be better served by job events on already-existing job instances. Using this method indiscriminately can lead to increasing memory usage, as each queue maintains a table of all associated jobs in order to dispatch events.
+Be careful with this method; most potential uses would be better served by job events on already-existing job instances. Using this method indiscriminately can lead to increasing memory usage when the `storeJobs` setting is `true`, as each queue maintains a table of all associated jobs in order to dispatch events.
 
 #### Queue#process([concurrency, ]handler(job, done))
 
@@ -442,12 +455,14 @@ The handler function should either:
 - Never throw an exception, unless `catchExceptions` has been enabled (otherwise, the error will be emitted from the `Queue` instance).
 - Never ever [block](http://www.slideshare.net/async_io/practical-use-of-mongodb-for-nodejs/47) [the](http://blog.mixu.net/2011/02/01/understanding-the-node-js-event-loop/) [event](https://strongloop.com/strongblog/node-js-performance-event-loop-monitoring/) [loop](http://zef.me/blog/4561/node-js-and-the-case-of-the-blocked-event-loop) (for very long). If you do, the stall detection might think the job stalled, when it was really just blocking the event loop.
 
+_N.B. If the handler returns a `Promise`, calls to the `done` callback will be ignored._
+
 #### Queue#checkStalledJobs([interval], [cb])
 
 Checks for jobs that appear to be stalling and thus need to be retried, then re-enqueues them.
 
 ```js
-queue.checkStalledJobs(5000, function (err, numStalled) {
+queue.checkStalledJobs(5000, (err, numStalled) => {
   // prints the number of stalled jobs detected every 5000 ms
   console.log('Checked stalled jobs', numStalled);
 });
@@ -461,7 +476,7 @@ What happens after the check is determined by the parameters provided:
 
 Bee-Queue automatically calls this method once when a worker begins processing, so it will check once if a worker process restarts. You should also make your own call with an interval parameter to make the check happen repeatedly over time; see [Under the hood](#under-the-hood) for an explanation why.
 
-The maximum delay from when a job stalls until it will be retried is roughly `stallInterval` + `interval`, so to minimize that delay without calling `checkStalledJobs` unnecessarily often, set `interval` to be the same or a bit shorter than `stallInterval`. A good system-wide average frequency for the check is every 0.5-10 seconds, depending on how time-sensitive your jobs are in case of failure.
+The maximum delay from when a job stalls until it will be retried is roughly `stallInterval + interval`, so to minimize that delay without calling `checkStalledJobs` unnecessarily often, set `interval` to be the same or a bit shorter than `stallInterval`. A good system-wide average frequency for the check is every 0.5-10 seconds, depending on how time-sensitive your jobs are in case of failure. Larger deployments, or deployments where processing has higher CPU variance, may need even higher intervals.
 
 Note that for calls that specify an interval, you must provide a callback if you want results from each subsequent check - the returned `Promise` can and will only resolve for the first check. If and only if you specify an `interval` and no `cb`, then errors encountered after the first check will be emitted as `error` events.
 
@@ -494,7 +509,7 @@ These are all Pub/Sub events like [Queue PubSub events](#queue-pubsub-events) an
 
 ```js
 const job = await queue.createJob({...}).save();
-job.on('succeeded', function (result) {
+job.on('succeeded', (result) => {
   console.log(`Job ${job.id} succeeded with result: ${result}`);
 });
 ```
@@ -504,7 +519,7 @@ The job has succeeded. If `result` is defined, the handler called `done(null, re
 #### retrying
 
 ```js
-job.on('retrying', function (err) {
+job.on('retrying', (err) => {
   console.log(`Job ${job.id} failed with error ${err.message} but is being retried!`);
 });
 ```
@@ -514,7 +529,7 @@ The job has failed, but it is being automatically re-enqueued for another attemp
 #### failed
 
 ```js
-job.on('failed', function (err) {
+job.on('failed', (err) => {
   console.log(`Job ${job.id} failed with error ${err.message}`);
 });
 ```
@@ -524,7 +539,7 @@ The job has failed, and is not being retried.
 #### progress
 
 ```js
-job.on('progress', function (progress) {
+job.on('progress', (progress) => {
   console.log(`Job ${job.id} reported progress: ${progress}%`);
 });
 ```
@@ -538,7 +553,9 @@ Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.back
 #### Job#setId(id)
 
 ```js
-const job = await queue.createJob({...}).setId('bulk').save();
+const job = await queue.createJob({...})
+  .setId('bulk')
+  .save();
 ```
 
 Explicitly sets the ID of the job. If a job with the given ID already exists, the Job will not be created, and `job.id` will be set to `null`. This method can be used to run a once for each of an external resource by passing that resource's ID. For instance, you might run the setup job for a user only once by setting the job ID to the ID of the user.
@@ -548,7 +565,9 @@ Avoid passing a numeric job ID, as it may conflict with an auto-generated ID.
 #### Job#retries(n)
 
 ```js
-const job = await queue.createJob({...}).retries(3).save();
+const job = await queue.createJob({...})
+  .retries(3)
+  .save();
 ```
 
 Sets how many times the job should be automatically retried in case of failure.
@@ -557,14 +576,45 @@ Stored in `job.options.retries` and decremented each time the job is retried.
 
 Defaults to 0.
 
-#### Job#backoff(strategy)
+#### Job#backoff(strategy, delayFactor)
 
+```js
+// When the job fails, retry it immediately.
+const job = queue.createJob({...})
+  .backoff('immediate');
+// When the job fails, wait the given number of milliseconds before retrying.
+job.backoff('fixed', 1000);
+// When the job fails, retry using an exponential backoff policy.
+// In this example, the first retry will be after one second after completion
+// of the first attempt, and the second retry will be two seconds after completion
+// of the first retry.
+job.backoff('exponential', 1000);
+```
 
+Sets the backoff policy when handling retries.
+
+This setting is stored in `job.options.backoff` as `{strategy, delay}`.
+
+Defaults to `'immediate'`.
+
+#### Job#delayUntil(date|timestamp)
+
+```js
+const job = await queue.createJob({...})
+  .delayUntil(Date.parse('2038-01-19T03:14:08.000Z'))
+  .save();
+```
+
+Delay the job until the given Date/timestamp passes. See the `Queue` settings section for information on controlling the activation of delayed jobs.
+
+Defaults to enqueueing the job for immediate processing.
 
 #### Job#timeout(ms)
 
 ```js
-const job = await queue.createJob({...}).timeout(10000).save();
+const job = await queue.createJob({...})
+  .timeout(10000)
+  .save();
 ```
 
 Sets a job runtime timeout in milliseconds; if the job's handler function takes longer than the timeout to call `done`, the worker assumes the job has failed and reports it as such (causing the job to retry if applicable).
@@ -585,16 +635,20 @@ Saves a job, queueing it up for processing. After the callback fires (and associ
 #### Job#reportProgress(n)
 
 ```js
-queue.process((job, done) => {
-  ...
+queue.process(async (job, done) => {
+  await doSomethingQuick();
+  
   job.reportProgress(10);
-  ...
+  
+  await doSomethingBigger();
+  
   job.reportProgress(50);
-  ...
+  
+  await doFinalizeStep();
 });
 ```
 
-Reports job progress when called within a handler function. Causes a `progress` event to be emitted.
+Reports job progress when called within a handler function. Causes a `progress` event to be emitted. Does not persist the progress to Redis, but will store it on `job.progress`, and if other `Queue`s have `storeJobs` and `getEvents` enabled, then the `progress` will end up on all corresponding job instances.
 
 ### Defaults
 
@@ -610,9 +664,11 @@ Each Queue uses the following Redis keys:
 - `bq:name:active`: List of IDs jobs currently being processed.
 - `bq:name:succeeded`: Set of IDs of jobs which succeeded.
 - `bq:name:failed`: Set of IDs of jobs which failed.
+- `bq:name:delayed`: Ordered Set of IDs corresponding to delayed jobs - this set maps delayed timestamp to IDs.
 - `bq:name:stalling`: Set of IDs of jobs which haven't 'checked in' during this interval.
 - `bq:name:stallBlock`: Set of IDs of jobs which haven't 'checked in' during this interval.
 - `bq:name:events`: Pub/Sub channel for workers to send out job results.
+- `bq:name:earlierDelayed`: When a new delayed job is added prior to all other jobs, the script creating the job will publish the job's timestamp over this Pub/Sub channel.
 
 Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon as they're enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. Bee-Queue generally follows the "Reliable Queue" pattern described [here](http://redis.io/commands/rpoplpush).
 
