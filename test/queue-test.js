@@ -365,6 +365,17 @@ describe('Queue', (it) => {
 
         t.context.handleErrors(t);
       });
+
+      it('should not interfere with checkStalledJobs', async (t) => {
+        const queue = t.context.makeQueue();
+
+        await queue.checkStalledJobs(10);
+        await queue.close();
+
+        await helpers.delay(50);
+
+        t.context.handleErrors(t);
+      });
     });
 
     it('should recover from a connection loss', async (t) => {
@@ -375,28 +386,11 @@ describe('Queue', (it) => {
         }
       });
 
+      const jobSpy = sinon.spy(queue, '_getNextJob');
+
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
-      });
 
-      queue.ready()
-        .then(() => queue.bclient.stream.destroy());
-
-      queue.createJob({foo: 'bar'}).save();
-
-      // We don't expect errors because destroy doesn't cause an actual error - it just forces redis
-      // to reconnect.
-      await helpers.waitOn(queue, 'succeeded', true);
-
-      t.context.handleErrors();
-    });
-
-    it('should reconnect when the blocking client disconnects', async (t) => {
-      const queue = t.context.makeQueue();
-
-      const jobSpy = sinon.spy(queue, 'getNextJob');
-
-      queue.process(async () => {
         // First getNextJob fails on the disconnect, second should succeed.
         t.is(jobSpy.callCount, 2);
       });
@@ -404,13 +398,30 @@ describe('Queue', (it) => {
       // Not called at all yet because queue.process uses setImmediate.
       t.is(jobSpy.callCount, 0);
 
+      const waitJob = queue._waitForJob, wait = helpers.deferred();
+      let waitDone = wait.defer();
+      queue._waitForJob = function (...args) {
+        if (waitDone) {
+          waitDone();
+          waitDone = null;
+        }
+        return waitJob.apply(this, args);
+      };
+
+      await wait;
+
+      queue.bclient.stream.destroy();
+
+      const err = await helpers.waitOn(queue, 'error');
+      t.is(err.name, 'AbortError');
+
       queue.createJob({foo: 'bar'}).save();
-      queue.ready()
-        .then(() => queue.bclient.stream.destroy());
 
       await helpers.waitOn(queue, 'succeeded', true);
 
       t.is(jobSpy.callCount, 2);
+
+      t.context.queueErrors = t.context.queueErrors.filter((e) => e !== err);
     });
   });
 
@@ -547,6 +558,18 @@ describe('Queue', (it) => {
       const counts = await queue.checkHealth();
       t.is(counts.newestJob, 0);
     });
+
+    it('should support callbacks', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await queue.createJob({foo: 'bar'}).save();
+
+      const countsPromise = helpers.deferred();
+      queue.checkHealth(countsPromise.defer());
+      const counts = await countsPromise;
+
+      t.is(counts.waiting, 1);
+    });
   });
 
   it.describe('getJob', (it) => {
@@ -595,6 +618,66 @@ describe('Queue', (it) => {
       t.truthy(job);
       t.is(job.id, 'amazingjob');
       t.deepEqual(job.data, {foo: 'bar'});
+    });
+
+    it('should support callbacks', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      const jobPromise = helpers.deferred();
+      queue.getJob(job.id, jobPromise.defer());
+      const gotJob = await jobPromise;
+
+      t.is(gotJob.id, job.id);
+    });
+  });
+
+  it.describe('removeJob', (it) => {
+    it('should not cause an error if immediately removed', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async (job) => {
+        if (job.id === 'deadjob') {
+          t.fail('should not be able to process the job');
+        }
+      });
+
+      const waitJob = queue._waitForJob, wait = helpers.deferred();
+      let waitDone = wait.defer();
+      queue._waitForJob = function (...args) {
+        if (waitDone) {
+          waitDone();
+          waitDone = null;
+        }
+        return waitJob.apply(this, args);
+      };
+
+      await wait;
+
+      const job = queue.createJob({foo: 'bar'}).setId('deadjob');
+      await Promise.all([
+        job.save(),
+        queue.removeJob(job.id),
+        queue.createJob({foo: 'bar'}).setId('goodjob').save(),
+      ]);
+
+      const goodJob = await helpers.waitOn(queue, 'succeeded');
+      t.is(goodJob.id, 'goodjob');
+
+      t.context.handleErrors(t);
+    });
+
+    it('should support callbacks', async (t) => {
+      t.plan(0);
+
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      const removePromise = helpers.deferred();
+      queue.removeJob(job.id, removePromise.defer());
+      await removePromise;
     });
   });
 
@@ -664,11 +747,40 @@ describe('Queue', (it) => {
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
-      const succeededJob = await helpers.waitOn(queue, 'succeeded');
+      const succeededJob = await helpers.waitOn(queue, 'succeeded', true);
       t.is(succeededJob.id, job.id);
 
       const jobData = await hget(queue.toKey('jobs'), job.id);
       t.is(jobData, null);
+
+      t.false(await job.isInSet('success'));
+    });
+
+    it('processes a job with removeOnFailure', async (t) => {
+      const queue = t.context.makeQueue({
+        removeOnFailure: true
+      });
+
+      await queue.ready();
+
+      const {hget} = promisify.methods(queue.client, ['hget']);
+
+      queue.process(async (job) => {
+        t.is(job.data.foo, 'bar');
+        throw new Error('failed :D');
+      });
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+
+      const succeededJob = await helpers.waitOn(queue, 'failed', true);
+      t.is(succeededJob.id, job.id);
+
+      const jobData = await hget(queue.toKey('jobs'), job.id);
+      t.is(jobData, null);
+
+      t.false(await job.isInSet('failed'));
     });
 
     it('processes a job that fails', async (t) => {
@@ -719,6 +831,34 @@ describe('Queue', (it) => {
       t.truthy(failedJob);
       t.is(failedJob.data.foo, 'bar');
       t.is(err.message, 'exception!');
+    });
+
+    it('processes a job that throws an exception and emits the it', async (t) => {
+      const queue = t.context.makeQueue({
+        catchExceptions: false
+      });
+
+      const ex = new Error('exception!');
+
+      queue.process(() => {
+        throw ex;
+      });
+
+      const fail = sinon.spy();
+      queue.once('failed', fail);
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+
+      const err = await helpers.waitOn(queue, 'error');
+      t.is(err, ex);
+
+      t.false(fail.called);
+
+      t.context.queueErrors = t.context.queueErrors.filter((e) => e !== err);
+
+      t.context.handleErrors(t);
     });
 
     it('processes and retries a job that fails', async (t) => {
@@ -861,6 +1001,18 @@ describe('Queue', (it) => {
       t.throws(() => {
         queue.process();
       }, 'Cannot call Queue#process twice');
+
+      t.context.handleErrors(t);
+    });
+
+    it('refuses to be called after close', (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.close();
+
+      t.throws(() => {
+        queue.process(() => {});
+      }, /closed/);
 
       t.context.handleErrors(t);
     });
@@ -1095,7 +1247,7 @@ describe('Queue', (it) => {
       await Promise.all(jobs.map((job) => job.save()));
 
       // Artificially move to active.
-      await queue.getNextJob();
+      await queue._getNextJob();
 
       // Mark the jobs as stalling, so that Queue#process immediately detects them as stalled.
       await helpers.delay(1); // Just in case - somehow - we end up going too fast.
@@ -1121,7 +1273,7 @@ describe('Queue', (it) => {
 
         await Promise.all([
           // Do nada.
-          stallQueue.getNextJob(),
+          stallQueue._getNextJob(),
           stallQueue.createJob({foo: 'bar'}).save(),
         ]);
 
@@ -1179,7 +1331,7 @@ describe('Queue', (it) => {
 
       await helpers.delay(1); // Just in case - somehow - we end up going too fast.
       await queue.checkStalledJobs();
-      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
+      await helpers.delay(2); // Yes this has actually been too fast - we need to outrun redis' key.
 
       const {done, next} = reef(numJobs);
       queue.process(async () => {
@@ -1605,6 +1757,19 @@ describe('Queue', (it) => {
 
       await t.throws(queue.destroy(), 'closed');
     });
-  });
 
+    it('should support callbacks', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await queue.createJob({zoo: 't'}).save();
+
+      const destroyPromise = helpers.deferred();
+      queue.destroy(destroyPromise.defer());
+      await destroyPromise;
+
+      const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
+      const keys = await getKeys(queue.toKey('*'));
+      t.deepEqual(keys, []);
+    });
+  });
 });

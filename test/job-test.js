@@ -47,6 +47,11 @@ describe('Job', (it) => {
     t.deepEqual(job.data, {});
   });
 
+  it.cb('should save with a callback', (t) => {
+    const {queue} = t.context;
+    queue.createJob().save(t.end);
+  });
+
   it.describe('Chaining', (it) => {
     it('sets retries', (t) => {
       const {queue} = t.context;
@@ -67,10 +72,21 @@ describe('Job', (it) => {
       const {queue} = t.context;
 
       const job = queue.createJob({foo: 'bar'});
+      t.notThrows(() => job.delayUntil(new Date(Date.now() + 10000)));
+      t.notThrows(() => job.delayUntil(Date.now() + 10000));
       t.throws(() => job.delayUntil(null), /timestamp/i);
       t.throws(() => job.delayUntil(NaN), /timestamp/i);
       t.throws(() => job.delayUntil('wobble'), /timestamp/i);
       t.throws(() => job.delayUntil(-8734), /timestamp/i);
+    });
+
+    it('should not save a delay to a past date', (t) => {
+      const {queue} = t.context;
+
+      const job = queue.createJob({foo: 'bar'});
+      const until = Date.now() - 1000;
+      job.delayUntil(until);
+      t.not(job.options.delay, until);
     });
 
     it('sets timeout', (t) => {
@@ -107,6 +123,12 @@ describe('Job', (it) => {
       const job = await makeJob();
       await t.throws(job.reportProgress(101), 'Progress must be between 0 and 100');
     });
+
+    it.cb('should support callbacks', (t) => {
+      const {makeJob} = t.context;
+
+      makeJob().then((job) => job.reportProgress(50, t.end), t.end);
+    });
   });
 
   it.describe('Remove', (it) => {
@@ -132,6 +154,43 @@ describe('Job', (it) => {
       await removed;
 
       t.is(await hget(queue.toKey('jobs'), job.id), null);
+    });
+  });
+
+  it.describe('Retry', (it) => {
+    it.cb('should support callbacks', (t) => {
+      const {makeJob} = t.context;
+
+      makeJob().then((job) => job.retry(t.end), t.end);
+    });
+  });
+
+  it.describe('IsInSet', (it) => {
+    it.cb('should support callbacks', (t) => {
+      const {makeJob} = t.context;
+
+      makeJob().then((job) => job.isInSet('stalling', next), t.end);
+
+      function next(err, inSet) {
+        t.ifError(err);
+        t.is(inSet, false);
+        t.end();
+      }
+    });
+  });
+
+  it.describe('fromId', (it) => {
+    it('should support callbacks', async (t) => {
+      const {queue, makeJob} = t.context;
+
+      const job = await makeJob();
+      const promise = helpers.deferred();
+      Job.fromId(queue, job.id, promise.defer());
+      const storedJob = await promise;
+      t.truthy(storedJob);
+      t.true(helpers.has(storedJob, 'id'));
+      t.deepEqual(storedJob.data, data);
+      t.is(storedJob.options.test, options.test);
     });
   });
 });

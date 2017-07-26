@@ -3,6 +3,10 @@ import sandbox from 'sandboxed-module';
 import lolex from 'lolex';
 import sinon from 'sinon';
 
+function maybeCoverage() {
+  return Object.keys(require.cache).some((path) => /node_modules\/nyc/.test(path));
+}
+
 describe('EagerTimer', (it) => {
   it.beforeEach(async (t) => {
     // Some reasonable time so we don't start at 0.
@@ -14,7 +18,16 @@ describe('EagerTimer', (it) => {
         setTimeout: clock.setTimeout,
         clearTimeout: clock.clearTimeout,
         Date: clock.Date
-      }
+      },
+      // Voodoo magic to support nyc.
+      sourceTransformers: maybeCoverage() ? {
+        nyc(source) {
+          const Instrumenter = require('nyc/lib/instrumenters/istanbul');
+          const instrumenter = Instrumenter(process.cwd(), {});
+          const instrumentMethod = instrumenter.instrumentSync.bind(instrumenter);
+          return instrumentMethod(source, this.filename);
+        }
+      } : {}
     });
 
     const timer = new EagerTimer(500);
