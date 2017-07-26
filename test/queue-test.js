@@ -572,6 +572,126 @@ describe('Queue', (it) => {
     });
   });
 
+  it.describe('getJobs', (it) => {
+    it('gets waiting jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const insertedJobs = [];
+      for (let i = 0; i < 3; i++) {
+        let job = await queue.createJob({foo: 'bar'}).save();
+        insertedJobs.push(job.toData());
+      }
+
+      const jobs = await queue.getJobs('waiting', {start: 0, end: 2});
+      for (let job of jobs) {
+        t.true(insertedJobs.includes(job.toData()));
+      }
+    });
+
+    it('gets active jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await queue.createJob({foo: 'bar'}).save();
+
+      queue.process(async (job) => {
+        const jobs = await queue.getJobs('active', {start: 0, end: 100});
+        t.is(jobs[0].toData(), job.toData());
+      });
+
+      await helpers.waitOn(queue, 'succeeded');
+    });
+
+    it('gets delayed jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async () => {});
+
+      const job = await queue.createJob({foo: 'bar'})
+        .delayUntil(Date.now() + 1000)
+        .save();
+
+      const jobs = await queue.getJobs('delayed', {start: 0, end: 1});
+      t.is(jobs[0].toData(), job.toData());
+    });
+
+    it('gets failed jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      queue.process(async () => {
+        throw new Error('failed');
+      });
+
+      await helpers.waitOn(queue, 'failed');
+
+      const jobs = await queue.getJobs('failed', {size: 1});
+      t.is(jobs[0].id, job.id);
+    });
+
+    it('gets successful jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async () => {});
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      await helpers.waitOn(queue, 'succeeded');
+
+      const jobs = await queue.getJobs('succeeded', {size: 1});
+      t.not(jobs[0].toData(), job.toData());
+      t.is(jobs[0].id, job.id);
+    });
+
+    it('scans until "size" jobs are found in for set types', async (t) => {
+      const queue = t.context.makeQueue({
+        redisScanCount: 50
+      });
+
+      queue.process(async () => {});
+
+      // Choose a big number for numbers of jobs created, because otherwise the
+      // set will be encoded as an intset and SSCAN will ignore the COUNT param.
+      // https://redis.io/commands/scan#the-count-option
+      for (let i = 0; i < 10000; i++) {
+        await queue.createJob({foo: 'bar'}).save();
+      }
+
+      const jobs = await queue.getJobs('succeeded', {size: 80});
+      t.is(jobs.length, 80);
+    });
+
+    it('accepts start, end parameters for list and zset types', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await t.notThrows(queue.getJobs('waiting', {start: 0, end: 10}));
+    });
+
+    it('accepts size parameter for set types', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await t.notThrows(queue.getJobs('succeeded', {size: 10}));
+    });
+
+    it('rejects improper queue type', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await t.throws(queue.getJobs('not-a-queue-type'), 'Improper queue type');
+    });
+
+    it('should support callbacks', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      const jobsPromise = helpers.deferred();
+      queue.getJobs('waiting', {start: 0, end: 1}, jobsPromise.defer());
+      const jobs = await jobsPromise;
+
+      t.is(jobs[0].toData(), job.toData());
+    });
+  });
+
   it.describe('getJob', (it) => {
     it('gets an job created by the same queue instance', async (t) => {
       const queue = t.context.makeQueue();
