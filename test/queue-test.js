@@ -576,16 +576,9 @@ describe('Queue', (it) => {
     it('gets waiting jobs', async (t) => {
       const queue = t.context.makeQueue();
 
-      const insertedJobs = [];
-      for (let i = 0; i < 3; i++) {
-        let job = await queue.createJob({foo: 'bar'}).save();
-        insertedJobs.push(job.toData());
-      }
-
+      const job = await queue.createJob({foo: 'bar'}).save();
       const jobs = await queue.getJobs('waiting', {start: 0, end: 2});
-      for (let job of jobs) {
-        t.true(insertedJobs.includes(job.toData()));
-      }
+      t.deepEqual(jobs[0].id, job.id);
     });
 
     it('gets active jobs', async (t) => {
@@ -595,10 +588,10 @@ describe('Queue', (it) => {
 
       queue.process(async (job) => {
         const jobs = await queue.getJobs('active', {start: 0, end: 100});
-        t.is(jobs[0].toData(), job.toData());
+        t.is(jobs[0].id, job.id);
       });
 
-      await helpers.waitOn(queue, 'succeeded');
+      await helpers.waitOn(queue, 'succeeded', true);
     });
 
     it('gets delayed jobs', async (t) => {
@@ -607,11 +600,11 @@ describe('Queue', (it) => {
       queue.process(async () => {});
 
       const job = await queue.createJob({foo: 'bar'})
-        .delayUntil(Date.now() + 1000)
+        .delayUntil(Date.now() + 10000)
         .save();
 
       const jobs = await queue.getJobs('delayed', {start: 0, end: 1});
-      t.is(jobs[0].toData(), job.toData());
+      t.is(jobs[0].id, job.id);
     });
 
     it('gets failed jobs', async (t) => {
@@ -623,7 +616,7 @@ describe('Queue', (it) => {
         throw new Error('failed');
       });
 
-      await helpers.waitOn(queue, 'failed');
+      await helpers.waitOn(queue, 'failed', true);
 
       const jobs = await queue.getJobs('failed', {size: 1});
       t.is(jobs[0].id, job.id);
@@ -636,10 +629,9 @@ describe('Queue', (it) => {
 
       const job = await queue.createJob({foo: 'bar'}).save();
 
-      await helpers.waitOn(queue, 'succeeded');
+      await helpers.waitOn(queue, 'succeeded', true);
 
       const jobs = await queue.getJobs('succeeded', {size: 1});
-      t.not(jobs[0].toData(), job.toData());
       t.is(jobs[0].id, job.id);
     });
 
@@ -648,17 +640,31 @@ describe('Queue', (it) => {
         redisScanCount: 50
       });
 
-      queue.process(async () => {});
 
       // Choose a big number for numbers of jobs created, because otherwise the
       // set will be encoded as an intset and SSCAN will ignore the COUNT param.
       // https://redis.io/commands/scan#the-count-option
+      const createJobPromises = [];
       for (let i = 0; i < 10000; i++) {
-        await queue.createJob({foo: 'bar'}).save();
+        createJobPromises.push(queue.createJob({foo: 'bar'}).save());
       }
+      Promise.all(createJobPromises);
 
+      // Wait for all jobs to process to make sure the SET encoding is a hash table
+      // rather than an intset.
+      const allJobsProcessed = new Promise((resolve) => {
+        let processed = 0;
+        queue.process(async () => {
+          processed += 1;
+          if (processed === 10000) resolve();
+        });
+      });
+
+      await allJobsProcessed;
       const jobs = await queue.getJobs('succeeded', {size: 80});
-      t.is(jobs.length, 80);
+
+      // Remove duplicates
+      t.is(new Set(jobs.map((job) => job.id)).size, 80);
     });
 
     it('accepts start, end parameters for list and zset types', async (t) => {
@@ -676,7 +682,7 @@ describe('Queue', (it) => {
     it('rejects improper queue type', async (t) => {
       const queue = t.context.makeQueue();
 
-      await t.throws(queue.getJobs('not-a-queue-type'), 'Improper queue type');
+      await t.throws(queue.getJobs('not-a-queue-type'), /improper queue type/i);
     });
 
     it('should support callbacks', async (t) => {
@@ -688,7 +694,7 @@ describe('Queue', (it) => {
       queue.getJobs('waiting', {start: 0, end: 1}, jobsPromise.defer());
       const jobs = await jobsPromise;
 
-      t.is(jobs[0].toData(), job.toData());
+      t.is(jobs[0].id, job.id);
     });
   });
 
