@@ -331,7 +331,7 @@ describe('Queue', (it) => {
         const [, finishJob] = await jobs.shift();
 
         process.nextTick(finishJob, new Error('fails the job'));
-        await t.notThrows(queue.close(100));
+        await t.notThrows(queue.close(1000));
       });
 
       it('should error if a job completes after the timeout', async (t) => {
