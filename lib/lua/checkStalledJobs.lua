@@ -25,9 +25,9 @@ if next(stalling) ~= nil then
   local nextIndex = 1
   for i, jobId in ipairs(stalling) do
     local removed = redis.call("lrem", KEYS[4], 0, jobId)
-    -- we only restart stalled jobs if we can find them in the active list - otherwise, the stalled
-    -- lrem may have been delayed, or may not have run after the last checkStalledJobs call despite
-    -- having ended. this can cause problems with static ids, and cause jobs to run again
+    -- safety belts: we only restart stalled jobs if we can find them in the active list
+    -- the only place we add jobs to the stalling set is in this script, and the two places we
+    -- remove jobs from the active list are in this script, and in the MULTI after the job finishes
     if removed > 0 then
       stalled[nextIndex] = jobId
       nextIndex = nextIndex + 1
