@@ -640,27 +640,20 @@ describe('Queue', (it) => {
         redisScanCount: 50
       });
 
-
       // Choose a big number for numbers of jobs created, because otherwise the
       // set will be encoded as an intset and SSCAN will ignore the COUNT param.
       // https://redis.io/commands/scan#the-count-option
-      const createJobPromises = [];
-      for (let i = 0; i < 10000; i++) {
-        createJobPromises.push(queue.createJob({foo: 'bar'}).save());
-      }
-      Promise.all(createJobPromises);
+      const allJobs = new Array(10000).fill().map(() => queue.createJob({foo: 'bar'}));
+      await Promise.all(allJobs.map((job) => job.save()));
 
       // Wait for all jobs to process to make sure the SET encoding is a hash table
       // rather than an intset.
-      const allJobsProcessed = new Promise((resolve) => {
-        let processed = 0;
-        queue.process(async () => {
-          processed += 1;
-          if (processed === 10000) resolve();
-        });
+      const {done, next} = reef(allJobs.length);
+      queue.process(async () => {
+        next();
       });
+      await done;
 
-      await allJobsProcessed;
       const jobs = await queue.getJobs('succeeded', {size: 80});
 
       // Remove duplicates
