@@ -266,7 +266,8 @@ const queue = new Queue('test', {
   processDelayed: false,
   removeOnSuccess: false,
   removeOnFailure: false,
-  catchExceptions: false
+  catchExceptions: false,
+  redisScanCount: 100
 });
 ```
 
@@ -280,15 +281,16 @@ The `settings` fields are:
   - `host`: string, Redis host.
   - `port`: number, Redis port.
   - `socket`: string, Redis socket to be used instead of a host and port.
-- `isWorker`: boolean, default true. Disable if this queue will not process jobs.
-- `getEvents`: boolean, default true. Disable if this queue does not need to receive job events.
-- `sendEvents`: boolean, default true. Disable if this worker does not need to send job events back to other queues.
-- `storeJobs`: boolean, default true. Disable if this worker does not need to associate events with specific `Job` instances.
-- `ensureScripts`: boolean, default true. Ensure that the LUA scripts exist in redis before running any commands against redis.
-- `processDelayed`: boolean, default true. Activate delayed jobs once they've passed their `delayUntil` timestamp.
-- `removeOnSuccess`: boolean, default false. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
-- `removeOnFailure`: boolean, default false. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
-- `catchExceptions`: boolean, default false. Only enable if you want exceptions thrown by the [handler](#queueprototypeprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
+- `isWorker`: boolean. Disable if this queue will not process jobs.
+- `getEvents`: boolean. Disable if this queue does not need to receive job events.
+- `sendEvents`: boolean. Disable if this worker does not need to send job events back to other queues.
+- `storeJobs`: boolean. Disable if this worker does not need to associate events with specific `Job` instances.
+- `ensureScripts`: boolean. Ensure that the LUA scripts exist in redis before running any commands against redis.
+- `processDelayed`: boolean. Activate delayed jobs once they've passed their `delayUntil` timestamp.
+- `removeOnSuccess`: boolean. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
+- `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
+- `catchExceptions`: boolean. Only enable if you want exceptions thrown by the [handler](#queueprototypeprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
+- `redisScanCount`: number. For setting the value of the `SSCAN` Redis command used in `Queue#getJobs` for succeeded and failed job types.
 
 ### Properties
 
@@ -422,7 +424,7 @@ const job = queue.createJob({...});
 
 Returns a new [Job object](#job) with the associated user data.
 
-#### Queue#getJob(jobId[, cb])
+#### Queue#getJob(jobId, [cb])
 
 ```js
 queue.getJob(3, function (err, job) {
@@ -437,7 +439,27 @@ Looks up a job by its `jobId`. The returned job will emit events if `getEvents` 
 
 Be careful with this method; most potential uses would be better served by job events on already-existing job instances. Using this method indiscriminately can lead to increasing memory usage when the `storeJobs` setting is `true`, as each queue maintains a table of all associated jobs in order to dispatch events.
 
-#### Queue#process([concurrency, ]handler(job, done))
+#### Queue#getJobs(type, page, [cb])
+
+```js
+queue.getJobs('waiting', {start: 0, end: 25})
+  .then((jobs) => {
+    const jobIds = jobs.map((job) => job.id);
+    console.log(`Job ids: ${jobIds.join(' ')}`);
+  });
+
+queue.getJobs('failed', {size: 100})
+  .then((jobs) => {
+    const jobIds = jobs.map((job) => job.id);
+    console.log(`Job ids: ${jobIds.join(' ')}`);
+  });
+```
+
+Looks up jobs by their queue type. When looking up jobs of type `waiting`, `active`, or `delayed`, `page` should be configured with `start` and `end` attributes to specify a range of job indices to return. Jobs of type `failed` and `succeeded` will return an arbitrary subset of the queue of size `page['size']`. Note: This is because failed and succeeded job types are represented by a Redis SET, which does not maintain a job ordering.
+
+Note that large values of the attributes of `page` may cause excess load on the Redis server.
+
+#### Queue#process([concurrency], handler(job, done))
 
 Begins processing jobs with the provided handler function.
 
