@@ -331,7 +331,7 @@ describe('Queue', (it) => {
         const [, finishJob] = await jobs.shift();
 
         process.nextTick(finishJob, new Error('fails the job'));
-        await t.notThrows(queue.close(100));
+        await t.notThrows(queue.close(1000));
       });
 
       it('should error if a job completes after the timeout', async (t) => {
@@ -569,6 +569,125 @@ describe('Queue', (it) => {
       const counts = await countsPromise;
 
       t.is(counts.waiting, 1);
+    });
+  });
+
+  it.describe('getJobs', (it) => {
+    it('gets waiting jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+      const jobs = await queue.getJobs('waiting', {start: 0, end: 2});
+      t.deepEqual(jobs[0].id, job.id);
+    });
+
+    it('gets active jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await queue.createJob({foo: 'bar'}).save();
+
+      queue.process(async (job) => {
+        const jobs = await queue.getJobs('active', {start: 0, end: 100});
+        t.is(jobs[0].id, job.id);
+      });
+
+      await helpers.waitOn(queue, 'succeeded', true);
+    });
+
+    it('gets delayed jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async () => {});
+
+      const job = await queue.createJob({foo: 'bar'})
+        .delayUntil(Date.now() + 10000)
+        .save();
+
+      const jobs = await queue.getJobs('delayed', {start: 0, end: 1});
+      t.is(jobs[0].id, job.id);
+    });
+
+    it('gets failed jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      queue.process(async () => {
+        throw new Error('failed');
+      });
+
+      await helpers.waitOn(queue, 'failed', true);
+
+      const jobs = await queue.getJobs('failed', {size: 1});
+      t.is(jobs[0].id, job.id);
+    });
+
+    it('gets successful jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async () => {});
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      await helpers.waitOn(queue, 'succeeded', true);
+
+      const jobs = await queue.getJobs('succeeded', {size: 1});
+      t.is(jobs[0].id, job.id);
+    });
+
+    it('scans until "size" jobs are found in for set types', async (t) => {
+      const queue = t.context.makeQueue({
+        redisScanCount: 50
+      });
+
+      // Choose a big number for numbers of jobs created, because otherwise the
+      // set will be encoded as an intset and SSCAN will ignore the COUNT param.
+      // https://redis.io/commands/scan#the-count-option
+      const allJobs = new Array(10000).fill().map(() => queue.createJob({foo: 'bar'}));
+      await Promise.all(allJobs.map((job) => job.save()));
+
+      // Wait for all jobs to process to make sure the SET encoding is a hash table
+      // rather than an intset.
+      const {done, next} = reef(allJobs.length);
+      queue.process(async () => {
+        next();
+      });
+      await done;
+
+      const jobs = await queue.getJobs('succeeded', {size: 80});
+
+      // Remove duplicates
+      t.is(new Set(jobs.map((job) => job.id)).size, 80);
+    });
+
+    it('accepts start, end parameters for list and zset types', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await t.notThrows(queue.getJobs('waiting', {start: 0, end: 10}));
+    });
+
+    it('accepts size parameter for set types', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await t.notThrows(queue.getJobs('succeeded', {size: 10}));
+    });
+
+    it('rejects improper queue type', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await t.throws(queue.getJobs('not-a-queue-type'), /improper queue type/i);
+    });
+
+    it('should support callbacks', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      const jobsPromise = helpers.deferred();
+      queue.getJobs('waiting', {start: 0, end: 1}, jobsPromise.defer());
+      const jobs = await jobsPromise;
+
+      t.is(jobs[0].id, job.id);
     });
   });
 
