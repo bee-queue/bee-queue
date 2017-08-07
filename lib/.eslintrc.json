@@ -1,0 +1,6 @@
+{
+  "extends": "../.eslintrc.json",
+  "rules": {
+    "max-len": "error"
+  }
+}
