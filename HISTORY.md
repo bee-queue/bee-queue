@@ -4,7 +4,7 @@
   * Upgrade node-redis to 2.7.1
     Note that redis connection options now match the latest redis.
   * Implement delayed jobs
-  * Implement fixed, expontential backoff strategies
+  * Implement fixed, exponential backoff strategies
   * Add promise support
   * Fix race conditions in tests
   * Add new performance settings
