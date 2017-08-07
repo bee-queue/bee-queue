@@ -131,12 +131,6 @@ describe('Queue', (it) => {
   it.beforeEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
   it.afterEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
 
-  it('should convert itself to a Queue instance', (t) => {
-    const queue = t.context.queue = Queue(t.context.queueName);
-
-    t.true(queue instanceof Queue);
-  });
-
   it('should initialize without ensuring scripts', async (t) => {
     const queue = t.context.makeQueue({
       ensureScripts: false
@@ -1862,6 +1856,11 @@ describe('Queue', (it) => {
 
       const successJob = await helpers.waitOn(queue, 'succeeded');
       t.truthy(successJob);
+
+      await queue.createJob({foo: 'bip'})
+        .delayUntil(Date.now() + 10 * 24 * 60 * 60 * 1000)
+        .save();
+
       await queue.destroy();
 
       const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
