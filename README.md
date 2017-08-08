@@ -161,7 +161,7 @@ The Job's `save` method returns a Promise in addition to calling the optional ca
 
 Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, and `.timeout(ms)` for setting options.
 
-Jobs can later be retrieved from Redis using [Queue.getJob](#queueprototypegetjobjobid-cberr-job), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
+Jobs can later be retrieved from Redis using [Queue#getJob](#queuegetjobjobid-cb), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
 
 ## Processing Jobs
 
@@ -183,7 +183,7 @@ addQueue.process(async (job) => {
 });
 ```
 
-The handler function is given the job it needs to process, including `job.data` from when the job was created. It should then pass results either by returning a `Promise` or by calling the `done` callback. For more on handlers, see [Queue.process](#queueprototypeprocessconcurrency-handlerjob-done).
+The handler function is given the job it needs to process, including `job.data` from when the job was created. It should then pass results either by returning a `Promise` or by calling the `done` callback. For more on handlers, see [Queue#process](#queueprocessconcurrency-handlerjob-done).
 
 `.process` can only be called once per `Queue` instance, but we can process on as many instances as we like, spanning multiple processes or servers, as long as they all connect to the same Redis instance. From this, we can easily make a worker pool of machines who all run the same code and spend their lives processing our jobs, no matter where those jobs are created.
 
@@ -206,7 +206,7 @@ Handlers can send progress reports, which will be received as events on the orig
 ```js
 const job = addQueue.createJob({x: 2, y: 3}).save();
 job.on('progress', (progress) => {
-  console.log(`Job ${job.id} reported progress: ${progress}%');
+  console.log(`Job ${job.id} reported progress: ${progress}%`);
 });
 
 addQueue.process(async (job) => {
@@ -236,7 +236,7 @@ Note that Job events become unreliable across process restarts, since the queue'
 
 Bee-Queue attempts to provide ["at least once delivery"](http://www.cloudcomputingpatterns.org/At-least-once_Delivery). Any job enqueued should be processed at least once - and if a worker crashes, gets disconnected, or otherwise fails to confirm completion of the job, the job will be dispatched to another worker for processing.
 
-To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queueprototypecheckstalledjobsinterval-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, and re-enqueues them.
+To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queuecheckstalledjobsinterval-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, and re-enqueues them.
 
 # API Reference
 
@@ -398,7 +398,7 @@ queue.on('job progress', (jobId, progress) => {
 });
 ```
 
-Some worker is processing job `jobId`, and it sent a [progress report](#jobprototypereportprogressn) of `progress` percent.
+Some worker is processing job `jobId`, and it sent a [progress report](#jobreportprogressn) of `progress` percent.
 
 ### Queue Delayed Job activation
 
@@ -563,7 +563,7 @@ job.on('progress', (progress) => {
 });
 ```
 
-The job has sent a [progress report](#jobprototypereportprogressn) of `progress` percent.
+The job has sent a [progress report](#jobreportprogressn) of `progress` percent.
 
 ### Methods
 
