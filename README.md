@@ -266,7 +266,6 @@ const queue = new Queue('test', {
   processDelayed: false,
   removeOnSuccess: false,
   removeOnFailure: false,
-  catchExceptions: false,
   redisScanCount: 100
 });
 ```
@@ -289,7 +288,6 @@ The `settings` fields are:
 - `processDelayed`: boolean. Activate delayed jobs once they've passed their `delayUntil` timestamp.
 - `removeOnSuccess`: boolean. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
 - `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
-- `catchExceptions`: boolean. Only enable if you want exceptions thrown by the [handler](#queueprototypeprocessconcurrency-handlerjob-done) to be caught by Bee-Queue and interpreted as job failures. Communicating failures via `done(err)` is preferred.
 - `redisScanCount`: number. For setting the value of the `SSCAN` Redis command used in `Queue#getJobs` for succeeded and failed job types.
 
 ### Properties
@@ -474,7 +472,6 @@ The handler function should either:
   - Use `done(err)` to indicate job failure
   - Use `done()` or `done(null, result)` to indicate job success
     - `result` must be JSON-serializable (for `JSON.stringify`)
-- Never throw an exception, unless `catchExceptions` has been enabled (otherwise, the error will be emitted from the `Queue` instance).
 - Never ever [block](http://www.slideshare.net/async_io/practical-use-of-mongodb-for-nodejs/47) [the](http://blog.mixu.net/2011/02/01/understanding-the-node-js-event-loop/) [event](https://strongloop.com/strongblog/node-js-performance-event-loop-monitoring/) [loop](http://zef.me/blog/4561/node-js-and-the-case-of-the-blocked-event-loop) (for very long). If you do, the stall detection might think the job stalled, when it was really just blocking the event loop.
 
 _N.B. If the handler returns a `Promise`, calls to the `done` callback will be ignored._

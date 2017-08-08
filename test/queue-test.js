@@ -922,9 +922,7 @@ describe('Queue', (it) => {
     });
 
     it('processes a job that throws an exception', async (t) => {
-      const queue = t.context.makeQueue({
-        catchExceptions: true
-      });
+      const queue = t.context.makeQueue();
 
       queue.process(() => {
         throw new Error('exception!');
@@ -944,34 +942,6 @@ describe('Queue', (it) => {
       t.truthy(failedJob);
       t.is(failedJob.data.foo, 'bar');
       t.is(err.message, 'exception!');
-    });
-
-    it('processes a job that throws an exception and emits the it', async (t) => {
-      const queue = t.context.makeQueue({
-        catchExceptions: false
-      });
-
-      const ex = new Error('exception!');
-
-      queue.process(() => {
-        throw ex;
-      });
-
-      const fail = sinon.spy();
-      queue.once('failed', fail);
-
-      const job = await queue.createJob({foo: 'bar'}).save();
-      t.truthy(job.id);
-      t.is(job.data.foo, 'bar');
-
-      const err = await helpers.waitOn(queue, 'error');
-      t.is(err, ex);
-
-      t.false(fail.called);
-
-      t.context.queueErrors = t.context.queueErrors.filter((e) => e !== err);
-
-      t.context.handleErrors(t);
     });
 
     it('processes and retries a job that fails', async (t) => {
