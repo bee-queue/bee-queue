@@ -263,7 +263,7 @@ const queue = new Queue('test', {
   sendEvents: true,
   storeJobs: true,
   ensureScripts: true,
-  processDelayed: false,
+  activateDelayedJobs: false,
   removeOnSuccess: false,
   removeOnFailure: false,
   redisScanCount: 100
@@ -285,7 +285,7 @@ The `settings` fields are:
 - `sendEvents`: boolean. Disable if this worker does not need to send job events back to other queues.
 - `storeJobs`: boolean. Disable if this worker does not need to associate events with specific `Job` instances.
 - `ensureScripts`: boolean. Ensure that the LUA scripts exist in redis before running any commands against redis.
-- `processDelayed`: boolean. Activate delayed jobs once they've passed their `delayUntil` timestamp.
+- `activateDelayedJobs`: boolean. Activate delayed jobs once they've passed their `delayUntil` timestamp. Note that this must be enabled on at least one `Queue` instance for the delayed retry strategies (`fixed` and `exponential`) - this will reactivate them after their computed delay.
 - `removeOnSuccess`: boolean. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
 - `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
 - `redisScanCount`: number. For setting the value of the `SSCAN` Redis command used in `Queue#getJobs` for succeeded and failed job types.
@@ -402,7 +402,7 @@ Some worker is processing job `jobId`, and it sent a [progress report](#jobproto
 
 ### Queue Delayed Job activation
 
-The `Queue` will activate no delayed jobs unless `processDelayed` is set to `true`.
+The `Queue` will activate no delayed jobs unless `activateDelayedJobs` is set to `true`.
 
 The promptness of the job activation is controlled with the `delayedDebounce` setting on the `Queue`. This setting defines a window across which to group delayed jobs. If three jobs are enqueued for 10s, 10.5s, and 12s in the future, then a `delayedDebounce` of `1000` will cause the first two jobs to activate when the timestamp of the second job passes.
 
@@ -693,7 +693,7 @@ Each Queue uses the following Redis keys:
 
 Bee-Queue is non-polling, so idle workers are listening to receive jobs as soon as they're enqueued to Redis. This is powered by [brpoplpush](http://redis.io/commands/BRPOPLPUSH), which is used to move jobs from the waiting list to the active list. Bee-Queue generally follows the "Reliable Queue" pattern described [here](http://redis.io/commands/rpoplpush).
 
-The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`. If either `getEvents` or `processDelayed` are enabled, another connection is dedicated to receiving Pub/Sub events. As such, these settings should be disabled if you don't need them.
+The `isWorker` [setting](#settings) creates an extra Redis connection dedicated to `brpoplpush`. If either `getEvents` or `activateDelayedJobs` are enabled, another connection is dedicated to receiving Pub/Sub events. As such, these settings should be disabled if you don't need them.
 
 The stalling set is a snapshot of the active list from the beginning of the latest stall interval. During each stalling interval, workers remove their job IDs from the stalling set, so at the end of an interval, any jobs whose IDs are left in the stalling set have missed their window (stalled) and need to be rerun. When `checkStalledJobs` runs, it re-enqueues any jobs left in the stalling set (to the waiting list), then takes a snapshot of the active list and stores it in the stalling set.
 

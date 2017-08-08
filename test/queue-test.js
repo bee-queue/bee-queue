@@ -1243,7 +1243,7 @@ describe('Queue', (it) => {
 
     it('should handle fixed backoff', async (t) => {
       const queue = t.context.makeQueue({
-        processDelayed: true
+        activateDelayedJobs: true
       });
 
       const calls = [];
@@ -1278,7 +1278,7 @@ describe('Queue', (it) => {
 
     it('should handle exponential backoff', async (t) => {
       const queue = t.context.makeQueue({
-        processDelayed: true
+        activateDelayedJobs: true
       });
 
       let calls = [];

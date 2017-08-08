@@ -89,7 +89,7 @@ describe('Delayed jobs', (it) => {
 
   it('should process delayed jobs', async (t) => {
     const queue = t.context.makeQueue({
-      processDelayed: true,
+      activateDelayedJobs: true,
       getEvents: false
     });
 
@@ -117,7 +117,7 @@ describe('Delayed jobs', (it) => {
   // extra raiseDelayedJobs invocation.
   it('should process two proximal delayed jobs', async (t) => {
     const queue = t.context.makeQueue({
-      processDelayed: true,
+      activateDelayedJobs: true,
       delayedDebounce: 150,
 
       // Set this far later than the timeout to ensure we pull the
@@ -163,7 +163,7 @@ describe('Delayed jobs', (it) => {
 
   it('should process a distant delayed job', async (t) => {
     const queue = t.context.makeQueue({
-      processDelayed: true,
+      activateDelayedJobs: true,
       nearTermWindow: 100
     });
 
@@ -216,7 +216,7 @@ describe('Delayed jobs', (it) => {
   it('should process delayed jobs from other workers', async (t) => {
     const queue = t.context.makeQueue({
       getEvents: false,
-      processDelayed: false
+      activateDelayedJobs: false
     });
 
     const processSpy = sinon.spy(async () => {});
@@ -227,7 +227,7 @@ describe('Delayed jobs', (it) => {
     const queue2 = t.context.makeQueue({
       isWorker: false,
       getEvents: false,
-      processDelayed: true
+      activateDelayedJobs: true
     });
 
     const start = Date.now();
@@ -244,7 +244,7 @@ describe('Delayed jobs', (it) => {
     const queue = t.context.makeQueue({
       getEvents: false,
       sendEvents: false,
-      processDelayed: true
+      activateDelayedJobs: true
     });
 
     const processSpy = sinon.spy(async () => {});
