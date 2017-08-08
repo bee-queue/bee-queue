@@ -283,7 +283,7 @@ The `settings` fields are:
 - `isWorker`: boolean. Disable if this queue will not process jobs.
 - `getEvents`: boolean. Disable if this queue does not need to receive job events.
 - `sendEvents`: boolean. Disable if this worker does not need to send job events back to other queues.
-- `storeJobs`: boolean. Disable if this worker does not need to associate events with specific `Job` instances.
+- `storeJobs`: boolean. Disable if this worker does not need to associate events with specific `Job` instances. This normally improves [memory usage](https://github.com/bee-queue/bee-queue/issues/54), as the storage of jobs is unnecessary for many use-cases.
 - `ensureScripts`: boolean. Ensure that the Lua scripts exist in redis before running any commands against redis.
 - `activateDelayedJobs`: boolean. Activate delayed jobs once they've passed their `delayUntil` timestamp. Note that this must be enabled on at least one `Queue` instance for the delayed retry strategies (`fixed` and `exponential`) - this will reactivate them after their computed delay.
 - `removeOnSuccess`: boolean. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
