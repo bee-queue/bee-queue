@@ -22,19 +22,17 @@ end
 local stalling, stalled = redis.call("smembers", KEYS[2]), {}
 if next(stalling) ~= nil then
   -- not worth optimizing - this should be a rare occurrence, better to keep it straightforward
-  local nextIndex = 1
   for i, jobId in ipairs(stalling) do
     local removed = redis.call("lrem", KEYS[4], 0, jobId)
     -- safety belts: we only restart stalled jobs if we can find them in the active list
     -- the only place we add jobs to the stalling set is in this script, and the two places we
     -- remove jobs from the active list are in this script, and in the MULTI after the job finishes
     if removed > 0 then
-      stalled[nextIndex] = jobId
-      nextIndex = nextIndex + 1
+      stalled[#stalled + 1] = jobId
     end
   end
   -- don't lpush zero jobs (the redis command will fail)
-  if nextIndex > 1 then
+  if #stalled > 0 then
     -- lpush instead of rpush so that jobs which cause uncaught exceptions don't
     -- hog the job consumers and starve the whole system. not a great situation
     -- to be in, but this is fairer.
