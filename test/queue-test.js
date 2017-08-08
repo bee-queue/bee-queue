@@ -457,7 +457,7 @@ describe('Queue', (it) => {
       await queue.ready();
 
       t.is(queue.client.connection_options.host, '127.0.0.1');
-      t.is(queue.bclient, undefined);
+      t.is(queue.bclient, null);
     });
   });
 
@@ -1742,7 +1742,7 @@ describe('Queue', (it) => {
       });
       const worker = t.context.makeQueue();
 
-      t.is(queue.eclient, undefined);
+      t.is(queue.eclient, null);
 
       await queue.createJob({foo: 'bar'})
         // Holy race condition, batman!
