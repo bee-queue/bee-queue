@@ -159,7 +159,7 @@ job
 
 The Job's `save` method returns a Promise in addition to calling the optional callback.
 
-Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, and `.timeout(ms)` for setting options, and
+Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, and `.timeout(ms)` for setting options.
 
 Jobs can later be retrieved from Redis using [Queue.getJob](#queueprototypegetjobjobid-cberr-job), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
 
@@ -284,7 +284,7 @@ The `settings` fields are:
 - `getEvents`: boolean. Disable if this queue does not need to receive job events.
 - `sendEvents`: boolean. Disable if this worker does not need to send job events back to other queues.
 - `storeJobs`: boolean. Disable if this worker does not need to associate events with specific `Job` instances.
-- `ensureScripts`: boolean. Ensure that the LUA scripts exist in redis before running any commands against redis.
+- `ensureScripts`: boolean. Ensure that the Lua scripts exist in redis before running any commands against redis.
 - `activateDelayedJobs`: boolean. Activate delayed jobs once they've passed their `delayUntil` timestamp. Note that this must be enabled on at least one `Queue` instance for the delayed retry strategies (`fixed` and `exponential`) - this will reactivate them after their computed delay.
 - `removeOnSuccess`: boolean. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
 - `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
