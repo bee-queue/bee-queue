@@ -35,6 +35,9 @@ if next(stalling) ~= nil then
   end
   -- don't lpush zero jobs (the redis command will fail)
   if nextIndex > 1 then
+    -- lpush instead of rpush so that jobs which cause uncaught exceptions don't
+    -- hog the job consumers and starve the whole system. not a great situation
+    -- to be in, but this is fairer.
     redis.call("lpush", KEYS[3], unpack(stalled))
   end
   redis.call("del", KEYS[2])
