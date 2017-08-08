@@ -21,7 +21,7 @@ redis.call("zadd", KEYS[3], tonumber(ARGV[3]), jobId)
 -- can enter a pathological case where jobs incrementally creep sooner, and each one never updates
 -- the timers
 local head = redis.call("zrange", KEYS[3], 0, 0)
-if #head > 0 and head[1] == jobId then
+if head[1] == jobId then
   redis.call("publish", KEYS[4], ARGV[3])
 end
 
