@@ -4,7 +4,8 @@
   ],
   "rules": {
     "handle-callback-err": 1,
-    "no-shadow": 0
+    "no-shadow": 0,
+    "no-warning-comments": 0
   },
   "parserOptions": {
     "ecmaVersion": 2017,

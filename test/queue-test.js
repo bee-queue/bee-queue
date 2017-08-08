@@ -629,6 +629,8 @@ describe('Queue', (it) => {
       t.is(jobs[0].id, job.id);
     });
 
+    // TODO: Speed up this test - there must be a better and more reliable way
+    // to avoid encoding the set as an intset in Redis.
     it('scans until "size" jobs are found in for set types', async (t) => {
       const queue = t.context.makeQueue({
         redisScanCount: 50
