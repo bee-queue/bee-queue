@@ -633,7 +633,10 @@ describe('Queue', (it) => {
     // to avoid encoding the set as an intset in Redis.
     it('scans until "size" jobs are found in for set types', async (t) => {
       const queue = t.context.makeQueue({
-        redisScanCount: 50
+        redisScanCount: 50,
+        sendEvents: false,
+        getEvents: false,
+        storeJobs: false
       });
 
       // Choose a big number for numbers of jobs created, because otherwise the
@@ -679,11 +682,41 @@ describe('Queue', (it) => {
 
       const job = await queue.createJob({foo: 'bar'}).save();
 
-      const jobsPromise = helpers.deferred();
+      let jobsPromise = helpers.deferred();
       queue.getJobs('waiting', {start: 0, end: 1}, jobsPromise.defer());
-      const jobs = await jobsPromise;
+      let jobs = await jobsPromise;
 
+      t.is(jobs.length, 1);
       t.is(jobs[0].id, job.id);
+
+      jobsPromise = helpers.deferred();
+      queue.getJobs('waiting', jobsPromise.defer());
+      jobs = await jobsPromise;
+
+      t.is(jobs.length, 1);
+      t.is(jobs[0].id, job.id);
+    });
+
+    it('uses stored jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      const jobs = await queue.getJobs('waiting', {start: 0, end: 1});
+      t.is(jobs.length, 1);
+      t.is(jobs[0], job);
+    });
+
+    it('creates new job instances', async (t) => {
+      const queue = t.context.makeQueue({
+        storeJobs: false
+      });
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      const jobs = await queue.getJobs('waiting', {start: 0, end: 1});
+      t.is(jobs.length, 1);
+      t.not(jobs[0], job);
     });
   });
 
@@ -944,6 +977,44 @@ describe('Queue', (it) => {
       t.truthy(failedJob);
       t.is(failedJob.data.foo, 'bar');
       t.is(err.message, 'exception!');
+    });
+
+    it('should capture error data', async (t) => {
+      const queue = t.context.makeQueue();
+
+      let stack;
+      queue.process((job) => {
+        if (job.data.error === 'Error') {
+          const err = new Error('has stack');
+          stack = err.stack;
+          throw err;
+        }
+        throw job.data.error;
+      });
+
+      const errors = [
+        'Error',
+        {message: 'has message'},
+        'is string',
+        true,
+      ];
+
+      const jobs = errors.map((error) => queue.createJob({error}));
+      const afterFailed = jobs.map((job) => helpers.waitOn(job, 'failed'));
+
+      await Promise.all(jobs.map((job) => job.save()));
+      await Promise.all(afterFailed);
+
+      // Force getJobs to fetch fresh copies of the jobs.
+      queue.jobs = new Map();
+
+      const failed = await queue.getJobs('failed');
+      const failedErrors = new Set(failed.map((job) => {
+        t.is(job.options.stacktraces.length, 1);
+        return job.options.stacktraces[0];
+      }));
+
+      t.deepEqual(failedErrors, new Set([stack, 'has message', 'is string', true]));
     });
 
     it('processes and retries a job that fails', async (t) => {
