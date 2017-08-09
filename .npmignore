@@ -1,0 +1,57 @@
+# All we want to publish is:
+#   HISTORY.md
+#   README.md
+#   LICENSE
+#   package.json
+#   index.js
+#   lib/
+# Ignore all else.
+
+benchmark/
+examples/
+test/
+
+.git/
+.github/
+.gitignore
+.eslintrc.json
+.npmignore
+.travis.yml
+CONTRIBUTING.md
+
+node_modules/
+coverage/
+.nyc_output/
+
+bee-queue.png
+bee-queue.sublime-project
+
+.git/
+.github/
+.gitignore
+.gitmodules
+
+.eslintignore
+.eslintrc
+
+lib-cov
+*.seed
+*.log
+*.csv
+*.dat
+*.out
+*.pid
+*.gz
+
+pids
+logs
+results
+
+npm-debug.log*
+dump.rdb
+
+.npm
+.node_repl_history
+.DS_Store
+*.sublime-workspace
+.vscode/
