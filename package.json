@@ -1,22 +1,29 @@
 {
   "name": "bee-queue",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
-    "redis": "1.0.0"
+    "promise-callbacks": "^3.0.0",
+    "redis": "^2.7.1"
   },
   "devDependencies": {
-    "chai": "^1.10.0",
-    "grunt": "~0.4.5",
-    "grunt-eslint": "17.1.0",
-    "grunt-githooks": "^0.3.1",
-    "grunt-mocha-test": "^0.12.6",
-    "sinon": "^1.12.2",
-    "coveralls": "^2.11.2"
+    "ava": "^0.21.0",
+    "ava-spec": "^1.1.0",
+    "coveralls": "^2.11.2",
+    "eslint": ">= 3",
+    "lolex": "^2.0.0",
+    "nyc": "^11.0.3",
+    "sandboxed-module": "^2.0.3",
+    "sinon": "^2.3.8"
   },
   "scripts": {
-    "test": "grunt test"
+    "test": "npm run eslint && ava",
+    "eslint": "eslint lib/ test/",
+    "coverage": "nyc ava",
+    "report": "npm run coverage && nyc report --reporter=html",
+    "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
+    "ci": "npm run coverage-and-publish"
   },
   "keywords": [
     "task",
@@ -28,14 +35,17 @@
     "redis",
     "lua"
   ],
+  "engines": {
+    "node": ">= 4"
+  },
   "author": "Lewis J Ellis <me@lewisjellis.com>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/LewisJEllis/bee-queue.git"
+    "url": "https://github.com/bee-queue/bee-queue.git"
   },
   "bugs": {
-    "url": "https://github.com/LewisJEllis/bee-queue/issues"
+    "url": "https://github.com/bee-queue/bee-queue/issues"
   },
-  "homepage": "https://github.com/LewisJEllis/bee-queue"
+  "homepage": "https://github.com/bee-queue/bee-queue"
 }

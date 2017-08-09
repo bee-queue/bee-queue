@@ -1,4 +1,8 @@
 {
+  "env": {
+    "node": true,
+    "es6": true
+  },
   "rules": {
     "array-bracket-spacing": [2, "never"],
     "brace-style": [2, "1tbs"],
@@ -13,6 +17,7 @@
     "indent": [2, 2, {"SwitchCase": 1, "VariableDeclarator": { "var": 2, "let": 2, "const": 3}}],
     "key-spacing": 1,
     "new-cap": [2, {"capIsNew": false}],
+    "no-console": 2,
     "no-extra-parens": 1,
     "no-floating-decimal": 2,
     "no-inner-declarations": 2,
@@ -22,22 +27,21 @@
     "no-shadow": 1,
     "no-spaced-func": 2,
     "no-trailing-spaces": 2,
+    "no-undef": 2,
     "no-underscore-dangle": 0,
     "no-unused-vars": [2, {"vars": "all", "args": "after-used"}],
     "no-use-before-define": [2, "nofunc"],
+    "no-var": 2,
     "no-warning-comments": [1, {"terms": ["todo"], "location": "anywhere"}],
     "object-curly-spacing": [2, "never"],
     "quotes": [2, "single"],
     "semi": [2, "always"],
     "semi-spacing": [2, {"before": false, "after": true}],
-    "space-after-keywords": [2, "always"],
+    "keyword-spacing": 2,
     "space-before-blocks": 2,
     "space-before-function-paren": [2, {"anonymous": "always", "named": "never"}],
     "space-in-parens": 2,
     "space-infix-ops": 2,
     "strict": 0
-  },
-  "env": {
-    "node": true
   }
 }

@@ -1,12 +1,12 @@
-before_script:
-  - npm install -g eslint
-  - npm install -g grunt-cli
-  - npm install -g istanbul
 language: node_js
 node_js:
-  - "0.12"
-  - "0.10"
+  - 4
+  - 6.9.1
+  - 6
+  - 7.6.0
+  - 7
+  - node
 services: redis
 after_script:
   - redis-cli script flush
-  - istanbul cover ./node_modules/mocha/bin/_mocha --report lcovonly -- -R spec && cat ./coverage/lcov.info | ./node_modules/coveralls/bin/coveralls.js && rm -rf ./coverage
+  - npm run ci
