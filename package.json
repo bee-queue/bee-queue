@@ -17,6 +17,14 @@
     "sandboxed-module": "^2.0.3",
     "sinon": "^2.3.8"
   },
+  "files": [
+    "HISTORY.md",
+    "README.md",
+    "LICENSE",
+    "package.json",
+    "index.js",
+    "lib"
+  ],
   "scripts": {
     "test": "npm run eslint && ava",
     "eslint": "eslint lib/ test/",

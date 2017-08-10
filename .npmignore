@@ -1,38 +1,11 @@
-# All we want to publish is:
-#   HISTORY.md
-#   README.md
-#   LICENSE
-#   package.json
-#   index.js
-#   lib/
-# Ignore all else.
+# This file ignores irrelevant file patterns, and complements the whitelist
+# defined in the files property of the package.json.
 
-benchmark/
-examples/
-test/
-
-.git/
-.github/
-.gitignore
-.eslintrc.json
-.npmignore
-.travis.yml
-CONTRIBUTING.md
-
-node_modules/
-coverage/
-.nyc_output/
-
-bee-queue.png
-bee-queue.sublime-project
-
-.git/
-.github/
 .gitignore
 .gitmodules
 
 .eslintignore
-.eslintrc
+.eslintrc.json
 
 lib-cov
 *.seed
@@ -50,8 +23,5 @@ results
 npm-debug.log*
 dump.rdb
 
-.npm
 .node_repl_history
 .DS_Store
-*.sublime-workspace
-.vscode/
