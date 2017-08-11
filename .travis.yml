@@ -10,3 +10,9 @@ services: redis
 after_script:
   - redis-cli script flush
   - npm run ci
+
+# Don't build pushes to branches other than master. This doesn’t affect pull-
+# request builds, which are separate from branch builds in Travis.
+branches:
+  only:
+    - master
