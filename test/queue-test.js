@@ -7,6 +7,7 @@ import sinon from 'sinon';
 import {promisify} from 'promise-callbacks';
 
 import redis from '../lib/redis';
+import {createClient} from 'redis';
 
 // A promise-based barrier.
 function reef(n = 1) {
@@ -165,15 +166,22 @@ describe('Queue', (it) => {
 
         await queue.ready();
 
-        t.true(queue.client.ready);
-        t.true(queue.bclient.ready);
-        t.true(queue.eclient.ready);
+        t.true(redis.isReady(queue.client));
+        t.true(redis.isReady(queue.bclient));
+        t.true(redis.isReady(queue.eclient));
 
         await queue.close();
 
-        t.false(queue.client.ready);
-        t.false(queue.bclient.ready);
-        t.false(queue.eclient.ready);
+        // ioredis closes the connection some time after the quit response has
+        // been received.
+        await Promise.all([
+          redis.isReady(queue.client) && helpers.waitOn(queue.client, 'close'),
+          redis.isReady(queue.bclient) && helpers.waitOn(queue.bclient, 'close'),
+          redis.isReady(queue.eclient) && helpers.waitOn(queue.eclient, 'close'),
+        ]);
+
+        t.false(redis.isReady(queue.client));
+        t.false(redis.isReady(queue.eclient));
       });
 
       it.cb('should support callbacks', (t) => {
@@ -370,6 +378,31 @@ describe('Queue', (it) => {
 
         t.context.handleErrors(t);
       });
+
+      it('should not quit the command client by default if given in settings', async (t) => {
+        const client = await redis.createClient();
+
+        sinon.spy(client, 'quit');
+
+        let queue = t.context.makeQueue({
+          redis: client
+        });
+
+        await queue.close();
+
+        t.true(client.ready);
+        t.false(client.quit.called);
+
+        queue = t.context.makeQueue({
+          redis: client,
+          quitCommandClient: true
+        });
+
+        await queue.close();
+
+        t.false(client.ready);
+        t.true(client.quit.called);
+      });
     });
 
     it('should recover from a connection loss', async (t) => {
@@ -392,6 +425,7 @@ describe('Queue', (it) => {
       // Not called at all yet because queue.process uses setImmediate.
       t.is(jobSpy.callCount, 0);
 
+      // Override _waitForJob.
       const waitJob = queue._waitForJob, wait = helpers.deferred();
       let waitDone = wait.defer();
       queue._waitForJob = function (...args) {
@@ -404,10 +438,12 @@ describe('Queue', (it) => {
 
       await wait;
 
+      const errored = helpers.waitOn(queue, 'error');
+
       queue.bclient.stream.destroy();
 
-      const err = await helpers.waitOn(queue, 'error');
-      t.is(err.name, 'AbortError');
+      const err = await errored;
+      t.true(redis.isAbortError(err));
 
       queue.createJob({foo: 'bar'}).save();
 
@@ -458,6 +494,34 @@ describe('Queue', (it) => {
 
       t.is(queue.client.connection_options.host, '127.0.0.1');
       t.is(queue.bclient, null);
+    });
+
+    it('should create a Queue with an existing redis instance', async (t) => {
+      const client = await redis.createClient();
+
+      const queue = t.context.makeQueue({
+        redis: client
+      });
+
+      await queue.createJob().save();
+
+      t.is(queue.client, client);
+      t.not(queue.eclient, client);
+
+      await queue.close();
+
+      t.true(client.ready);
+      t.false(queue.eclient.ready);
+    });
+
+    it('should create a Queue with a connecting redis instance', async (t) => {
+      const client = createClient();
+
+      const queue = t.context.makeQueue({
+        redis: client
+      });
+
+      await t.notThrows(queue.createJob().save());
     });
   });
 
