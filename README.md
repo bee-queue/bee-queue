@@ -506,6 +506,26 @@ Note that for calls that specify an interval, you must provide a callback if you
 
 Closes the queue's connections to Redis. Idempotent.
 
+The recommended pattern for gracefully shutting down your worker is:
+
+```js
+// Some reasonable period of time for all your concurrent jobs to finish
+// processing. If a job does not finish processing in this time, it will stall
+// and be retried. As such, do attempt to make your jobs idempotent, as you
+// generally should with any queue that provides at-least-once delivery.
+const TIMEOUT = 30 * 1000;
+
+process.on('uncaughtException', async () => {
+  // Queue#close is idempotent - no need to guard against duplicate calls.
+  try {
+    await queue.close(TIMEOUT);
+  } catch (err) {
+    console.error('bee-queue failed to shut down gracefully', err);
+  }
+  process.exit(1);
+});
+```
+
 ## Job
 
 ### Properties
