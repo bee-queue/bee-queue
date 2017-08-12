@@ -502,6 +502,16 @@ The maximum delay from when a job stalls until it will be retried is roughly `st
 
 Note that for calls that specify an interval, you must provide a callback if you want results from each subsequent check - the returned `Promise` can and will only resolve for the first check. If and only if you specify an `interval` and no `cb`, then errors encountered after the first check will be emitted as `error` events.
 
+#### Queue#checkHealth([cb])
+
+Check the "health" of the queue. Returns a promise that resolves to the number of jobs in each state (`waiting`, `active`, `succeeded`, `failed`, `delayed`), and the newest job ID (if using the default ID behavior) in `newestJob`. You can periodically query the `newestJob` ID to estimate the job creation throughput, and can infer the job processing throughput by incorporating the `waiting` and `active` counts.
+
+```js
+const counts = await queue.checkHealth();
+// print all the job counts
+console.log('job state counts:', counts);
+```
+
 #### Queue#close([cb])
 
 Closes the queue's connections to Redis. Idempotent.
