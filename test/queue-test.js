@@ -1201,6 +1201,25 @@ describe('Queue', (it) => {
       return end;
     });
 
+    it('should fail a job that has a retry but is intentionally stopped', async (t) => {
+      const queue = t.context.makeQueue();
+
+      let called = false;
+      queue.process(async (job) => {
+        if (called) {
+          return t.fail('the job should not double-process');
+        }
+        called = true;
+        job.retries(0);
+        throw new Error('fatal error');
+      });
+
+      const job = await queue.createJob({}).retries(5).save();
+
+      await helpers.waitOn(job, 'failed', true);
+
+      t.true(called);
+    });
 
     it('processes a job that times out and auto-retries', async (t) => {
       const queue = t.context.makeQueue();
