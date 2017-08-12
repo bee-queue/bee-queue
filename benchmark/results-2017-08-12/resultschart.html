@@ -1,0 +1,83 @@
+<!DOCTYPE HTML>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>Highcharts Example</title>
+
+		<style type="text/css">
+
+		</style>
+	</head>
+	<body>
+<script src="https://cdn.jsdelivr.net/highcharts/5.0.11/highcharts.js"></script>
+
+<div id="container" style="min-width: 310px; height: 600px; margin: 0 auto"></div>
+
+
+
+		<script type="text/javascript">
+
+Highcharts.chart('container', {
+    chart: {
+        type: 'column'
+    },
+    title: {
+        text: 'Queue benchmarks, 10k jobs'
+    },
+    subtitle: {
+        text: '(lower is better)'
+    },
+    xAxis: {
+        categories: [
+            '1 concurrent',
+            '5 concurrent',
+            '20 concurrent',
+            '50 concurrent'
+        ],
+        crosshair: true
+    },
+    yAxis: {
+        min: 0,
+        title: {
+            text: 'Execution Time (ms)'
+        }
+    },
+    tooltip: {
+        headerFormat: '<span style="font-size:10px">{point.key}</span><table>',
+        pointFormat: '<tr><td style="color:{series.color};padding:0">{series.name}: </td>' +
+            '<td style="padding:0"><b>{point.y:.1f} mm</b></td></tr>',
+        footerFormat: '</table>',
+        shared: true,
+        useHTML: true
+    },
+    plotOptions: {
+        column: {
+            pointPadding: 0.2,
+            borderWidth: 0
+        }
+    },
+    series: [{
+        name: 'Bee Queue 1.0 (disabled events)',
+        data: [4872, 3541, 3221, 3124]
+
+    }, {
+        name: 'Bee Queue 1.0',
+        data: [5252, 3826, 3367, 3267]
+
+    }, {
+        name: 'Bee Queue 0.x',
+        data: [5246, 3826, 3375, 3263]
+
+    }, {
+        name: 'Bull v3.0rc5',
+        data: [7428, 5824, 5147, 4955]
+
+    }, {
+        name: 'Kue',
+        data: [12738, 9677, 8822, 8631]
+
+    }]
+});
+		</script>
+	</body>
+</html>

@@ -96,21 +96,9 @@ Bee-Queue is like a bee because it:
 
 # Benchmarks
 
-![benchmark chart](https://raw.githubusercontent.com/bee-queue/bee-queue/master/benchmark/benchmark-chart.png)
+![benchmark chart](./benchmark/results-2017-08-12/resultschart.png)
 
-See the raw data [here](https://raw.githubusercontent.com/bee-queue/bee-queue/master/summary-2017-07-20.txt).
-
-These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with Node.js (v6.9.1, v7.6.0, and v8.2.0) and Redis 3.2.9 running directly on an AWS m4.xlarge. The numbers shown are averages of 3 runs; the raw data collected and code used are available in the benchmark folder.
-
-For a rough idea of space efficiency, the following table contains Redis memory usage as reported by [INFO](http://redis.io/commands/INFO) after doing a [FLUSHALL](http://redis.io/commands/FLUSHALL), restarting Redis, and running a single basic 10k job benchmark:
-
-| Library   | Memory After  | Memory Peak | Memory After Δ | Memory Peak Δ |
-| --------- | ------------- | ----------- | -------------- | ------------- |
-| Bee-Queue |        2.65MB |      2.73MB |         1.67MB |        1.75MB |
-| Bull      |        3.93MB |      5.09MB |         2.95MB |        4.11MB |
-| Kue       |        7.53MB |      7.86MB |         6.55MB |        6.88MB |
-
-The Δ columns factor out the ~986KB of memory usage reported by Redis on a fresh startup. Note that this data was collected in 2015, but should still accurately reflect the memory usage of Bee-Queue.
+These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with Node.js (v6.9.1, v6.11.2, v7.6.0, v7.10.1, v8.2.1, v8.3.0) and Redis (v3.2.10, v4.0.1) running directly on an AWS m4.xlarge. The numbers shown are averages of 3 runs; the raw data collected and code used are available in the [benchmark folder](./benchmark).
 
 # Web Interface
 
