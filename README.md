@@ -280,6 +280,8 @@ The `settings` fields are:
   - `host`: string, Redis host.
   - `port`: number, Redis port.
   - `socket`: string, Redis socket to be used instead of a host and port.
+
+  Note that this can also be a node_redis `RedisClient` instance, in which case Bee-Queue will issue normal commands over it. It will `duplicate()` the client for blocking commands and PubSub subscriptions, if enabled. This is advanced usage,
 - `isWorker`: boolean. Disable if this queue will not process jobs.
 - `getEvents`: boolean. Disable if this queue does not need to receive job events.
 - `sendEvents`: boolean. Disable if this worker does not need to send job events back to other queues.
@@ -288,6 +290,7 @@ The `settings` fields are:
 - `activateDelayedJobs`: boolean. Activate delayed jobs once they've passed their `delayUntil` timestamp. Note that this must be enabled on at least one `Queue` instance for the delayed retry strategies (`fixed` and `exponential`) - this will reactivate them after their computed delay.
 - `removeOnSuccess`: boolean. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
 - `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
+- `quitCommandClient`: boolean. Whether to `QUIT` the redis command client (the client it sends normal operations over) when `Queue#close` is called. This defaults to `true` for normal usage, and `false` if an existing `RedisClient` object was provided to the `redis` option.
 - `redisScanCount`: number. For setting the value of the `SSCAN` Redis command used in `Queue#getJobs` for succeeded and failed job types.
 
 ### Properties
