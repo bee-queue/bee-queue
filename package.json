@@ -31,7 +31,7 @@
     "coverage": "nyc ava",
     "report": "npm run coverage && nyc report --reporter=html",
     "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
-    "ci": "npm run coverage-and-publish"
+    "ci": "npm run eslint && npm run coverage-and-publish"
   },
   "keywords": [
     "task",

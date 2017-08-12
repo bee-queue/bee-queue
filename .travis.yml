@@ -7,9 +7,11 @@ node_js:
   - 7
   - node
 services: redis
+# this runs eslint, runs the tests, instruments their coverage, and
+# publishes it to coveralls.io
+script: npm run ci
 after_script:
   - redis-cli script flush
-  - npm run ci
 
 # Don't build pushes to branches other than master. This doesn’t affect pull-
 # request builds, which are separate from branch builds in Travis.
