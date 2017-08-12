@@ -1,3 +1,9 @@
+1.1.0 / 2017-08-12
+==================
+
+  * Support sharing the redis command client between Queues.
+  * Add documentation, add tests for expected behavior.
+
 1.0.0 / 2017-06-30
 ==================
 
