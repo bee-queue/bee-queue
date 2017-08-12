@@ -1,0 +1,3242 @@
+[
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3712,
+    "stats": {
+      "userTime": 3.09,
+      "systemTime": 0.85,
+      "cpuUtil": 1.02,
+      "totalTime": 3.86,
+      "maximumRSS": 202436,
+      "minorPageFaults": 49814,
+      "voluntaryContextSwitches": 10720,
+      "involuntaryContextSwitches": 61
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3961,
+    "stats": {
+      "userTime": 3.47,
+      "systemTime": 0.70,
+      "cpuUtil": 1.01,
+      "totalTime": 4.11,
+      "maximumRSS": 201596,
+      "minorPageFaults": 49284,
+      "voluntaryContextSwitches": 9292,
+      "involuntaryContextSwitches": 69
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3814,
+    "stats": {
+      "userTime": 3.28,
+      "systemTime": 0.77,
+      "cpuUtil": 1.02,
+      "totalTime": 3.97,
+      "maximumRSS": 205640,
+      "minorPageFaults": 49873,
+      "voluntaryContextSwitches": 6141,
+      "involuntaryContextSwitches": 78
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2868,
+    "stats": {
+      "userTime": 2.54,
+      "systemTime": 0.57,
+      "cpuUtil": 1.03,
+      "totalTime": 3.02,
+      "maximumRSS": 201324,
+      "minorPageFaults": 49229,
+      "voluntaryContextSwitches": 235,
+      "involuntaryContextSwitches": 51
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3150,
+    "stats": {
+      "userTime": 2.78,
+      "systemTime": 0.62,
+      "cpuUtil": 1.03,
+      "totalTime": 3.30,
+      "maximumRSS": 203504,
+      "minorPageFaults": 50009,
+      "voluntaryContextSwitches": 253,
+      "involuntaryContextSwitches": 50
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3021,
+    "stats": {
+      "userTime": 2.62,
+      "systemTime": 0.65,
+      "cpuUtil": 1.03,
+      "totalTime": 3.17,
+      "maximumRSS": 203776,
+      "minorPageFaults": 49444,
+      "voluntaryContextSwitches": 260,
+      "involuntaryContextSwitches": 51
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2485,
+    "stats": {
+      "userTime": 2.17,
+      "systemTime": 0.57,
+      "cpuUtil": 1.03,
+      "totalTime": 2.64,
+      "maximumRSS": 202408,
+      "minorPageFaults": 49113,
+      "voluntaryContextSwitches": 253,
+      "involuntaryContextSwitches": 31
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2452,
+    "stats": {
+      "userTime": 2.21,
+      "systemTime": 0.50,
+      "cpuUtil": 1.03,
+      "totalTime": 2.60,
+      "maximumRSS": 203436,
+      "minorPageFaults": 49358,
+      "voluntaryContextSwitches": 246,
+      "involuntaryContextSwitches": 17
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2557,
+    "stats": {
+      "userTime": 2.26,
+      "systemTime": 0.55,
+      "cpuUtil": 1.03,
+      "totalTime": 2.71,
+      "maximumRSS": 204172,
+      "minorPageFaults": 49775,
+      "voluntaryContextSwitches": 255,
+      "involuntaryContextSwitches": 31
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2638,
+    "stats": {
+      "userTime": 2.40,
+      "systemTime": 0.50,
+      "cpuUtil": 1.03,
+      "totalTime": 2.80,
+      "maximumRSS": 204668,
+      "minorPageFaults": 50177,
+      "voluntaryContextSwitches": 253,
+      "involuntaryContextSwitches": 29
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2341,
+    "stats": {
+      "userTime": 2.09,
+      "systemTime": 0.51,
+      "cpuUtil": 1.04,
+      "totalTime": 2.50,
+      "maximumRSS": 204612,
+      "minorPageFaults": 50174,
+      "voluntaryContextSwitches": 256,
+      "involuntaryContextSwitches": 39
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2565,
+    "stats": {
+      "userTime": 2.27,
+      "systemTime": 0.56,
+      "cpuUtil": 1.03,
+      "totalTime": 2.73,
+      "maximumRSS": 204876,
+      "minorPageFaults": 49758,
+      "voluntaryContextSwitches": 275,
+      "involuntaryContextSwitches": 27
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 5578,
+    "stats": {
+      "userTime": 5.00,
+      "systemTime": 0.70,
+      "cpuUtil": 0.96,
+      "totalTime": 5.89,
+      "maximumRSS": 133744,
+      "minorPageFaults": 32421,
+      "voluntaryContextSwitches": 20483,
+      "involuntaryContextSwitches": 63
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 6108,
+    "stats": {
+      "userTime": 5.38,
+      "systemTime": 0.64,
+      "cpuUtil": 0.93,
+      "totalTime": 6.41,
+      "maximumRSS": 134780,
+      "minorPageFaults": 31896,
+      "voluntaryContextSwitches": 20461,
+      "involuntaryContextSwitches": 71
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 5758,
+    "stats": {
+      "userTime": 5.12,
+      "systemTime": 0.75,
+      "cpuUtil": 0.96,
+      "totalTime": 6.06,
+      "maximumRSS": 135904,
+      "minorPageFaults": 31344,
+      "voluntaryContextSwitches": 20452,
+      "involuntaryContextSwitches": 72
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 4418,
+    "stats": {
+      "userTime": 4.50,
+      "systemTime": 0.44,
+      "cpuUtil": 1.04,
+      "totalTime": 4.72,
+      "maximumRSS": 134588,
+      "minorPageFaults": 31055,
+      "voluntaryContextSwitches": 546,
+      "involuntaryContextSwitches": 58
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 4187,
+    "stats": {
+      "userTime": 4.14,
+      "systemTime": 0.58,
+      "cpuUtil": 1.04,
+      "totalTime": 4.50,
+      "maximumRSS": 135336,
+      "minorPageFaults": 31171,
+      "voluntaryContextSwitches": 542,
+      "involuntaryContextSwitches": 82
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 4622,
+    "stats": {
+      "userTime": 4.60,
+      "systemTime": 0.54,
+      "cpuUtil": 1.04,
+      "totalTime": 4.93,
+      "maximumRSS": 133196,
+      "minorPageFaults": 31509,
+      "voluntaryContextSwitches": 557,
+      "involuntaryContextSwitches": 77
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3434,
+    "stats": {
+      "userTime": 3.50,
+      "systemTime": 0.46,
+      "cpuUtil": 1.05,
+      "totalTime": 3.74,
+      "maximumRSS": 134796,
+      "minorPageFaults": 31619,
+      "voluntaryContextSwitches": 501,
+      "involuntaryContextSwitches": 65
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3669,
+    "stats": {
+      "userTime": 3.68,
+      "systemTime": 0.52,
+      "cpuUtil": 1.05,
+      "totalTime": 3.98,
+      "maximumRSS": 134760,
+      "minorPageFaults": 32258,
+      "voluntaryContextSwitches": 544,
+      "involuntaryContextSwitches": 53
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3680,
+    "stats": {
+      "userTime": 3.71,
+      "systemTime": 0.49,
+      "cpuUtil": 1.05,
+      "totalTime": 3.99,
+      "maximumRSS": 136348,
+      "minorPageFaults": 31694,
+      "voluntaryContextSwitches": 537,
+      "involuntaryContextSwitches": 59
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3439,
+    "stats": {
+      "userTime": 3.56,
+      "systemTime": 0.41,
+      "cpuUtil": 1.05,
+      "totalTime": 3.75,
+      "maximumRSS": 135236,
+      "minorPageFaults": 31126,
+      "voluntaryContextSwitches": 521,
+      "involuntaryContextSwitches": 42
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3357,
+    "stats": {
+      "userTime": 3.44,
+      "systemTime": 0.44,
+      "cpuUtil": 1.06,
+      "totalTime": 3.66,
+      "maximumRSS": 135008,
+      "minorPageFaults": 31146,
+      "voluntaryContextSwitches": 516,
+      "involuntaryContextSwitches": 70
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3261,
+    "stats": {
+      "userTime": 3.38,
+      "systemTime": 0.41,
+      "cpuUtil": 1.06,
+      "totalTime": 3.57,
+      "maximumRSS": 134484,
+      "minorPageFaults": 31076,
+      "voluntaryContextSwitches": 528,
+      "involuntaryContextSwitches": 51
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 9630,
+    "stats": {
+      "userTime": 6.54,
+      "systemTime": 3.26,
+      "cpuUtil": 0.99,
+      "totalTime": 9.83,
+      "maximumRSS": 241416,
+      "minorPageFaults": 66747,
+      "voluntaryContextSwitches": 37601,
+      "involuntaryContextSwitches": 106
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 9557,
+    "stats": {
+      "userTime": 6.98,
+      "systemTime": 2.74,
+      "cpuUtil": 0.99,
+      "totalTime": 9.75,
+      "maximumRSS": 245816,
+      "minorPageFaults": 65917,
+      "voluntaryContextSwitches": 37379,
+      "involuntaryContextSwitches": 109
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 10200,
+    "stats": {
+      "userTime": 7.23,
+      "systemTime": 3.17,
+      "cpuUtil": 1.00,
+      "totalTime": 0.40,
+      "maximumRSS": 242656,
+      "minorPageFaults": 66623,
+      "voluntaryContextSwitches": 35522,
+      "involuntaryContextSwitches": 102
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 8345,
+    "stats": {
+      "userTime": 6.25,
+      "systemTime": 2.45,
+      "cpuUtil": 1.01,
+      "totalTime": 8.54,
+      "maximumRSS": 242532,
+      "minorPageFaults": 66766,
+      "voluntaryContextSwitches": 270,
+      "involuntaryContextSwitches": 123
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 8499,
+    "stats": {
+      "userTime": 6.24,
+      "systemTime": 2.61,
+      "cpuUtil": 1.01,
+      "totalTime": 8.69,
+      "maximumRSS": 242548,
+      "minorPageFaults": 66645,
+      "voluntaryContextSwitches": 272,
+      "involuntaryContextSwitches": 121
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 8483,
+    "stats": {
+      "userTime": 6.54,
+      "systemTime": 2.30,
+      "cpuUtil": 1.01,
+      "totalTime": 8.68,
+      "maximumRSS": 241900,
+      "minorPageFaults": 67011,
+      "voluntaryContextSwitches": 254,
+      "involuntaryContextSwitches": 103
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 7357,
+    "stats": {
+      "userTime": 5.54,
+      "systemTime": 2.17,
+      "cpuUtil": 1.02,
+      "totalTime": 7.55,
+      "maximumRSS": 244196,
+      "minorPageFaults": 66864,
+      "voluntaryContextSwitches": 276,
+      "involuntaryContextSwitches": 75
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 7297,
+    "stats": {
+      "userTime": 5.56,
+      "systemTime": 2.10,
+      "cpuUtil": 1.02,
+      "totalTime": 7.49,
+      "maximumRSS": 243652,
+      "minorPageFaults": 67840,
+      "voluntaryContextSwitches": 265,
+      "involuntaryContextSwitches": 74
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 7597,
+    "stats": {
+      "userTime": 5.73,
+      "systemTime": 2.22,
+      "cpuUtil": 1.02,
+      "totalTime": 7.79,
+      "maximumRSS": 248256,
+      "minorPageFaults": 67194,
+      "voluntaryContextSwitches": 257,
+      "involuntaryContextSwitches": 91
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 7050,
+    "stats": {
+      "userTime": 5.37,
+      "systemTime": 2.04,
+      "cpuUtil": 1.02,
+      "totalTime": 7.25,
+      "maximumRSS": 246056,
+      "minorPageFaults": 67431,
+      "voluntaryContextSwitches": 245,
+      "involuntaryContextSwitches": 93
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 6517,
+    "stats": {
+      "userTime": 4.83,
+      "systemTime": 2.04,
+      "cpuUtil": 1.02,
+      "totalTime": 6.72,
+      "maximumRSS": 241700,
+      "minorPageFaults": 66565,
+      "voluntaryContextSwitches": 249,
+      "involuntaryContextSwitches": 98
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 6440,
+    "stats": {
+      "userTime": 4.60,
+      "systemTime": 2.18,
+      "cpuUtil": 1.02,
+      "totalTime": 6.64,
+      "maximumRSS": 240876,
+      "minorPageFaults": 65345,
+      "voluntaryContextSwitches": 246,
+      "involuntaryContextSwitches": 87
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3400,
+    "stats": {
+      "userTime": 2.90,
+      "systemTime": 0.73,
+      "cpuUtil": 1.03,
+      "totalTime": 3.52,
+      "maximumRSS": 204936,
+      "minorPageFaults": 48776,
+      "voluntaryContextSwitches": 11017,
+      "involuntaryContextSwitches": 51
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3556,
+    "stats": {
+      "userTime": 2.89,
+      "systemTime": 0.88,
+      "cpuUtil": 1.02,
+      "totalTime": 3.68,
+      "maximumRSS": 203132,
+      "minorPageFaults": 47982,
+      "voluntaryContextSwitches": 9537,
+      "involuntaryContextSwitches": 60
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3460,
+    "stats": {
+      "userTime": 2.84,
+      "systemTime": 0.86,
+      "cpuUtil": 1.03,
+      "totalTime": 3.58,
+      "maximumRSS": 204456,
+      "minorPageFaults": 48272,
+      "voluntaryContextSwitches": 8662,
+      "involuntaryContextSwitches": 57
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2656,
+    "stats": {
+      "userTime": 2.25,
+      "systemTime": 0.62,
+      "cpuUtil": 1.03,
+      "totalTime": 2.79,
+      "maximumRSS": 220616,
+      "minorPageFaults": 52392,
+      "voluntaryContextSwitches": 225,
+      "involuntaryContextSwitches": 36
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2546,
+    "stats": {
+      "userTime": 2.27,
+      "systemTime": 0.50,
+      "cpuUtil": 1.03,
+      "totalTime": 2.67,
+      "maximumRSS": 219796,
+      "minorPageFaults": 52643,
+      "voluntaryContextSwitches": 235,
+      "involuntaryContextSwitches": 29
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2412,
+    "stats": {
+      "userTime": 2.06,
+      "systemTime": 0.58,
+      "cpuUtil": 1.04,
+      "totalTime": 2.54,
+      "maximumRSS": 220060,
+      "minorPageFaults": 53348,
+      "voluntaryContextSwitches": 222,
+      "involuntaryContextSwitches": 37
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2315,
+    "stats": {
+      "userTime": 2.01,
+      "systemTime": 0.56,
+      "cpuUtil": 1.05,
+      "totalTime": 2.44,
+      "maximumRSS": 220128,
+      "minorPageFaults": 53098,
+      "voluntaryContextSwitches": 274,
+      "involuntaryContextSwitches": 40
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2121,
+    "stats": {
+      "userTime": 1.82,
+      "systemTime": 0.55,
+      "cpuUtil": 1.05,
+      "totalTime": 2.25,
+      "maximumRSS": 220248,
+      "minorPageFaults": 53027,
+      "voluntaryContextSwitches": 309,
+      "involuntaryContextSwitches": 22
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2281,
+    "stats": {
+      "userTime": 1.93,
+      "systemTime": 0.58,
+      "cpuUtil": 1.04,
+      "totalTime": 2.42,
+      "maximumRSS": 220616,
+      "minorPageFaults": 53704,
+      "voluntaryContextSwitches": 232,
+      "involuntaryContextSwitches": 40
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2345,
+    "stats": {
+      "userTime": 2.02,
+      "systemTime": 0.56,
+      "cpuUtil": 1.04,
+      "totalTime": 2.47,
+      "maximumRSS": 203448,
+      "minorPageFaults": 47664,
+      "voluntaryContextSwitches": 328,
+      "involuntaryContextSwitches": 29
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2040,
+    "stats": {
+      "userTime": 1.81,
+      "systemTime": 0.47,
+      "cpuUtil": 1.04,
+      "totalTime": 2.18,
+      "maximumRSS": 220304,
+      "minorPageFaults": 52670,
+      "voluntaryContextSwitches": 224,
+      "involuntaryContextSwitches": 25
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2210,
+    "stats": {
+      "userTime": 1.98,
+      "systemTime": 0.46,
+      "cpuUtil": 1.04,
+      "totalTime": 2.34,
+      "maximumRSS": 220840,
+      "minorPageFaults": 52860,
+      "voluntaryContextSwitches": 226,
+      "involuntaryContextSwitches": 26
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 6083,
+    "stats": {
+      "userTime": 5.06,
+      "systemTime": 0.68,
+      "cpuUtil": 0.90,
+      "totalTime": 6.35,
+      "maximumRSS": 150496,
+      "minorPageFaults": 34597,
+      "voluntaryContextSwitches": 20554,
+      "involuntaryContextSwitches": 68
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 5135,
+    "stats": {
+      "userTime": 4.60,
+      "systemTime": 0.57,
+      "cpuUtil": 0.95,
+      "totalTime": 5.39,
+      "maximumRSS": 149280,
+      "minorPageFaults": 34930,
+      "voluntaryContextSwitches": 20523,
+      "involuntaryContextSwitches": 59
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 5260,
+    "stats": {
+      "userTime": 4.65,
+      "systemTime": 0.65,
+      "cpuUtil": 0.95,
+      "totalTime": 5.53,
+      "maximumRSS": 150984,
+      "minorPageFaults": 34779,
+      "voluntaryContextSwitches": 20595,
+      "involuntaryContextSwitches": 66
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3749,
+    "stats": {
+      "userTime": 3.73,
+      "systemTime": 0.52,
+      "cpuUtil": 1.05,
+      "totalTime": 4.02,
+      "maximumRSS": 151640,
+      "minorPageFaults": 35649,
+      "voluntaryContextSwitches": 720,
+      "involuntaryContextSwitches": 69
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3659,
+    "stats": {
+      "userTime": 3.59,
+      "systemTime": 0.55,
+      "cpuUtil": 1.05,
+      "totalTime": 3.93,
+      "maximumRSS": 121792,
+      "minorPageFaults": 27485,
+      "voluntaryContextSwitches": 523,
+      "involuntaryContextSwitches": 77
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 4215,
+    "stats": {
+      "userTime": 4.24,
+      "systemTime": 0.46,
+      "cpuUtil": 1.05,
+      "totalTime": 4.48,
+      "maximumRSS": 151912,
+      "minorPageFaults": 34945,
+      "voluntaryContextSwitches": 606,
+      "involuntaryContextSwitches": 62
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3039,
+    "stats": {
+      "userTime": 3.04,
+      "systemTime": 0.50,
+      "cpuUtil": 1.07,
+      "totalTime": 3.30,
+      "maximumRSS": 121068,
+      "minorPageFaults": 27954,
+      "voluntaryContextSwitches": 530,
+      "involuntaryContextSwitches": 54
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3002,
+    "stats": {
+      "userTime": 3.13,
+      "systemTime": 0.37,
+      "cpuUtil": 1.07,
+      "totalTime": 3.26,
+      "maximumRSS": 120788,
+      "minorPageFaults": 28739,
+      "voluntaryContextSwitches": 519,
+      "involuntaryContextSwitches": 49
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3150,
+    "stats": {
+      "userTime": 3.20,
+      "systemTime": 0.47,
+      "cpuUtil": 1.07,
+      "totalTime": 3.41,
+      "maximumRSS": 150420,
+      "minorPageFaults": 36352,
+      "voluntaryContextSwitches": 561,
+      "involuntaryContextSwitches": 65
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2838,
+    "stats": {
+      "userTime": 2.94,
+      "systemTime": 0.39,
+      "cpuUtil": 1.07,
+      "totalTime": 3.10,
+      "maximumRSS": 120468,
+      "minorPageFaults": 28269,
+      "voluntaryContextSwitches": 545,
+      "involuntaryContextSwitches": 55
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3216,
+    "stats": {
+      "userTime": 3.29,
+      "systemTime": 0.44,
+      "cpuUtil": 1.07,
+      "totalTime": 3.48,
+      "maximumRSS": 150812,
+      "minorPageFaults": 36139,
+      "voluntaryContextSwitches": 748,
+      "involuntaryContextSwitches": 63
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2887,
+    "stats": {
+      "userTime": 2.99,
+      "systemTime": 0.40,
+      "cpuUtil": 1.07,
+      "totalTime": 3.15,
+      "maximumRSS": 151332,
+      "minorPageFaults": 35477,
+      "voluntaryContextSwitches": 541,
+      "involuntaryContextSwitches": 47
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 9357,
+    "stats": {
+      "userTime": 6.83,
+      "systemTime": 2.60,
+      "cpuUtil": 0.99,
+      "totalTime": 9.51,
+      "maximumRSS": 154864,
+      "minorPageFaults": 48394,
+      "voluntaryContextSwitches": 39387,
+      "involuntaryContextSwitches": 78
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 9160,
+    "stats": {
+      "userTime": 6.81,
+      "systemTime": 2.48,
+      "cpuUtil": 0.99,
+      "totalTime": 9.32,
+      "maximumRSS": 154408,
+      "minorPageFaults": 47492,
+      "voluntaryContextSwitches": 38570,
+      "involuntaryContextSwitches": 98
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 9399,
+    "stats": {
+      "userTime": 7.12,
+      "systemTime": 2.36,
+      "cpuUtil": 0.99,
+      "totalTime": 9.56,
+      "maximumRSS": 158204,
+      "minorPageFaults": 48459,
+      "voluntaryContextSwitches": 38961,
+      "involuntaryContextSwitches": 108
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 6876,
+    "stats": {
+      "userTime": 5.09,
+      "systemTime": 2.14,
+      "cpuUtil": 1.02,
+      "totalTime": 7.03,
+      "maximumRSS": 157748,
+      "minorPageFaults": 47367,
+      "voluntaryContextSwitches": 450,
+      "involuntaryContextSwitches": 108
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 6680,
+    "stats": {
+      "userTime": 5.01,
+      "systemTime": 2.02,
+      "cpuUtil": 1.02,
+      "totalTime": 6.84,
+      "maximumRSS": 156032,
+      "minorPageFaults": 47487,
+      "voluntaryContextSwitches": 402,
+      "involuntaryContextSwitches": 93
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 6563,
+    "stats": {
+      "userTime": 4.83,
+      "systemTime": 2.09,
+      "cpuUtil": 1.02,
+      "totalTime": 6.72,
+      "maximumRSS": 157288,
+      "minorPageFaults": 48423,
+      "voluntaryContextSwitches": 430,
+      "involuntaryContextSwitches": 98
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 6119,
+    "stats": {
+      "userTime": 4.64,
+      "systemTime": 1.82,
+      "cpuUtil": 1.03,
+      "totalTime": 6.28,
+      "maximumRSS": 157768,
+      "minorPageFaults": 47865,
+      "voluntaryContextSwitches": 340,
+      "involuntaryContextSwitches": 83
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 6102,
+    "stats": {
+      "userTime": 4.50,
+      "systemTime": 1.95,
+      "cpuUtil": 1.03,
+      "totalTime": 6.26,
+      "maximumRSS": 159744,
+      "minorPageFaults": 48205,
+      "voluntaryContextSwitches": 308,
+      "involuntaryContextSwitches": 100
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 6336,
+    "stats": {
+      "userTime": 4.69,
+      "systemTime": 2.00,
+      "cpuUtil": 1.03,
+      "totalTime": 6.50,
+      "maximumRSS": 155140,
+      "minorPageFaults": 48894,
+      "voluntaryContextSwitches": 368,
+      "involuntaryContextSwitches": 86
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 6085,
+    "stats": {
+      "userTime": 4.56,
+      "systemTime": 1.88,
+      "cpuUtil": 1.03,
+      "totalTime": 6.25,
+      "maximumRSS": 157852,
+      "minorPageFaults": 48480,
+      "voluntaryContextSwitches": 315,
+      "involuntaryContextSwitches": 86
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 5515,
+    "stats": {
+      "userTime": 4.16,
+      "systemTime": 1.71,
+      "cpuUtil": 1.03,
+      "totalTime": 5.68,
+      "maximumRSS": 157096,
+      "minorPageFaults": 49519,
+      "voluntaryContextSwitches": 304,
+      "involuntaryContextSwitches": 87
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 5694,
+    "stats": {
+      "userTime": 4.22,
+      "systemTime": 1.83,
+      "cpuUtil": 1.03,
+      "totalTime": 5.86,
+      "maximumRSS": 155628,
+      "minorPageFaults": 48052,
+      "voluntaryContextSwitches": 341,
+      "involuntaryContextSwitches": 80
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 5055,
+    "stats": {
+      "userTime": 4.66,
+      "systemTime": 0.74,
+      "cpuUtil": 0.99,
+      "totalTime": 5.41,
+      "maximumRSS": 148380,
+      "minorPageFaults": 43260,
+      "voluntaryContextSwitches": 20988,
+      "involuntaryContextSwitches": 75
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 5082,
+    "stats": {
+      "userTime": 4.78,
+      "systemTime": 0.66,
+      "cpuUtil": 1.00,
+      "totalTime": 5.44,
+      "maximumRSS": 148832,
+      "minorPageFaults": 43295,
+      "voluntaryContextSwitches": 20732,
+      "involuntaryContextSwitches": 53
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 5272,
+    "stats": {
+      "userTime": 4.93,
+      "systemTime": 0.64,
+      "cpuUtil": 0.99,
+      "totalTime": 5.63,
+      "maximumRSS": 148936,
+      "minorPageFaults": 43459,
+      "voluntaryContextSwitches": 22631,
+      "involuntaryContextSwitches": 48
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 4198,
+    "stats": {
+      "userTime": 4.11,
+      "systemTime": 0.54,
+      "cpuUtil": 1.02,
+      "totalTime": 4.55,
+      "maximumRSS": 141768,
+      "minorPageFaults": 41525,
+      "voluntaryContextSwitches": 483,
+      "involuntaryContextSwitches": 42
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 4150,
+    "stats": {
+      "userTime": 4.07,
+      "systemTime": 0.52,
+      "cpuUtil": 1.02,
+      "totalTime": 4.50,
+      "maximumRSS": 141872,
+      "minorPageFaults": 41640,
+      "voluntaryContextSwitches": 524,
+      "involuntaryContextSwitches": 69
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 4122,
+    "stats": {
+      "userTime": 4.01,
+      "systemTime": 0.56,
+      "cpuUtil": 1.02,
+      "totalTime": 4.47,
+      "maximumRSS": 143492,
+      "minorPageFaults": 41995,
+      "voluntaryContextSwitches": 542,
+      "involuntaryContextSwitches": 69
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3686,
+    "stats": {
+      "userTime": 3.61,
+      "systemTime": 0.52,
+      "cpuUtil": 1.02,
+      "totalTime": 4.03,
+      "maximumRSS": 144408,
+      "minorPageFaults": 42102,
+      "voluntaryContextSwitches": 488,
+      "involuntaryContextSwitches": 36
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 4004,
+    "stats": {
+      "userTime": 3.97,
+      "systemTime": 0.48,
+      "cpuUtil": 1.02,
+      "totalTime": 4.35,
+      "maximumRSS": 143588,
+      "minorPageFaults": 41954,
+      "voluntaryContextSwitches": 501,
+      "involuntaryContextSwitches": 60
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3624,
+    "stats": {
+      "userTime": 3.59,
+      "systemTime": 0.48,
+      "cpuUtil": 1.02,
+      "totalTime": 3.97,
+      "maximumRSS": 143092,
+      "minorPageFaults": 42380,
+      "voluntaryContextSwitches": 510,
+      "involuntaryContextSwitches": 70
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3657,
+    "stats": {
+      "userTime": 3.67,
+      "systemTime": 0.44,
+      "cpuUtil": 1.02,
+      "totalTime": 4.01,
+      "maximumRSS": 141464,
+      "minorPageFaults": 41514,
+      "voluntaryContextSwitches": 611,
+      "involuntaryContextSwitches": 29
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3626,
+    "stats": {
+      "userTime": 3.64,
+      "systemTime": 0.44,
+      "cpuUtil": 1.02,
+      "totalTime": 3.98,
+      "maximumRSS": 144664,
+      "minorPageFaults": 42013,
+      "voluntaryContextSwitches": 506,
+      "involuntaryContextSwitches": 40
+    }
+  },
+  {
+    "library": "bq",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3512,
+    "stats": {
+      "userTime": 3.52,
+      "systemTime": 0.44,
+      "cpuUtil": 1.02,
+      "totalTime": 3.86,
+      "maximumRSS": 142524,
+      "minorPageFaults": 41781,
+      "voluntaryContextSwitches": 506,
+      "involuntaryContextSwitches": 49
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 5669,
+    "stats": {
+      "userTime": 4.95,
+      "systemTime": 0.65,
+      "cpuUtil": 0.91,
+      "totalTime": 6.15,
+      "maximumRSS": 129820,
+      "minorPageFaults": 36640,
+      "voluntaryContextSwitches": 20925,
+      "involuntaryContextSwitches": 63
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 4828,
+    "stats": {
+      "userTime": 4.42,
+      "systemTime": 0.63,
+      "cpuUtil": 0.95,
+      "totalTime": 5.31,
+      "maximumRSS": 129360,
+      "minorPageFaults": 36255,
+      "voluntaryContextSwitches": 20916,
+      "involuntaryContextSwitches": 63
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 5509,
+    "stats": {
+      "userTime": 5.05,
+      "systemTime": 0.54,
+      "cpuUtil": 0.93,
+      "totalTime": 5.99,
+      "maximumRSS": 130464,
+      "minorPageFaults": 36419,
+      "voluntaryContextSwitches": 20923,
+      "involuntaryContextSwitches": 52
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3486,
+    "stats": {
+      "userTime": 3.72,
+      "systemTime": 0.49,
+      "cpuUtil": 1.05,
+      "totalTime": 4.00,
+      "maximumRSS": 150912,
+      "minorPageFaults": 41610,
+      "voluntaryContextSwitches": 916,
+      "involuntaryContextSwitches": 55
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3465,
+    "stats": {
+      "userTime": 3.61,
+      "systemTime": 0.55,
+      "cpuUtil": 1.05,
+      "totalTime": 3.96,
+      "maximumRSS": 128832,
+      "minorPageFaults": 36025,
+      "voluntaryContextSwitches": 898,
+      "involuntaryContextSwitches": 61
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3436,
+    "stats": {
+      "userTime": 3.61,
+      "systemTime": 0.52,
+      "cpuUtil": 1.05,
+      "totalTime": 3.93,
+      "maximumRSS": 127660,
+      "minorPageFaults": 35714,
+      "voluntaryContextSwitches": 930,
+      "involuntaryContextSwitches": 69
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3064,
+    "stats": {
+      "userTime": 3.40,
+      "systemTime": 0.36,
+      "cpuUtil": 1.06,
+      "totalTime": 3.54,
+      "maximumRSS": 119684,
+      "minorPageFaults": 33741,
+      "voluntaryContextSwitches": 914,
+      "involuntaryContextSwitches": 39
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2990,
+    "stats": {
+      "userTime": 3.28,
+      "systemTime": 0.40,
+      "cpuUtil": 1.06,
+      "totalTime": 3.48,
+      "maximumRSS": 128184,
+      "minorPageFaults": 35887,
+      "voluntaryContextSwitches": 996,
+      "involuntaryContextSwitches": 48
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2993,
+    "stats": {
+      "userTime": 3.26,
+      "systemTime": 0.44,
+      "cpuUtil": 1.06,
+      "totalTime": 3.48,
+      "maximumRSS": 127232,
+      "minorPageFaults": 35692,
+      "voluntaryContextSwitches": 890,
+      "involuntaryContextSwitches": 51
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2843,
+    "stats": {
+      "userTime": 3.12,
+      "systemTime": 0.42,
+      "cpuUtil": 1.06,
+      "totalTime": 3.32,
+      "maximumRSS": 127116,
+      "minorPageFaults": 35288,
+      "voluntaryContextSwitches": 886,
+      "involuntaryContextSwitches": 40
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3058,
+    "stats": {
+      "userTime": 3.28,
+      "systemTime": 0.47,
+      "cpuUtil": 1.05,
+      "totalTime": 3.54,
+      "maximumRSS": 127320,
+      "minorPageFaults": 35309,
+      "voluntaryContextSwitches": 883,
+      "involuntaryContextSwitches": 53
+    }
+  },
+  {
+    "library": "bull",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3105,
+    "stats": {
+      "userTime": 3.30,
+      "systemTime": 0.50,
+      "cpuUtil": 1.05,
+      "totalTime": 3.58,
+      "maximumRSS": 127784,
+      "minorPageFaults": 35708,
+      "voluntaryContextSwitches": 889,
+      "involuntaryContextSwitches": 55
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 9213,
+    "stats": {
+      "userTime": 6.92,
+      "systemTime": 2.71,
+      "cpuUtil": 1.00,
+      "totalTime": 9.59,
+      "maximumRSS": 162208,
+      "minorPageFaults": 61358,
+      "voluntaryContextSwitches": 39445,
+      "involuntaryContextSwitches": 99
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 9391,
+    "stats": {
+      "userTime": 7.44,
+      "systemTime": 2.40,
+      "cpuUtil": 1.00,
+      "totalTime": 9.77,
+      "maximumRSS": 161488,
+      "minorPageFaults": 62400,
+      "voluntaryContextSwitches": 36838,
+      "involuntaryContextSwitches": 111
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 9315,
+    "stats": {
+      "userTime": 7.20,
+      "systemTime": 2.54,
+      "cpuUtil": 1.00,
+      "totalTime": 9.69,
+      "maximumRSS": 162084,
+      "minorPageFaults": 61302,
+      "voluntaryContextSwitches": 38620,
+      "involuntaryContextSwitches": 112
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 6863,
+    "stats": {
+      "userTime": 5.28,
+      "systemTime": 2.19,
+      "cpuUtil": 1.03,
+      "totalTime": 7.24,
+      "maximumRSS": 161408,
+      "minorPageFaults": 60587,
+      "voluntaryContextSwitches": 1507,
+      "involuntaryContextSwitches": 121
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 7062,
+    "stats": {
+      "userTime": 5.56,
+      "systemTime": 2.12,
+      "cpuUtil": 1.03,
+      "totalTime": 7.44,
+      "maximumRSS": 227704,
+      "minorPageFaults": 71630,
+      "voluntaryContextSwitches": 1486,
+      "involuntaryContextSwitches": 108
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 6847,
+    "stats": {
+      "userTime": 5.27,
+      "systemTime": 2.20,
+      "cpuUtil": 1.03,
+      "totalTime": 7.22,
+      "maximumRSS": 156768,
+      "minorPageFaults": 59046,
+      "voluntaryContextSwitches": 1497,
+      "involuntaryContextSwitches": 86
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 6387,
+    "stats": {
+      "userTime": 4.84,
+      "systemTime": 2.18,
+      "cpuUtil": 1.03,
+      "totalTime": 6.77,
+      "maximumRSS": 157368,
+      "minorPageFaults": 60036,
+      "voluntaryContextSwitches": 1526,
+      "involuntaryContextSwitches": 100
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 6228,
+    "stats": {
+      "userTime": 4.86,
+      "systemTime": 2.00,
+      "cpuUtil": 1.03,
+      "totalTime": 6.61,
+      "maximumRSS": 160324,
+      "minorPageFaults": 60739,
+      "voluntaryContextSwitches": 1417,
+      "involuntaryContextSwitches": 88
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 6346,
+    "stats": {
+      "userTime": 4.90,
+      "systemTime": 2.07,
+      "cpuUtil": 1.03,
+      "totalTime": 6.72,
+      "maximumRSS": 164108,
+      "minorPageFaults": 60962,
+      "voluntaryContextSwitches": 1379,
+      "involuntaryContextSwitches": 115
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 6397,
+    "stats": {
+      "userTime": 5.04,
+      "systemTime": 1.98,
+      "cpuUtil": 1.03,
+      "totalTime": 6.78,
+      "maximumRSS": 163780,
+      "minorPageFaults": 62649,
+      "voluntaryContextSwitches": 1341,
+      "involuntaryContextSwitches": 107
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 6035,
+    "stats": {
+      "userTime": 4.96,
+      "systemTime": 1.72,
+      "cpuUtil": 1.04,
+      "totalTime": 6.42,
+      "maximumRSS": 165576,
+      "minorPageFaults": 59808,
+      "voluntaryContextSwitches": 1384,
+      "involuntaryContextSwitches": 104
+    }
+  },
+  {
+    "library": "kue",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 6314,
+    "stats": {
+      "userTime": 4.88,
+      "systemTime": 2.05,
+      "cpuUtil": 1.03,
+      "totalTime": 6.69,
+      "maximumRSS": 164140,
+      "minorPageFaults": 62788,
+      "voluntaryContextSwitches": 1368,
+      "involuntaryContextSwitches": 110
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3634,
+    "stats": {
+      "userTime": 2.99,
+      "systemTime": 0.86,
+      "cpuUtil": 1.01,
+      "totalTime": 3.78,
+      "maximumRSS": 203668,
+      "minorPageFaults": 49459,
+      "voluntaryContextSwitches": 8251,
+      "involuntaryContextSwitches": 62
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3490,
+    "stats": {
+      "userTime": 2.86,
+      "systemTime": 0.86,
+      "cpuUtil": 1.02,
+      "totalTime": 3.64,
+      "maximumRSS": 203584,
+      "minorPageFaults": 49370,
+      "voluntaryContextSwitches": 7240,
+      "involuntaryContextSwitches": 83
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3469,
+    "stats": {
+      "userTime": 2.86,
+      "systemTime": 0.82,
+      "cpuUtil": 1.01,
+      "totalTime": 3.62,
+      "maximumRSS": 201760,
+      "minorPageFaults": 49201,
+      "voluntaryContextSwitches": 9977,
+      "involuntaryContextSwitches": 46
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2911,
+    "stats": {
+      "userTime": 2.62,
+      "systemTime": 0.53,
+      "cpuUtil": 1.02,
+      "totalTime": 3.07,
+      "maximumRSS": 203224,
+      "minorPageFaults": 49578,
+      "voluntaryContextSwitches": 340,
+      "involuntaryContextSwitches": 35
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2650,
+    "stats": {
+      "userTime": 2.29,
+      "systemTime": 0.60,
+      "cpuUtil": 1.03,
+      "totalTime": 2.81,
+      "maximumRSS": 201700,
+      "minorPageFaults": 49086,
+      "voluntaryContextSwitches": 232,
+      "involuntaryContextSwitches": 44
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2830,
+    "stats": {
+      "userTime": 2.42,
+      "systemTime": 0.65,
+      "cpuUtil": 1.03,
+      "totalTime": 2.98,
+      "maximumRSS": 202368,
+      "minorPageFaults": 49238,
+      "voluntaryContextSwitches": 236,
+      "involuntaryContextSwitches": 56
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2473,
+    "stats": {
+      "userTime": 2.09,
+      "systemTime": 0.63,
+      "cpuUtil": 1.03,
+      "totalTime": 2.63,
+      "maximumRSS": 201396,
+      "minorPageFaults": 49252,
+      "voluntaryContextSwitches": 240,
+      "involuntaryContextSwitches": 34
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2432,
+    "stats": {
+      "userTime": 2.20,
+      "systemTime": 0.48,
+      "cpuUtil": 1.03,
+      "totalTime": 2.58,
+      "maximumRSS": 201352,
+      "minorPageFaults": 49291,
+      "voluntaryContextSwitches": 235,
+      "involuntaryContextSwitches": 31
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2407,
+    "stats": {
+      "userTime": 2.10,
+      "systemTime": 0.55,
+      "cpuUtil": 1.03,
+      "totalTime": 2.56,
+      "maximumRSS": 201672,
+      "minorPageFaults": 49529,
+      "voluntaryContextSwitches": 238,
+      "involuntaryContextSwitches": 28
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2397,
+    "stats": {
+      "userTime": 2.13,
+      "systemTime": 0.52,
+      "cpuUtil": 1.03,
+      "totalTime": 2.56,
+      "maximumRSS": 202368,
+      "minorPageFaults": 49252,
+      "voluntaryContextSwitches": 256,
+      "involuntaryContextSwitches": 33
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2445,
+    "stats": {
+      "userTime": 2.12,
+      "systemTime": 0.58,
+      "cpuUtil": 1.03,
+      "totalTime": 2.60,
+      "maximumRSS": 201588,
+      "minorPageFaults": 49573,
+      "voluntaryContextSwitches": 245,
+      "involuntaryContextSwitches": 27
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2271,
+    "stats": {
+      "userTime": 1.99,
+      "systemTime": 0.53,
+      "cpuUtil": 1.03,
+      "totalTime": 2.43,
+      "maximumRSS": 202536,
+      "minorPageFaults": 49455,
+      "voluntaryContextSwitches": 240,
+      "involuntaryContextSwitches": 21
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3250,
+    "stats": {
+      "userTime": 2.86,
+      "systemTime": 0.61,
+      "cpuUtil": 1.02,
+      "totalTime": 3.37,
+      "maximumRSS": 201984,
+      "minorPageFaults": 48100,
+      "voluntaryContextSwitches": 10495,
+      "involuntaryContextSwitches": 43
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3496,
+    "stats": {
+      "userTime": 2.97,
+      "systemTime": 0.71,
+      "cpuUtil": 1.01,
+      "totalTime": 3.62,
+      "maximumRSS": 203524,
+      "minorPageFaults": 47704,
+      "voluntaryContextSwitches": 9580,
+      "involuntaryContextSwitches": 56
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3169,
+    "stats": {
+      "userTime": 2.46,
+      "systemTime": 0.92,
+      "cpuUtil": 1.02,
+      "totalTime": 3.29,
+      "maximumRSS": 205840,
+      "minorPageFaults": 49298,
+      "voluntaryContextSwitches": 13522,
+      "involuntaryContextSwitches": 52
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2604,
+    "stats": {
+      "userTime": 2.18,
+      "systemTime": 0.67,
+      "cpuUtil": 1.04,
+      "totalTime": 2.73,
+      "maximumRSS": 203456,
+      "minorPageFaults": 47701,
+      "voluntaryContextSwitches": 283,
+      "involuntaryContextSwitches": 33
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2399,
+    "stats": {
+      "userTime": 2.05,
+      "systemTime": 0.57,
+      "cpuUtil": 1.03,
+      "totalTime": 2.53,
+      "maximumRSS": 214732,
+      "minorPageFaults": 51835,
+      "voluntaryContextSwitches": 224,
+      "involuntaryContextSwitches": 34
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2273,
+    "stats": {
+      "userTime": 1.94,
+      "systemTime": 0.56,
+      "cpuUtil": 1.04,
+      "totalTime": 2.41,
+      "maximumRSS": 215608,
+      "minorPageFaults": 50692,
+      "voluntaryContextSwitches": 231,
+      "involuntaryContextSwitches": 36
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2175,
+    "stats": {
+      "userTime": 1.98,
+      "systemTime": 0.44,
+      "cpuUtil": 1.05,
+      "totalTime": 2.30,
+      "maximumRSS": 205128,
+      "minorPageFaults": 48540,
+      "voluntaryContextSwitches": 413,
+      "involuntaryContextSwitches": 25
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2042,
+    "stats": {
+      "userTime": 1.79,
+      "systemTime": 0.49,
+      "cpuUtil": 1.05,
+      "totalTime": 2.17,
+      "maximumRSS": 206188,
+      "minorPageFaults": 48311,
+      "voluntaryContextSwitches": 306,
+      "involuntaryContextSwitches": 29
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2314,
+    "stats": {
+      "userTime": 1.91,
+      "systemTime": 0.64,
+      "cpuUtil": 1.04,
+      "totalTime": 2.45,
+      "maximumRSS": 212896,
+      "minorPageFaults": 51085,
+      "voluntaryContextSwitches": 221,
+      "involuntaryContextSwitches": 42
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2186,
+    "stats": {
+      "userTime": 1.88,
+      "systemTime": 0.53,
+      "cpuUtil": 1.03,
+      "totalTime": 2.32,
+      "maximumRSS": 212352,
+      "minorPageFaults": 49822,
+      "voluntaryContextSwitches": 212,
+      "involuntaryContextSwitches": 25
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 1953,
+    "stats": {
+      "userTime": 1.72,
+      "systemTime": 0.46,
+      "cpuUtil": 1.04,
+      "totalTime": 2.09,
+      "maximumRSS": 212068,
+      "minorPageFaults": 50578,
+      "voluntaryContextSwitches": 223,
+      "involuntaryContextSwitches": 28
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 1950,
+    "stats": {
+      "userTime": 1.72,
+      "systemTime": 0.46,
+      "cpuUtil": 1.04,
+      "totalTime": 2.08,
+      "maximumRSS": 213336,
+      "minorPageFaults": 50870,
+      "voluntaryContextSwitches": 209,
+      "involuntaryContextSwitches": 29
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 4741,
+    "stats": {
+      "userTime": 4.66,
+      "systemTime": 0.42,
+      "cpuUtil": 0.99,
+      "totalTime": 5.09,
+      "maximumRSS": 140164,
+      "minorPageFaults": 41197,
+      "voluntaryContextSwitches": 20630,
+      "involuntaryContextSwitches": 47
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 4801,
+    "stats": {
+      "userTime": 4.59,
+      "systemTime": 0.56,
+      "cpuUtil": 1.00,
+      "totalTime": 5.15,
+      "maximumRSS": 140880,
+      "minorPageFaults": 41357,
+      "voluntaryContextSwitches": 20470,
+      "involuntaryContextSwitches": 22
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 4744,
+    "stats": {
+      "userTime": 4.55,
+      "systemTime": 0.54,
+      "cpuUtil": 0.99,
+      "totalTime": 5.09,
+      "maximumRSS": 141772,
+      "minorPageFaults": 41522,
+      "voluntaryContextSwitches": 20547,
+      "involuntaryContextSwitches": 37
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3956,
+    "stats": {
+      "userTime": 3.93,
+      "systemTime": 0.47,
+      "cpuUtil": 1.02,
+      "totalTime": 4.30,
+      "maximumRSS": 135376,
+      "minorPageFaults": 39942,
+      "voluntaryContextSwitches": 452,
+      "involuntaryContextSwitches": 38
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3818,
+    "stats": {
+      "userTime": 3.82,
+      "systemTime": 0.44,
+      "cpuUtil": 1.02,
+      "totalTime": 4.17,
+      "maximumRSS": 135724,
+      "minorPageFaults": 40042,
+      "voluntaryContextSwitches": 473,
+      "involuntaryContextSwitches": 31
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3855,
+    "stats": {
+      "userTime": 3.73,
+      "systemTime": 0.57,
+      "cpuUtil": 1.02,
+      "totalTime": 4.21,
+      "maximumRSS": 135608,
+      "minorPageFaults": 39907,
+      "voluntaryContextSwitches": 477,
+      "involuntaryContextSwitches": 52
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3567,
+    "stats": {
+      "userTime": 3.56,
+      "systemTime": 0.44,
+      "cpuUtil": 1.02,
+      "totalTime": 3.92,
+      "maximumRSS": 134532,
+      "minorPageFaults": 39783,
+      "voluntaryContextSwitches": 477,
+      "involuntaryContextSwitches": 30
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3695,
+    "stats": {
+      "userTime": 3.69,
+      "systemTime": 0.45,
+      "cpuUtil": 1.02,
+      "totalTime": 4.05,
+      "maximumRSS": 134644,
+      "minorPageFaults": 39555,
+      "voluntaryContextSwitches": 466,
+      "involuntaryContextSwitches": 23
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3609,
+    "stats": {
+      "userTime": 3.58,
+      "systemTime": 0.48,
+      "cpuUtil": 1.02,
+      "totalTime": 3.96,
+      "maximumRSS": 134784,
+      "minorPageFaults": 39792,
+      "voluntaryContextSwitches": 470,
+      "involuntaryContextSwitches": 53
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3808,
+    "stats": {
+      "userTime": 3.85,
+      "systemTime": 0.40,
+      "cpuUtil": 1.02,
+      "totalTime": 4.17,
+      "maximumRSS": 133824,
+      "minorPageFaults": 40022,
+      "voluntaryContextSwitches": 464,
+      "involuntaryContextSwitches": 31
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3938,
+    "stats": {
+      "userTime": 3.92,
+      "systemTime": 0.46,
+      "cpuUtil": 1.02,
+      "totalTime": 4.30,
+      "maximumRSS": 133988,
+      "minorPageFaults": 39722,
+      "voluntaryContextSwitches": 472,
+      "involuntaryContextSwitches": 37
+    }
+  },
+  {
+    "library": "bq-min",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3579,
+    "stats": {
+      "userTime": 3.59,
+      "systemTime": 0.44,
+      "cpuUtil": 1.02,
+      "totalTime": 3.94,
+      "maximumRSS": 134588,
+      "minorPageFaults": 39814,
+      "voluntaryContextSwitches": 559,
+      "involuntaryContextSwitches": 47
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3176,
+    "stats": {
+      "userTime": 2.67,
+      "systemTime": 0.54,
+      "cpuUtil": 0.98,
+      "totalTime": 3.27,
+      "maximumRSS": 73716,
+      "minorPageFaults": 17817,
+      "voluntaryContextSwitches": 20017,
+      "involuntaryContextSwitches": 29
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3919,
+    "stats": {
+      "userTime": 2.75,
+      "systemTime": 1.13,
+      "cpuUtil": 0.96,
+      "totalTime": 4.01,
+      "maximumRSS": 73884,
+      "minorPageFaults": 17709,
+      "voluntaryContextSwitches": 20064,
+      "involuntaryContextSwitches": 48
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3293,
+    "stats": {
+      "userTime": 2.84,
+      "systemTime": 0.53,
+      "cpuUtil": 0.99,
+      "totalTime": 3.39,
+      "maximumRSS": 71736,
+      "minorPageFaults": 17707,
+      "voluntaryContextSwitches": 19937,
+      "involuntaryContextSwitches": 28
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2292,
+    "stats": {
+      "userTime": 1.72,
+      "systemTime": 0.74,
+      "cpuUtil": 1.03,
+      "totalTime": 2.39,
+      "maximumRSS": 73656,
+      "minorPageFaults": 17784,
+      "voluntaryContextSwitches": 142,
+      "involuntaryContextSwitches": 38
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2549,
+    "stats": {
+      "userTime": 1.96,
+      "systemTime": 0.76,
+      "cpuUtil": 1.02,
+      "totalTime": 2.65,
+      "maximumRSS": 73356,
+      "minorPageFaults": 17728,
+      "voluntaryContextSwitches": 138,
+      "involuntaryContextSwitches": 54
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2823,
+    "stats": {
+      "userTime": 2.22,
+      "systemTime": 0.77,
+      "cpuUtil": 1.02,
+      "totalTime": 2.92,
+      "maximumRSS": 72920,
+      "minorPageFaults": 17997,
+      "voluntaryContextSwitches": 132,
+      "involuntaryContextSwitches": 42
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2538,
+    "stats": {
+      "userTime": 2.04,
+      "systemTime": 0.66,
+      "cpuUtil": 1.02,
+      "totalTime": 2.64,
+      "maximumRSS": 73304,
+      "minorPageFaults": 18199,
+      "voluntaryContextSwitches": 145,
+      "involuntaryContextSwitches": 34
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2350,
+    "stats": {
+      "userTime": 1.96,
+      "systemTime": 0.55,
+      "cpuUtil": 1.02,
+      "totalTime": 2.45,
+      "maximumRSS": 73940,
+      "minorPageFaults": 18279,
+      "voluntaryContextSwitches": 142,
+      "involuntaryContextSwitches": 30
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2336,
+    "stats": {
+      "userTime": 1.93,
+      "systemTime": 0.57,
+      "cpuUtil": 1.03,
+      "totalTime": 2.43,
+      "maximumRSS": 75452,
+      "minorPageFaults": 18925,
+      "voluntaryContextSwitches": 147,
+      "involuntaryContextSwitches": 34
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2640,
+    "stats": {
+      "userTime": 2.10,
+      "systemTime": 0.70,
+      "cpuUtil": 1.02,
+      "totalTime": 2.74,
+      "maximumRSS": 75872,
+      "minorPageFaults": 18807,
+      "voluntaryContextSwitches": 136,
+      "involuntaryContextSwitches": 42
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 1702,
+    "stats": {
+      "userTime": 1.24,
+      "systemTime": 0.64,
+      "cpuUtil": 1.04,
+      "totalTime": 1.80,
+      "maximumRSS": 72500,
+      "minorPageFaults": 18023,
+      "voluntaryContextSwitches": 141,
+      "involuntaryContextSwitches": 39
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "6.9.1",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 1821,
+    "stats": {
+      "userTime": 1.34,
+      "systemTime": 0.64,
+      "cpuUtil": 1.03,
+      "totalTime": 1.92,
+      "maximumRSS": 73060,
+      "minorPageFaults": 17996,
+      "voluntaryContextSwitches": 141,
+      "involuntaryContextSwitches": 39
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3089,
+    "stats": {
+      "userTime": 2.17,
+      "systemTime": 0.97,
+      "cpuUtil": 0.99,
+      "totalTime": 3.17,
+      "maximumRSS": 75864,
+      "minorPageFaults": 17481,
+      "voluntaryContextSwitches": 19941,
+      "involuntaryContextSwitches": 36
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3062,
+    "stats": {
+      "userTime": 2.24,
+      "systemTime": 0.86,
+      "cpuUtil": 0.98,
+      "totalTime": 3.14,
+      "maximumRSS": 74988,
+      "minorPageFaults": 17136,
+      "voluntaryContextSwitches": 20144,
+      "involuntaryContextSwitches": 42
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3065,
+    "stats": {
+      "userTime": 2.36,
+      "systemTime": 0.73,
+      "cpuUtil": 0.98,
+      "totalTime": 3.15,
+      "maximumRSS": 93840,
+      "minorPageFaults": 21518,
+      "voluntaryContextSwitches": 20057,
+      "involuntaryContextSwitches": 30
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 1953,
+    "stats": {
+      "userTime": 1.47,
+      "systemTime": 0.65,
+      "cpuUtil": 1.04,
+      "totalTime": 2.04,
+      "maximumRSS": 88580,
+      "minorPageFaults": 20789,
+      "voluntaryContextSwitches": 146,
+      "involuntaryContextSwitches": 38
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2064,
+    "stats": {
+      "userTime": 1.54,
+      "systemTime": 0.68,
+      "cpuUtil": 1.03,
+      "totalTime": 2.14,
+      "maximumRSS": 75160,
+      "minorPageFaults": 17317,
+      "voluntaryContextSwitches": 152,
+      "involuntaryContextSwitches": 40
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 1971,
+    "stats": {
+      "userTime": 1.37,
+      "systemTime": 0.76,
+      "cpuUtil": 1.04,
+      "totalTime": 2.05,
+      "maximumRSS": 75292,
+      "minorPageFaults": 17348,
+      "voluntaryContextSwitches": 232,
+      "involuntaryContextSwitches": 36
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 1710,
+    "stats": {
+      "userTime": 1.27,
+      "systemTime": 0.60,
+      "cpuUtil": 1.04,
+      "totalTime": 1.79,
+      "maximumRSS": 91020,
+      "minorPageFaults": 21274,
+      "voluntaryContextSwitches": 141,
+      "involuntaryContextSwitches": 40
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 1654,
+    "stats": {
+      "userTime": 1.20,
+      "systemTime": 0.62,
+      "cpuUtil": 1.04,
+      "totalTime": 1.74,
+      "maximumRSS": 75048,
+      "minorPageFaults": 17333,
+      "voluntaryContextSwitches": 143,
+      "involuntaryContextSwitches": 26
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2054,
+    "stats": {
+      "userTime": 1.50,
+      "systemTime": 0.72,
+      "cpuUtil": 1.03,
+      "totalTime": 2.14,
+      "maximumRSS": 92372,
+      "minorPageFaults": 21160,
+      "voluntaryContextSwitches": 220,
+      "involuntaryContextSwitches": 41
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2073,
+    "stats": {
+      "userTime": 1.56,
+      "systemTime": 0.67,
+      "cpuUtil": 1.03,
+      "totalTime": 2.15,
+      "maximumRSS": 74352,
+      "minorPageFaults": 17146,
+      "voluntaryContextSwitches": 146,
+      "involuntaryContextSwitches": 31
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 1956,
+    "stats": {
+      "userTime": 1.45,
+      "systemTime": 0.67,
+      "cpuUtil": 1.04,
+      "totalTime": 2.04,
+      "maximumRSS": 92592,
+      "minorPageFaults": 21221,
+      "voluntaryContextSwitches": 143,
+      "involuntaryContextSwitches": 41
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "7.6.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 1792,
+    "stats": {
+      "userTime": 1.28,
+      "systemTime": 0.67,
+      "cpuUtil": 1.04,
+      "totalTime": 1.88,
+      "maximumRSS": 90584,
+      "minorPageFaults": 21278,
+      "voluntaryContextSwitches": 136,
+      "involuntaryContextSwitches": 37
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 3123,
+    "stats": {
+      "userTime": 2.52,
+      "systemTime": 0.91,
+      "cpuUtil": 1.00,
+      "totalTime": 3.44,
+      "maximumRSS": 102192,
+      "minorPageFaults": 31302,
+      "voluntaryContextSwitches": 20016,
+      "involuntaryContextSwitches": 33
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 3054,
+    "stats": {
+      "userTime": 2.56,
+      "systemTime": 0.80,
+      "cpuUtil": 0.99,
+      "totalTime": 3.37,
+      "maximumRSS": 103244,
+      "minorPageFaults": 31282,
+      "voluntaryContextSwitches": 20069,
+      "involuntaryContextSwitches": 37
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 1,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 3482,
+    "stats": {
+      "userTime": 2.60,
+      "systemTime": 1.12,
+      "cpuUtil": 0.98,
+      "totalTime": 3.79,
+      "maximumRSS": 103324,
+      "minorPageFaults": 31275,
+      "voluntaryContextSwitches": 20364,
+      "involuntaryContextSwitches": 29
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2208,
+    "stats": {
+      "userTime": 1.87,
+      "systemTime": 0.73,
+      "cpuUtil": 1.03,
+      "totalTime": 2.52,
+      "maximumRSS": 98248,
+      "minorPageFaults": 29739,
+      "voluntaryContextSwitches": 292,
+      "involuntaryContextSwitches": 33
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 2171,
+    "stats": {
+      "userTime": 1.72,
+      "systemTime": 0.86,
+      "cpuUtil": 1.03,
+      "totalTime": 2.48,
+      "maximumRSS": 101016,
+      "minorPageFaults": 30459,
+      "voluntaryContextSwitches": 290,
+      "involuntaryContextSwitches": 47
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 5,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 1930,
+    "stats": {
+      "userTime": 1.64,
+      "systemTime": 0.68,
+      "cpuUtil": 1.03,
+      "totalTime": 2.24,
+      "maximumRSS": 82312,
+      "minorPageFaults": 25796,
+      "voluntaryContextSwitches": 345,
+      "involuntaryContextSwitches": 39
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 2111,
+    "stats": {
+      "userTime": 1.79,
+      "systemTime": 0.72,
+      "cpuUtil": 1.03,
+      "totalTime": 2.42,
+      "maximumRSS": 100304,
+      "minorPageFaults": 30302,
+      "voluntaryContextSwitches": 283,
+      "involuntaryContextSwitches": 43
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 1817,
+    "stats": {
+      "userTime": 1.62,
+      "systemTime": 0.59,
+      "cpuUtil": 1.04,
+      "totalTime": 2.13,
+      "maximumRSS": 99484,
+      "minorPageFaults": 30048,
+      "voluntaryContextSwitches": 281,
+      "involuntaryContextSwitches": 45
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 20,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 1814,
+    "stats": {
+      "userTime": 1.54,
+      "systemTime": 0.67,
+      "cpuUtil": 1.04,
+      "totalTime": 2.12,
+      "maximumRSS": 81424,
+      "minorPageFaults": 25600,
+      "voluntaryContextSwitches": 328,
+      "involuntaryContextSwitches": 44
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 0,
+    "numJobs": 10000,
+    "duration": 1824,
+    "stats": {
+      "userTime": 1.52,
+      "systemTime": 0.70,
+      "cpuUtil": 1.04,
+      "totalTime": 2.13,
+      "maximumRSS": 99396,
+      "minorPageFaults": 30119,
+      "voluntaryContextSwitches": 277,
+      "involuntaryContextSwitches": 34
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 1,
+    "numJobs": 10000,
+    "duration": 1852,
+    "stats": {
+      "userTime": 1.63,
+      "systemTime": 0.61,
+      "cpuUtil": 1.03,
+      "totalTime": 2.16,
+      "maximumRSS": 99644,
+      "minorPageFaults": 30051,
+      "voluntaryContextSwitches": 287,
+      "involuntaryContextSwitches": 31
+    }
+  },
+  {
+    "library": "bq-0",
+    "concurrency": 50,
+    "nodeVersion": "8.2.0",
+    "run": 2,
+    "numJobs": 10000,
+    "duration": 2134,
+    "stats": {
+      "userTime": 1.76,
+      "systemTime": 0.77,
+      "cpuUtil": 1.03,
+      "totalTime": 2.44,
+      "maximumRSS": 99240,
+      "minorPageFaults": 29980,
+      "voluntaryContextSwitches": 286,
+      "involuntaryContextSwitches": 39
+    }
+  }
+]

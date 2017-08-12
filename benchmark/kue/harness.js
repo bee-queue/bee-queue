@@ -1,26 +1,52 @@
-var kue = require('kue');
-var queue = kue.createQueue();
+const helpers = require('../../lib/helpers');
+const kue = require('kue');
+const queue = kue.createQueue();
 
-module.exports = function (options, cb) {
-  var finished = 0;
-  var finishTime, startTime;
-
-  var reportResult = function (result) {
-    finished += 1;
-    if (finished === options.numRuns) {
-      finishTime = (new Date()).getTime();
-      cb(null, finishTime - startTime);
+// A promise-based barrier.
+function reef(n = 1) {
+  const done = helpers.deferred(), end = done.defer();
+  return {
+    done,
+    next() {
+      --n;
+      if (n < 0) return false;
+      if (n === 0) end();
+      return true;
     }
   };
+}
 
-  queue.process('test', options.concurrency, function (job, done) {
-    reportResult();
-    return done();
+module.exports = (options) => {
+  const {done, next} = reef(options.numRuns);
+
+  queue.process('test', options.concurrency, (job, jobDone) => {
+    next();
+    jobDone();
   });
 
-  startTime = (new Date()).getTime();
-
-  for (var i = 0; i < options.numRuns; i++) {
-    queue.create('test', {i: i}).save();
+  const startTime = Date.now();
+  for (let i = 0; i < options.numRuns; ++i) {
+    queue.create('test', {i}).removeOnComplete(true).save();
   }
+  return done.then(() => {
+    const elapsed = Date.now() - startTime;
+    const promise = helpers.deferred();
+    queue.shutdown(promise.defer());
+    return promise.then(() => elapsed);
+  });
 };
+
+if (require.main === module) {
+  const jobs = parseInt(process.env.NUM_RUNS || '10000', 10);
+  const concurrency = parseInt(process.env.CONCURRENCY || '1', 10);
+  module.exports({
+    numRuns: jobs,
+    concurrency
+  }).then((time) => {
+    if (process.stdout.isTTY) {
+      console.log(`Ran ${jobs} jobs through Kue with concurrency ${concurrency} in ${time} ms`);
+    } else {
+      console.log(time);
+    }
+  });
+}
