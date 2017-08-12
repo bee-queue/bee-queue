@@ -393,6 +393,10 @@ describe('Queue', (it) => {
         t.true(client.ready);
         t.false(client.quit.called);
 
+        let promise = helpers.deferred();
+        client.ping(promise.defer());
+        await t.notThrows(promise);
+
         queue = t.context.makeQueue({
           redis: client,
           quitCommandClient: true
@@ -402,6 +406,34 @@ describe('Queue', (it) => {
 
         t.false(client.ready);
         t.true(client.quit.called);
+
+        promise = helpers.deferred();
+        client.ping(promise.defer());
+        await t.throws(promise, (err) => redis.isAbortError(err));
+      });
+
+      it('should not quit the command client when quitCommandClient=false', async (t) => {
+        const queue = t.context.makeQueue({
+          quitCommandClient: false
+        });
+
+        await queue.ready();
+
+        const client = queue.client;
+        sinon.spy(client, 'quit');
+
+        await queue.close();
+
+        t.true(client.ready);
+        t.false(client.quit.called);
+
+        let promise = helpers.deferred();
+        client.ping(promise.defer());
+        await t.notThrows(promise);
+
+        promise = helpers.deferred();
+        client.quit(promise.defer());
+        await promise;
       });
     });
 
