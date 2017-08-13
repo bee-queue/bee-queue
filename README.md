@@ -28,7 +28,7 @@ queue.process(function (job, done) {
 
 Bee-Queue is meant to power a distributed worker pool and was built with short, real-time jobs in mind. A web server can enqueue a job, wait for a worker process to complete it, and return its results within an HTTP request. Scaling is as simple as running more workers.
 
-Thanks to the folks at [Mixmax](https://mixmax.com), Bee-Queue is once again being regularly maintained!
+Thanks to the folks at [Mixmax](https://mixmax.com), Bee-Queue is once again being regularly [maintained](https://mixmax.com/blog/bee-queue-v1-node-redis-queue)!
 
 [Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/Automattic/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job prioritization and repeatable jobs, which Bee-Queue [currently does not](#contributing). Bee-Queue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
 
