@@ -96,7 +96,7 @@ Bee-Queue is like a bee because it:
 
 # Benchmarks
 
-![benchmark chart](./benchmark/results-2017-08-12/resultschart.png)
+![benchmark chart](https://raw.githubusercontent.com/bee-queue/bee-queue/master/benchmark/results-2017-08-12/resultschart.png)
 
 These basic benchmarks ran 10,000 jobs through each library, at varying levels of concurrency, with Node.js (v6.9.1, v6.11.2, v7.6.0, v7.10.1, v8.2.1, v8.3.0) and Redis (v3.2.10, v4.0.1) running directly on an AWS m4.xlarge. The numbers shown are averages of 3 runs; the raw data collected and code used are available in the [benchmark folder](./benchmark).
 
