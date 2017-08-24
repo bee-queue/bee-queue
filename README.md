@@ -236,7 +236,7 @@ Note that Job events become unreliable across process restarts, since the queue'
 
 Bee-Queue attempts to provide ["at least once delivery"](http://www.cloudcomputingpatterns.org/At-least-once_Delivery). Any job enqueued should be processed at least once - and if a worker crashes, gets disconnected, or otherwise fails to confirm completion of the job, the job will be dispatched to another worker for processing.
 
-To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queuecheckstalledjobsinterval-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, and re-enqueues them.
+To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queuecheckstalledjobsinterval-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, emits a `stalled` event with the job id, and re-enqueues them to be picked up by another worker.
 
 # API Reference
 
@@ -354,6 +354,16 @@ queue.on('failed', (job, err) => {
 ```
 
 This queue has processed `job`, but its handler reported a failure either by rejecting its returned Promise, or by calling `done(err)`.
+
+#### stalled
+
+```js
+queue.on('stalled', (jobId) => {
+  console.log(`Job ${jobId} stalled and will be reprocessed`);
+});
+```
+
+This queue detected that a job [stalled](#stalling-jobs). Note that this might not be the same queue that processed the job and ultimately stalled; instead, it's the queue that happened to _detect_ the stalled job.
 
 ### Queue PubSub Events
 
