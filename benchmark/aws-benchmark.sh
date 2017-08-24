@@ -81,7 +81,7 @@ for redis_version in $redis_versions; do
           while ! nc -z localhost 6379; do sleep 0.1; done
           CONCURRENCY="$c" /usr/bin/time -v node "$lib/harness"
           redis_info
-          "$redis_dir/redis-cli shutdown"
+          "$redis_dir/redis-cli" shutdown
         done
       done
     done
