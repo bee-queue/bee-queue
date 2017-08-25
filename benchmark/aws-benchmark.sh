@@ -8,8 +8,10 @@
 
 # from an amazing stackoverflow answer: https://stackoverflow.com/a/246128
 DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-WDIR="$DIR/working"
+WDIR=`mktemp -d`
 ODIR="$(pwd)"
+
+cp -R "$DIR/../" "$WDIR/bee-queue"
 
 sudo yum groupinstall -y 'Development Tools'
 sudo yum install -y htop
@@ -19,9 +21,7 @@ source ~/.bashrc
 redis_versions='3.2.10 4.0.1'
 node_versions='6.9.1 6 7.6.0 7 8.2.1 node'
 
-libraries='bq bq-0 bull kue'
-
-mkdir "$WDIR"
+libraries='bq-min bull bq bq-0 kue'
 
 for redis_version in $redis_versions; do
   cd "$WDIR"
@@ -32,8 +32,6 @@ for redis_version in $redis_versions; do
   cd "$WDIR/redis-$redis_version"
   make
 done
-
-cd "$WDIR"
 
 for node_version in $node_versions; do
   nvm install "$node_version"
@@ -46,7 +44,6 @@ function redis_info () {
   "$redis_dir/redis-cli" INFO CPU | grep -E '^used_cpu_(?:sys|user)\b'
 }
 
-git clone https://github.com/bee-queue/bee-queue
 cd "$WDIR/bee-queue"
 npm install
 npm install kue bull

@@ -24,20 +24,24 @@ function reef(n = 1) {
 }
 
 module.exports = (options) => {
-  const {done, next} = reef(options.numRuns);
+  return new Promise((resolve) => {
+    queue.on('ready', () => {
+      const {done, next} = reef(options.numRuns);
 
-  queue.process(options.concurrency, () => {
-    next();
-    return Promise.resolve();
-  });
+      queue.process(options.concurrency, () => {
+        next();
+        return Promise.resolve();
+      });
 
-  const startTime = Date.now();
-  for (let i = 0; i < options.numRuns; ++i) {
-    queue.createJob({i}).save();
-  }
-  return done.then(() => {
-    const elapsed = Date.now() - startTime;
-    return queue.close().then(() => elapsed);
+      const startTime = Date.now();
+      for (let i = 0; i < options.numRuns; ++i) {
+        queue.createJob({i}).save();
+      }
+      return done.then(() => {
+        const elapsed = Date.now() - startTime;
+        return queue.close().then(() => resolve(elapsed));
+      });
+    });
   });
 };
 

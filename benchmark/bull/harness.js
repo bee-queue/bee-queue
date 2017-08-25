@@ -17,20 +17,22 @@ function reef(n = 1) {
 }
 
 module.exports = (options) => {
-  const {done, next} = reef(options.numRuns);
+  return queue.isReady().then(() => {
+    const {done, next} = reef(options.numRuns);
 
-  queue.process(options.concurrency, () => {
-    next();
-    return Promise.resolve();
-  });
+    queue.process(options.concurrency, () => {
+      next();
+      return Promise.resolve();
+    });
 
-  const startTime = Date.now();
-  for (let i = 0; i < options.numRuns; ++i) {
-    queue.add({i}, {removeOnComplete: true});
-  }
-  return done.then(() => {
-    const elapsed = Date.now() - startTime;
-    return queue.close().then(() => elapsed);
+    const startTime = Date.now();
+    for (let i = 0; i < options.numRuns; ++i) {
+      queue.add({i}, {removeOnComplete: true});
+    }
+    return done.then(() => {
+      const elapsed = Date.now() - startTime;
+      return queue.close().then(() => elapsed);
+    });
   });
 };
 
@@ -42,7 +44,7 @@ if (require.main === module) {
     concurrency
   }).then((time) => {
     if (process.stdout.isTTY) {
-      console.log(`Ran ${jobs} jobs through Bull with concurrency ${concurrency} in ${time} ms`);
+      console.log(`!!Ran ${jobs} jobs through Bull with concurrency ${concurrency} in ${time} ms`);
     } else {
       console.log(time);
     }
