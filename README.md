@@ -568,7 +568,7 @@ queue.destroy()
   .then(() => console.log('Queue was destroyed'));
 ```
 
-Removes all Redis keys belonging to this queue, except `bq:name:events` and `bq:name:earlierDelayed` (see [Under the hood](#under-the-hood)). Idempotent.
+Removes all Redis keys belonging to this queue (see [Under the hood](#under-the-hood)). Idempotent.
 
 It goes without saying that this should be used with great care.
 
