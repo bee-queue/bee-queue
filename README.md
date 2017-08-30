@@ -363,7 +363,7 @@ queue.on('stalled', (jobId) => {
 });
 ```
 
-This queue detected that a job [stalled](#stalling-jobs). Note that this might not be the same queue that processed the job and ultimately stalled; instead, it's the queue that happened to _detect_ the stalled job.
+This queue detected that a job [stalled](#stalling-jobs). Note that this might not be the same queue _instance_ that processed the job and ultimately stalled; instead, it's the queue _instance_ that happened to _detect_ the stalled job.
 
 ### Queue PubSub Events
 
