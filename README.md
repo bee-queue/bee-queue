@@ -536,6 +536,44 @@ process.on('uncaughtException', async () => {
 });
 ```
 
+#### Queue#removeJob(jobId, [cb])
+
+```js
+queue.removeJob(3, function (err) {
+  if (!err) {
+    console.log('Job 3 was removed');
+  }
+});
+
+queue.removeJob(3)
+  .then(() => console.log('Job 3 was removed'));
+```
+
+Removes a job by its `jobId`. Idempotent.
+
+This may have unintended side-effect, e.g. if the job is currently being processed by another worker, so only use this method when you know it's safe.
+
+Returns the `Queue` instance it was called on.
+
+#### Queue#destroy([cb])
+
+```js
+queue.destroy(function (err) {
+  if (!err) {
+    console.log('Queue was destroyed');
+  }
+});
+
+queue.destroy()
+  .then(() => console.log('Queue was destroyed'));
+```
+
+Removes all Redis keys belonging to this queue (see [Under the hood](#under-the-hood)). Idempotent.
+
+It goes without saying that this should be used with great care.
+
+Returns the number of keys removed.
+
 ## Job
 
 ### Properties
@@ -703,6 +741,31 @@ queue.process(async (job, done) => {
 ```
 
 Reports job progress when called within a handler function. Causes a `progress` event to be emitted. Does not persist the progress to Redis, but will store it on `job.progress`, and if other `Queue`s have `storeJobs` and `getEvents` enabled, then the `progress` will end up on all corresponding job instances.
+
+#### Job#remove([cb])
+
+```js
+const job = queue.createJob({...});
+
+// ...
+
+job.remove(function (err) {
+  if (!err) {
+    console.log('Job was removed');
+  }
+});
+
+job.remove()
+  .then(() => console.log('Job was removed'));
+```
+
+Removes a job from the queue. Idempotent.
+
+This may have unintended side-effect, e.g. if the job is currently being processed by another worker, so only use this method when you know it's safe.
+
+Note that this method will call [`Queue#removeJob`](#queueremovejobjobid-cb) with the job id, so if you don't have the job in memory, but knows its id, it's much more efficient to use `Queue#removeJob` instead of getting the job first.
+
+Returns the `Job` instance it was called on.
 
 ### Defaults
 
