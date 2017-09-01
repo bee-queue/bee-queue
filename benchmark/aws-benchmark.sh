@@ -1,5 +1,7 @@
 #!/bin/bash -e
 
+# Run this script on a FRESH CHECKOUT of bee-queue (prior to running npm/yarn).
+
 # make sure you understand this script before you run it. it may have unexpected
 # consequences for your system, and is intended to be run on an Amazon AWS EC2
 # instance for consistency.
