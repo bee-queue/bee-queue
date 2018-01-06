@@ -1,3 +1,5 @@
+import { ClientOpts } from 'redis';
+
 declare class BeeQueue {
   name: string;
   keyPrefix: string;
@@ -9,7 +11,7 @@ declare class BeeQueue {
 
   on(ev: "ready",     fn: () => void): this;
   on(ev: "error",     fn: (err: Error) => void): this;
-  on(ev: "succeeded", fn: (job: BeeQueue.Job, err: Error) => void): this;
+  on(ev: "succeeded", fn: (job: BeeQueue.Job, result: any) => void): this;
   on(ev: "retrying",  fn: (job: BeeQueue.Job, err: Error) => void): this;
   on(ev: "failed",    fn: (job: BeeQueue.Job, err: Error) => void): this;
   on(ev: "stalled",   fn: (jobId: string) => void): this;
@@ -52,15 +54,7 @@ declare namespace BeeQueue {
     stallInterval?: number,
     nearTermWindow?: number,
     delayedDebounce?: number,
-    redis?: ({
-      host: string
-      port?: number
-    } | {
-      socket: string;
-    }) & {
-      db?: number;
-      options?: any; 
-    },
+    redis?: ClientOpts,
     isWorker?: boolean,
     getEvents?: boolean,
     sendEvents?: boolean,
