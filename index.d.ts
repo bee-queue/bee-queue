@@ -23,6 +23,9 @@ declare class BeeQueue {
 
   createJob<T>(data: T): BeeQueue.Job;
 
+  getJob(jobId: string, cb: (job: BeeQueue.Job) => void): void;
+  getJob(jobId: string): Promise<BeeQueue.Job>;
+  
   getJobs(type: string, page: BeeQueue.Page, cb: (jobs: BeeQueue.Job[]) => void): void;
   getJobs(type: string, page: BeeQueue.Page): Promise<BeeQueue.Job[]>;
 
@@ -92,9 +95,9 @@ declare namespace BeeQueue {
   }
 
   interface Page {
-    start: number;
-    end: number;
-    size: number;
+    start?: number;
+    end?: number;
+    size?: number;
   }
 
   interface HealthCheckResult {
