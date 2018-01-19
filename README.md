@@ -71,6 +71,7 @@ You'll also need [Redis 2.8+](http://redis.io/topics/quickstart)* running somewh
   - [Progress Reporting](#progress-reporting)
   - [Job & Queue Events](#job-and-queue-events)
   - [Stalling Jobs](#stalling-jobs)
+  - [Optimizing Redis Connections](#optimizing-redis-connections)
 - [API Reference](#api-reference)
 - [Under The Hood](#under-the-hood)
 - [Contributing](#contributing)
@@ -226,6 +227,54 @@ Note that Job events become unreliable across process restarts, since the queue'
 Bee-Queue attempts to provide ["at least once delivery"](http://www.cloudcomputingpatterns.org/At-least-once_Delivery). Any job enqueued should be processed at least once - and if a worker crashes, gets disconnected, or otherwise fails to confirm completion of the job, the job will be dispatched to another worker for processing.
 
 To make this happen, workers periodically phone home to Redis about each job they're working on, just to say "I'm still working on this and I haven't stalled, so you don't need to retry it." The [`checkStalledJobs`](#queuecheckstalledjobsinterval-cb) method finds any active jobs whose workers have gone silent (not phoned home for at least [`stallInterval`](#settings) ms), assumes they have stalled, emits a `stalled` event with the job id, and re-enqueues them to be picked up by another worker.
+
+## Optimizing Redis Connections
+
+By default, every time you create a queue instance with `new Queue()` a new redis connection will be created. If you have a small number of queues accross a large number of servers this will probably be fine. If you have a large number of queues with a small number of servers, this will probably be fine too. If your deployment gets a bit larger you will likely need to optimize the Redis connections.
+
+Let's say for example you have a web application with 30 producer queues and you run 10 webservers & 10 worker servers, each one with 4 processes/server. With the default settings this is going to add up to a lot of Redis connections.
+
+The producer queues are the ones that run on the webserver and they push jobs into the queue. These queues do not need to receive events so they can all share one redis connection by passing in an instance of [node_redis `RedisClient`](https://github.com/NodeRedis/node_redis#rediscreateclient).
+
+Example:
+
+```javascript
+// producer queues running on the web server
+const Queue = require('bee-queue')
+const redis = require('redis')
+const sharedConfig = {
+  getEvents: false,
+  isWorker: false,
+  redis: redis.createClient(process.env.REDIS_URL)
+}
+
+const emailQueue = new Queue('EMAIL_DELIVERY', sharedConfig)
+const facebookUpdateQueue = new Queue('FACEBOOK_UPDATE', sharedConfig)
+
+emailQueue.createJob({})
+facebookUpdateQueue.createJob({})
+```
+
+Note that these "producer queues" above are only relevant for the processes that have to put jobs into the queue, not for the workers that need to actually process the jobs.
+
+In your worker process where you define how to process the job with `queue.process` you will have to run "worker queues" instead of "producer queues". In the example below, even though you are passing in the shared config with the same redis instance, because this is a worker queue Bee-Queue will `duplicate()` the client because it needs the blocking commands for PubSub subscriptions. This will result in a new connection for each queue.
+
+```javascript
+// worker queues running on the worker server
+const Queue = require('bee-queue')
+const redis = require('redis')
+const sharedConfig = {
+  redis: redis.createClient(process.env.REDIS_URL)
+}
+
+const emailQueue = new Queue('EMAIL_DELIVERY', sharedConfig)
+const facebookUpdateQueue = new Queue('FACEBOOK_UPDATE', sharedConfig)
+
+emailQueue.process((job) => { })
+facebookUpdateQueue.process((job) => { })
+```
+
+For a more detailed example and explanation see [#96](https://github.com/bee-queue/bee-queue/issues/96)
 
 # API Reference
 
