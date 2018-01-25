@@ -109,7 +109,7 @@ declare namespace BeeQueue {
     newestJob?: string;
   }
 
-  type DoneCallback<T> = (error: Error | null, result: T) => void;
+  type DoneCallback<T> = (error: Error | null, result?: T) => void;
 }
 
 export = BeeQueue;
