@@ -1,3 +1,5 @@
+import { ClientOpts } from 'redis';
+
 declare class BeeQueue {
   name: string;
   keyPrefix: string;
@@ -9,7 +11,7 @@ declare class BeeQueue {
 
   on(ev: "ready",     fn: () => void): this;
   on(ev: "error",     fn: (err: Error) => void): this;
-  on(ev: "succeeded", fn: (job: BeeQueue.Job, err: Error) => void): this;
+  on(ev: "succeeded", fn: (job: BeeQueue.Job, result: any) => void): this;
   on(ev: "retrying",  fn: (job: BeeQueue.Job, err: Error) => void): this;
   on(ev: "failed",    fn: (job: BeeQueue.Job, err: Error) => void): this;
   on(ev: "stalled",   fn: (jobId: string) => void): this;
@@ -21,6 +23,9 @@ declare class BeeQueue {
 
   createJob<T>(data: T): BeeQueue.Job;
 
+  getJob(jobId: string, cb: (job: BeeQueue.Job) => void): void;
+  getJob(jobId: string): Promise<BeeQueue.Job>;
+  
   getJobs(type: string, page: BeeQueue.Page, cb: (jobs: BeeQueue.Job[]) => void): void;
   getJobs(type: string, page: BeeQueue.Page): Promise<BeeQueue.Job[]>;
 
@@ -52,15 +57,7 @@ declare namespace BeeQueue {
     stallInterval?: number,
     nearTermWindow?: number,
     delayedDebounce?: number,
-    redis?: ({
-      host: string
-      port?: number
-    } | {
-      socket: string;
-    }) & {
-      db?: number;
-      options?: any; 
-    },
+    redis?: ClientOpts,
     isWorker?: boolean,
     getEvents?: boolean,
     sendEvents?: boolean,
@@ -98,9 +95,9 @@ declare namespace BeeQueue {
   }
 
   interface Page {
-    start: number;
-    end: number;
-    size: number;
+    start?: number;
+    end?: number;
+    size?: number;
   }
 
   interface HealthCheckResult {
@@ -112,7 +109,7 @@ declare namespace BeeQueue {
     newestJob?: string;
   }
 
-  type DoneCallback<T> = (error: Error | null, result: T) => void;
+  type DoneCallback<T> = (error: Error | null, result?: T) => void;
 }
 
 export = BeeQueue;

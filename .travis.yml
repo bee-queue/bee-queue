@@ -1,11 +1,9 @@
 language: node_js
 node_js:
   - 4
-  - 6.9.1
   - 6
-  - 7.6.0
-  - 7
-  - node
+  - 8
+  - 9
 services: redis
 # this runs eslint, runs the tests, instruments their coverage, and
 # publishes it to coveralls.io

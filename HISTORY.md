@@ -1,3 +1,18 @@
+1.2.2 / 2018-01-25
+==================
+
+  * Update Typescript type definitions (thanks @brickyang for #98).
+
+1.2.1 / 2018-01-15
+==================
+
+  * Update Typescript type definitions (thanks @brickyang for #94).
+
+1.2.0 / 2018-01-10
+==================
+
+  * Add Typescript type definitions (thanks @pbadenski for #80 and @martinwepner for #89).
+
 1.1.0 / 2017-08-12
 ==================
 
