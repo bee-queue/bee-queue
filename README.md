@@ -12,7 +12,8 @@ A simple, fast, robust job/task queue for Node.js, backed by Redis.
 const Queue = require('bee-queue');
 const queue = new Queue('example');
 
-const job = queue.createJob({x: 2, y: 3}).save();
+const job = queue.createJob({x: 2, y: 3})
+job.save();
 job.on('succeeded', (result) => {
   console.log(`Received result for job ${job.id}: result`);
 });
