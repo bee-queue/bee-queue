@@ -741,6 +741,30 @@ queue.process(async (job, done) => {
 
 Reports job progress when called within a handler function. Causes a `progress` event to be emitted. Does not persist the progress to Redis, but will store it on `job.progress`, and if other `Queue`s have `storeJobs` and `getEvents` enabled, then the `progress` will end up on all corresponding job instances.
 
+### Job#publish(name,data)
+
+```js
+const job = queue.createJob({...}).save();
+
+job.on('found-something', (data) => {
+  console.log(`Job ${job.id} updated with:`, data);
+});
+
+queue.process(async (job) => {
+
+  // do some work
+
+  job.publish('found-something', {msg:"found abc"});
+
+  // do some work
+
+  job.publish('found-something', {msg:"found xyz"});
+
+});
+```
+
+While processing a job you can send custom events back e.g. for specific log information etc.
+
 #### Job#remove([cb])
 
 ```js
