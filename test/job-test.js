@@ -131,6 +131,22 @@ describe('Job', (it) => {
     });
   });
 
+  it.describe('Custom event', (it) => {
+    it.cb('let you emit & subscribe, passing data', (t) => {
+      const {makeJob} = t.context;
+
+      makeJob().then((job) => {
+        job.on('custom-event-1', (data) => {
+          if (! data || data.hello !== 'world') {
+            throw new Error('failed to recieve correct data');
+          }
+          t.end();
+        });
+        job.publish('custom-event-1', {hello: 'world'});
+      });
+    });
+  });
+
   it.describe('Remove', (it) => {
     it('removes the job from redis', async (t) => {
       const {queue, makeJob} = t.context;
