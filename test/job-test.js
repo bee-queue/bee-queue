@@ -117,13 +117,26 @@ describe('Job', (it) => {
   });
 
   it.describe('Progress', (it) => {
-    // NOTE: Disabling this because 
-    // it('rejects out-of-bounds progress', async (t) => {
-    //   const {makeJob} = t.context;
+    it('requires a progress value', async (t) => {
+      const {makeJob} = t.context;
 
-    //   const job = await makeJob();
-    //   await t.throws(job.reportProgress(101), 'Progress must be between 0 and 100');
-    // });
+      const job = await makeJob();
+      await t.throws(job.reportProgress(), 'Progress cannot be empty');
+    });
+
+    it('should support passing a data object', async (t) => {
+      const {makeJob} = t.context;
+
+      const job = await makeJob();
+      const progressData = {a: 'value'};
+      return new Promise((resolve) => {
+        job.on('progress', (data) => {
+          t.deepEqual(data, progressData);
+          resolve();
+        });
+        job.reportProgress(progressData);
+      });
+    });
 
     it.cb('should support callbacks', (t) => {
       const {makeJob} = t.context;
