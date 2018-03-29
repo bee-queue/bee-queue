@@ -195,19 +195,19 @@ Handlers can send progress reports, which will be received as events on the orig
 ```js
 const job = addQueue.createJob({x: 2, y: 3}).save();
 job.on('progress', (progress) => {
-  console.log(`Job ${job.id} reported progress: ${progress}%`);
+  console.log(`Job ${job.id} reported progress: page ${progress.page} / ${progress.totalPages}`);
 });
 
 addQueue.process(async (job) => {
   // do some work
-  job.reportProgress(30);
+  job.reportProgress({ page: 3, totalPages: 11 });
   // do more work
-  job.reportProgress(80);
+  job.reportProgress({ page: 9, totalPages: 11 });
   // do the rest
 });
 ```
 
-Just like `.process`, these `progress` events work across multiple processes or servers; the job instance will receive the progress event no matter where processing happens. Note that this mechanism depends on Pub/Sub, and thus will incur additional overhead for each additional worker node.
+Just like `.process`, these `progress` events work across multiple processes or servers; the job instance will receive the progress event no matter where processing happens. The data passed through can be any JSON-serializable value. Note that this mechanism depends on Pub/Sub, and thus will incur additional overhead for each additional worker node.
 
 ## Job and Queue Events
 
