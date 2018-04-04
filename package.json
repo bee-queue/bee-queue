@@ -34,6 +34,11 @@
     "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
     "ci": "npm run eslint && npm run coverage-and-publish"
   },
+  "ava": {
+    "files": [
+      "test/*-test.js"
+    ]
+  },
   "keywords": [
     "task",
     "job",

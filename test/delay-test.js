@@ -1,35 +1,12 @@
 import {describe} from 'ava-spec';
 
 import Queue from '../lib/queue';
-import helpers from 'promise-callbacks';
-// import helpers from '../lib/helpers';
+import helpers from './helpers';
 import sinon from 'sinon';
 
 import redis from '../lib/redis';
 
 import {EventEmitter as Emitter} from 'events';
-
-// todo delKeys and reef are repeated between here and queue-test, factor out
-async function delKeys(client, pattern) {
-  const keys = await client.keys(pattern);
-  if (keys.length) {
-    await client.del(keys);
-  }
-}
-
-// A promise-based barrier.
-function reef(n = 1) {
-  let next;
-  const done = new Promise(resolve => {
-    next = () => {
-      --n;
-      if (n < 0) return false;
-      if (n === 0) resolve();
-      return true;
-    };
-  });
-  return {done, next};
-}
 
 describe('Delayed jobs', (it) => {
   const gclient = redis.createClient();
@@ -80,8 +57,8 @@ describe('Delayed jobs', (it) => {
     }
   });
 
-  it.beforeEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
-  it.afterEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
+  it.beforeEach(async (t) => helpers.delKeys(await gclient, `bq:${t.context.queueName}:*`));
+  it.afterEach(async (t) => helpers.delKeys(await gclient, `bq:${t.context.queueName}:*`));
 
   it('should process delayed jobs', async (t) => {
     const queue = t.context.makeQueue({
@@ -186,7 +163,7 @@ describe('Delayed jobs', (it) => {
     t.is(await scheduled, -1);
 
     // For when Job#save calls schedule, and the subsequent call from onMessage.
-    ({done: scheduled, next: onSchedule} = reef(2));
+    ({done: scheduled, next: onSchedule} = helpers.reef(2));
 
     await queue.createJob({is: 'distant'}).delayUntil(start + 150).save();
     t.is(mockTimer.schedule.secondCall.args[0], start + 150);

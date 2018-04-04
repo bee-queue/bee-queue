@@ -1,25 +1,13 @@
 import {describe} from 'ava-spec';
 
 import Queue from '../lib/queue';
-import helpers from 'promise-callbacks';
+import helpers from './helpers';
 import sinon from 'sinon';
 
 import redis from '../lib/redis';
 import Redis from 'ioredis';
 
-// A promise-based barrier.
-function reef(n = 1) {
-  let next;
-  const done = new Promise(resolve => {
-    next = () => {
-      --n;
-      if (n < 0) return false;
-      if (n === 0) resolve();
-      return true;
-    };
-  });
-  return {done, next};
-}
+const reef = helpers.reef;
 
 async function recordUntil(emitter, trackedEvents, lastEvent) {
   const recordedEvents = [];
@@ -35,13 +23,6 @@ async function recordUntil(emitter, trackedEvents, lastEvent) {
 
   await done;
   return recordedEvents;
-}
-
-async function delKeys(client, pattern) {
-  const keys = await client.keys(pattern);
-  if (keys.length) {
-    await client.del(keys);
-  }
 }
 
 function spitter() {
@@ -121,8 +102,8 @@ describe('Queue', (it) => {
     }
   });
 
-  it.beforeEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
-  it.afterEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
+  it.beforeEach(async (t) => helpers.delKeys(await gclient, `bq:${t.context.queueName}:*`));
+  it.afterEach(async (t) => helpers.delKeys(await gclient, `bq:${t.context.queueName}:*`));
 
   it('should initialize without ensuring scripts', async (t) => {
     const queue = t.context.makeQueue({
