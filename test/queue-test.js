@@ -380,7 +380,7 @@ describe('Queue', (it) => {
         });
 
         await queue.close();
-        await helpers.delay(10); // ioredis#614 bleh
+        await helpers.delay(50); // ioredis#614 bleh
 
         t.false(redis.isReady(client));
         t.true(client.quit.called);
@@ -399,7 +399,7 @@ describe('Queue', (it) => {
         sinon.spy(client, 'quit');
 
         await queue.close();
-        await helpers.delay(10); // ioredis#614 bleh
+        await helpers.delay(50); // ioredis#614 bleh
 
         t.true(redis.isReady(client));
         t.false(client.quit.called);
@@ -523,7 +523,7 @@ describe('Queue', (it) => {
       t.true(redis.isReady(client));
       // ioredis still has status = ready immediately after quit() resolves...
       // so just uhh, wait a second for it to catch up...filed ioredis#614
-      await helpers.delay(10);
+      await helpers.delay(50);
       t.false(redis.isReady(queue.eclient));
     });
 
