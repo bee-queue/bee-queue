@@ -1340,7 +1340,8 @@ describe('Queue', (it) => {
         queue.createJob({count: i}).save();
       }
 
-      return end.then(() => t.context.handleErrors(t));
+      await end;
+      t.context.handleErrors(t);
     });
   });
 
