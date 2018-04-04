@@ -1,38 +1,34 @@
 import {describe} from 'ava-spec';
 
 import Queue from '../lib/queue';
-import helpers from '../lib/helpers';
+import helpers from 'promise-callbacks';
+// import helpers from '../lib/helpers';
 import sinon from 'sinon';
 
 import redis from '../lib/redis';
 
 import {EventEmitter as Emitter} from 'events';
 
-function delKeys(client, pattern) {
-  const promise = helpers.deferred(), done = promise.defer();
-  client.keys(pattern, (err, keys) => {
-    if (err) return done(err);
-    if (keys.length) {
-      client.del(keys, done);
-    } else {
-      done();
-    }
-  });
-  return promise;
+// todo delKeys and reef are repeated between here and queue-test, factor out
+async function delKeys(client, pattern) {
+  const keys = await client.keys(pattern);
+  if (keys.length) {
+    await client.del(keys);
+  }
 }
 
 // A promise-based barrier.
 function reef(n = 1) {
-  const done = helpers.deferred(), end = done.defer();
-  return {
-    done,
-    next() {
+  let next;
+  const done = new Promise(resolve => {
+    next = () => {
       --n;
       if (n < 0) return false;
-      if (n === 0) end();
+      if (n === 0) resolve();
       return true;
-    }
-  };
+    };
+  });
+  return {done, next};
 }
 
 describe('Delayed jobs', (it) => {

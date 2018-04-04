@@ -2,9 +2,13 @@ import {describe} from 'ava-spec';
 
 import Job from '../lib/job';
 import Queue from '../lib/queue';
-import helpers from '../lib/helpers';
 
-import {promisify} from 'promise-callbacks';
+async function clearKeys(client, queue) {
+  const keys = await client.keys(queue.toKey('*'));
+  if (keys.length) {
+    await client.del(keys);
+  }
+}
 
 describe('Job', (it) => {
   const data = {foo: 'bar'};
@@ -26,9 +30,9 @@ describe('Job', (it) => {
     Object.assign(t.context, {queue, makeJob});
   });
 
-  it.afterEach.cb((t) => {
+  it.afterEach((t) => {
     const {queue} = t.context;
-    clearKeys(queue.client, queue, t.end);
+    return clearKeys(queue.client, queue);
   });
 
   it('creates a job', async (t) => {
@@ -36,8 +40,8 @@ describe('Job', (it) => {
 
     const job = await makeJob();
     t.truthy(job, 'fails to return a job');
-    t.true(helpers.has(job, 'id'), 'job has no id');
-    t.true(helpers.has(job, 'data'), 'job has no data');
+    t.true(job.hasOwnProperty('id'), 'job has no id');
+    t.true(job.hasOwnProperty('data'), 'job has no data');
   });
 
   it('creates a job without data', async (t) => {
@@ -45,11 +49,6 @@ describe('Job', (it) => {
 
     const job = await queue.createJob().save();
     t.deepEqual(job.data, {});
-  });
-
-  it.cb('should save with a callback', (t) => {
-    const {queue} = t.context;
-    queue.createJob().save(t.end);
   });
 
   it.describe('Chaining', (it) => {
@@ -110,7 +109,7 @@ describe('Job', (it) => {
       const job = await makeJob();
       const storedJob = await Job.fromId(queue, job.id);
       t.truthy(storedJob);
-      t.true(helpers.has(storedJob, 'id'));
+      t.true(storedJob.hasOwnProperty('id'));
       t.deepEqual(storedJob.data, data);
       t.is(storedJob.options.test, options.test);
     });
@@ -137,85 +136,60 @@ describe('Job', (it) => {
         job.reportProgress(progressData);
       });
     });
-
-    it.cb('should support callbacks', (t) => {
-      const {makeJob} = t.context;
-
-      makeJob().then((job) => job.reportProgress(50, t.end), t.end);
-    });
   });
 
   it.describe('Remove', (it) => {
     it('removes the job from redis', async (t) => {
       const {queue, makeJob} = t.context;
 
-      const {hget} = promisify.methods(queue.client, ['hget']);
-
       const job = await makeJob();
       t.is(job, await job.remove());
 
-      t.is(await hget(queue.toKey('jobs'), job.id), null);
+      t.is(await queue.client.hget(queue.toKey('jobs'), job.id), null);
     });
 
-    it('should work with a callback', async (t) => {
+    it('should work with a callback NO MORE', async (t) => {
       const {queue, makeJob} = t.context;
 
-      const {hget} = promisify.methods(queue.client, ['hget']);
-
       const job = await makeJob();
-      const removed = helpers.deferred();
-      job.remove(removed.defer());
-      await removed;
+      await job.remove();
 
-      t.is(await hget(queue.toKey('jobs'), job.id), null);
+      t.is(await queue.client.hget(queue.toKey('jobs'), job.id), null);
     });
   });
 
   it.describe('Retry', (it) => {
-    it.cb('should support callbacks', (t) => {
+    it('should resolve', async (t) => {
+      t.plan(0);
       const {makeJob} = t.context;
 
-      makeJob().then((job) => job.retry(t.end), t.end);
+      const job = await makeJob();
+      return job.retry();
     });
   });
 
   it.describe('IsInSet', (it) => {
-    it.cb('should support callbacks', (t) => {
+    it('should support callbacks NO MORE', async (t) => {
+      // todo consider whether we still need this test or if redundant
       const {makeJob} = t.context;
 
-      makeJob().then((job) => job.isInSet('stalling', next), t.end);
-
-      function next(err, inSet) {
-        t.ifError(err);
-        t.is(inSet, false);
-        t.end();
-      }
+      const job = await makeJob();
+      const inSet = await job.isInSet('stalling');
+      t.is(inSet, false);
     });
   });
 
   it.describe('fromId', (it) => {
-    it('should support callbacks', async (t) => {
+    it('should support callbacks NO MORE', async (t) => {
+      // todo consider whether we still need this test or if redundant
       const {queue, makeJob} = t.context;
 
       const job = await makeJob();
-      const promise = helpers.deferred();
-      Job.fromId(queue, job.id, promise.defer());
-      const storedJob = await promise;
+      const storedJob = await Job.fromId(queue, job.id);
       t.truthy(storedJob);
-      t.true(helpers.has(storedJob, 'id'));
+      t.true(storedJob.hasOwnProperty('id'));
       t.deepEqual(storedJob.data, data);
       t.is(storedJob.options.test, options.test);
     });
   });
 });
-
-function clearKeys(client, queue, done) {
-  client.keys(queue.toKey('*'), (err, keys) => {
-    if (err) return done(err);
-    if (keys.length) {
-      client.del(keys, done);
-    } else {
-      done();
-    }
-  });
-}

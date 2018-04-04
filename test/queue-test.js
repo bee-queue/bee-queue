@@ -1,26 +1,24 @@
 import {describe} from 'ava-spec';
 
 import Queue from '../lib/queue';
-import helpers from '../lib/helpers';
+import helpers from 'promise-callbacks';
 import sinon from 'sinon';
 
-import {promisify} from 'promise-callbacks';
-
 import redis from '../lib/redis';
-import {createClient} from 'redis';
+import Redis from 'ioredis';
 
 // A promise-based barrier.
 function reef(n = 1) {
-  const done = helpers.deferred(), end = done.defer();
-  return {
-    done,
-    next() {
+  let next;
+  const done = new Promise(resolve => {
+    next = () => {
       --n;
       if (n < 0) return false;
-      if (n === 0) end();
+      if (n === 0) resolve();
       return true;
-    }
-  };
+    };
+  });
+  return {done, next};
 }
 
 async function recordUntil(emitter, trackedEvents, lastEvent) {
@@ -39,17 +37,11 @@ async function recordUntil(emitter, trackedEvents, lastEvent) {
   return recordedEvents;
 }
 
-function delKeys(client, pattern) {
-  const promise = helpers.deferred(), done = promise.defer();
-  client.keys(pattern, (err, keys) => {
-    if (err) return done(err);
-    if (keys.length) {
-      client.del(keys, done);
-    } else {
-      done();
-    }
-  });
-  return promise;
+async function delKeys(client, pattern) {
+  const keys = await client.keys(pattern);
+  if (keys.length) {
+    await client.del(keys);
+  }
 }
 
 function spitter() {
@@ -142,11 +134,6 @@ describe('Queue', (it) => {
     t.context.handleErrors(t);
   });
 
-  it.cb('should support a ready callback', (t) => {
-    const queue = t.context.makeQueue();
-    queue.ready(t.end);
-  });
-
   it('should indicate whether it is running', async (t) => {
     const queue = t.context.makeQueue();
 
@@ -184,14 +171,6 @@ describe('Queue', (it) => {
         t.false(redis.isReady(queue.eclient));
       });
 
-      it.cb('should support callbacks', (t) => {
-        const queue = t.context.makeQueue();
-
-        queue.ready().then(() => {
-          queue.close(t.end);
-        }).catch(t.end);
-      });
-
       it('should not fail after a second call', async (t) => {
         const queue = t.context.makeQueue();
 
@@ -218,7 +197,7 @@ describe('Queue', (it) => {
         processSpy.reset();
 
         // Close the queue so queue3 will process later jobs.
-        queue.close();
+        await queue.close();
 
         const queue2 = t.context.makeQueue({
           // If the other queue is still somehow running, ensure that we can't take work from it.
@@ -244,7 +223,7 @@ describe('Queue', (it) => {
         const queue = t.context.makeQueue();
 
         const started = helpers.deferred(), resume = helpers.deferred();
-        queue.process(() => {
+        queue.process(async () => {
           setImmediate(started.defer(), null);
           return resume;
         });
@@ -269,7 +248,7 @@ describe('Queue', (it) => {
 
         const started = helpers.deferred(),
               resumed = helpers.deferred(), resume = resumed.defer();
-        const processSpy = sinon.spy(() => {
+        const processSpy = sinon.spy(async () => {
           setImmediate(started.defer(), null);
           return resumed;
         });
@@ -390,12 +369,10 @@ describe('Queue', (it) => {
 
         await queue.close();
 
-        t.true(client.ready);
+        t.true(redis.isReady(client));
         t.false(client.quit.called);
 
-        let promise = helpers.deferred();
-        client.ping(promise.defer());
-        await t.notThrows(promise);
+        await t.notThrows(client.ping());
 
         queue = t.context.makeQueue({
           redis: client,
@@ -403,13 +380,12 @@ describe('Queue', (it) => {
         });
 
         await queue.close();
+        await helpers.delay(10); // ioredis#614 bleh
 
-        t.false(client.ready);
+        t.false(redis.isReady(client));
         t.true(client.quit.called);
 
-        promise = helpers.deferred();
-        client.ping(promise.defer());
-        await t.throws(promise, (err) => redis.isAbortError(err));
+        await t.throws(client.ping(), (err) => redis.isAbortError(err));
       });
 
       it('should not quit the command client when quitCommandClient=false', async (t) => {
@@ -423,20 +399,21 @@ describe('Queue', (it) => {
         sinon.spy(client, 'quit');
 
         await queue.close();
+        await helpers.delay(10); // ioredis#614 bleh
 
-        t.true(client.ready);
+        t.true(redis.isReady(client));
         t.false(client.quit.called);
 
-        let promise = helpers.deferred();
-        client.ping(promise.defer());
-        await t.notThrows(promise);
+        await t.notThrows(client.ping());
 
-        promise = helpers.deferred();
-        client.quit(promise.defer());
-        await promise;
+        await client.quit();
       });
     });
 
+    // todo probably also test where job is already being processed by worker and connection is lost?
+    // and where producer tries to enqueue but conn is destroyed, does it still get enqueued
+    // note: node_redis threw error event, ioredis does not and has strong reconnection powers built in
+    // so we actually end up processing on first call here instead of second
     it('should recover from a connection loss', async (t) => {
       const queue = t.context.makeQueue({
         redis: {
@@ -450,40 +427,37 @@ describe('Queue', (it) => {
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
 
-        // First getNextJob fails on the disconnect, second should succeed.
-        t.is(jobSpy.callCount, 2);
+        t.is(jobSpy.callCount, 1);
       });
 
       // Not called at all yet because queue.process uses setImmediate.
       t.is(jobSpy.callCount, 0);
 
       // Override _waitForJob.
-      const waitJob = queue._waitForJob, wait = helpers.deferred();
-      let waitDone = wait.defer();
+      const waitForJob = queue._waitForJob;
+      const waitingForJob = helpers.deferred();
+      let waitDone = waitingForJob.defer();
       queue._waitForJob = function (...args) {
         if (waitDone) {
           waitDone();
           waitDone = null;
         }
-        return waitJob.apply(this, args);
+        return waitForJob.apply(this, args);
       };
 
-      await wait;
+      await waitingForJob;
 
-      const errored = helpers.waitOn(queue, 'error');
-
+      // todo ensure this is how to abruptly kill ioredis connections
       queue.bclient.stream.destroy();
-
-      const err = await errored;
-      t.true(redis.isAbortError(err));
+      await helpers.waitOn(queue.bclient, 'reconnecting');
+      await helpers.waitOn(queue.bclient, 'ready');
+      // t.true(redis.isAbortError(err)); todo i think we just dont get these in ioredis maybe?
 
       queue.createJob({foo: 'bar'}).save();
-
       await helpers.waitOn(queue, 'succeeded', true);
 
-      t.is(jobSpy.callCount, 2);
-
-      t.context.queueErrors = t.context.queueErrors.filter((e) => e !== err);
+      t.is(jobSpy.callCount, 1);
+      t.is(t.context.queueErrors.length, 0);
     });
   });
 
@@ -493,28 +467,32 @@ describe('Queue', (it) => {
 
       await queue.ready();
 
-      t.is(queue.client.connection_options.host, '127.0.0.1');
-      t.is(queue.bclient.connection_options.host, '127.0.0.1');
-      t.is(queue.client.connection_options.port, 6379);
-      t.is(queue.bclient.connection_options.port, 6379);
-      t.true(queue.client.selected_db == null);
-      t.true(queue.bclient.selected_db == null);
+      // todo not sure if this is our best bet for testing connection-ness or if we need all this
+      // maybe consider using isClient instead of just prodding internal state?
+      t.is(queue.client.options.host, 'localhost');
+      t.is(queue.client.options.port, 6379);
+      t.is(queue.client.options.db, 0);
+      t.is(queue.bclient.options.host, 'localhost');
+      t.is(queue.bclient.options.port, 6379);
+      t.is(queue.bclient.options.db, 0);
     });
 
     it('creates a queue with passed redis settings', async (t) => {
       const queue = t.context.makeQueue({
         redis: {
-          host: 'localhost',
+          host: '127.0.0.1',
           db: 1
         }
       });
 
       await queue.ready();
 
-      t.is(queue.client.connection_options.host, 'localhost');
-      t.is(queue.bclient.connection_options.host, 'localhost');
-      t.is(queue.client.selected_db, 1);
-      t.is(queue.bclient.selected_db, 1);
+      t.is(queue.client.options.host, '127.0.0.1');
+      t.is(queue.client.options.port, 6379);
+      t.is(queue.client.options.db, 1);
+      t.is(queue.bclient.options.host, '127.0.0.1');
+      t.is(queue.bclient.options.port, 6379);
+      t.is(queue.bclient.options.db, 1);
     });
 
     it('creates a queue with isWorker false', async (t) => {
@@ -524,7 +502,7 @@ describe('Queue', (it) => {
 
       await queue.ready();
 
-      t.is(queue.client.connection_options.host, '127.0.0.1');
+      t.is(queue.client.options.host, 'localhost');
       t.is(queue.bclient, null);
     });
 
@@ -542,12 +520,15 @@ describe('Queue', (it) => {
 
       await queue.close();
 
-      t.true(client.ready);
-      t.false(queue.eclient.ready);
+      t.true(redis.isReady(client));
+      // ioredis still has status = ready immediately after quit() resolves...
+      // so just uhh, wait a second for it to catch up...filed ioredis#614
+      await helpers.delay(10);
+      t.false(redis.isReady(queue.eclient));
     });
 
     it('should create a Queue with a connecting redis instance', async (t) => {
-      const client = createClient();
+      const client = new Redis();
 
       const queue = t.context.makeQueue({
         redis: client
@@ -562,12 +543,10 @@ describe('Queue', (it) => {
 
     await queue.ready();
 
-    const {hget} = promisify.methods(queue.client, ['hget']);
-
     const job = await queue.createJob({foo: 'bar'}).save();
     t.truthy(job.id);
 
-    const jobData = await hget(`bq:${t.context.queueName}:jobs`, job.id);
+    const jobData = await queue.client.hget(`bq:${t.context.queueName}:jobs`, job.id);
 
     t.is(jobData, job.toData());
   });
@@ -649,14 +628,12 @@ describe('Queue', (it) => {
       t.is(counts.newestJob, 0);
     });
 
-    it('should support callbacks', async (t) => {
+    it('should support callbacks NO MORE', async (t) => {
+      // todo consider whether we still need this test or if redundant
       const queue = t.context.makeQueue();
 
       await queue.createJob({foo: 'bar'}).save();
-
-      const countsPromise = helpers.deferred();
-      queue.checkHealth(countsPromise.defer());
-      const counts = await countsPromise;
+      const counts = await queue.checkHealth();
 
       t.is(counts.waiting, 1);
     });
@@ -738,7 +715,8 @@ describe('Queue', (it) => {
       // Choose a big number for numbers of jobs created, because otherwise the
       // set will be encoded as an intset and SSCAN will ignore the COUNT param.
       // https://redis.io/commands/scan#the-count-option
-      const allJobs = new Array(10000).fill().map(() => queue.createJob({foo: 'bar'}));
+      // todo: used to be 10,000, but seems to still work at 1,000, determine minimum?
+      const allJobs = new Array(1000).fill().map(() => queue.createJob({foo: 'bar'}));
       await Promise.all(allJobs.map((job) => job.save()));
 
       // Wait for all jobs to process to make sure the SET encoding is a hash table
@@ -773,21 +751,18 @@ describe('Queue', (it) => {
       await t.throws(queue.getJobs('not-a-queue-type'), /improper queue type/i);
     });
 
-    it('should support callbacks', async (t) => {
+    it('should support callbacks NO MORE', async (t) => {
+      // todo consider whether we still need this test or if redundant
       const queue = t.context.makeQueue();
 
       const job = await queue.createJob({foo: 'bar'}).save();
 
-      let jobsPromise = helpers.deferred();
-      queue.getJobs('waiting', {start: 0, end: 1}, jobsPromise.defer());
-      let jobs = await jobsPromise;
+      let jobs = await queue.getJobs('waiting', {start: 0, end: 1});
 
       t.is(jobs.length, 1);
       t.is(jobs[0].id, job.id);
 
-      jobsPromise = helpers.deferred();
-      queue.getJobs('waiting', jobsPromise.defer());
-      jobs = await jobsPromise;
+      jobs = await queue.getJobs('waiting');
 
       t.is(jobs.length, 1);
       t.is(jobs[0].id, job.id);
@@ -864,14 +839,12 @@ describe('Queue', (it) => {
       t.deepEqual(job.data, {foo: 'bar'});
     });
 
-    it('should support callbacks', async (t) => {
+    it('should support callbacks NO MORE', async (t) => {
+      // todo consider whether we still need this test or if redundant
       const queue = t.context.makeQueue();
 
       const job = await queue.createJob({foo: 'bar'}).save();
-
-      const jobPromise = helpers.deferred();
-      queue.getJob(job.id, jobPromise.defer());
-      const gotJob = await jobPromise;
+      const gotJob = await queue.getJob(job.id);
 
       t.is(gotJob.id, job.id);
     });
@@ -912,16 +885,15 @@ describe('Queue', (it) => {
       t.context.handleErrors(t);
     });
 
-    it('should support callbacks', async (t) => {
+    it('should support callbacks NO MORE', async (t) => {
+      // todo consider whether we still need this test or if redundant
       t.plan(0);
 
       const queue = t.context.makeQueue();
 
       const job = await queue.createJob({foo: 'bar'}).save();
 
-      const removePromise = helpers.deferred();
-      queue.removeJob(job.id, removePromise.defer());
-      await removePromise;
+      await queue.removeJob(job.id);
     });
   });
 
@@ -981,8 +953,6 @@ describe('Queue', (it) => {
 
       await queue.ready();
 
-      const {hget} = promisify.methods(queue.client, ['hget']);
-
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
       });
@@ -994,7 +964,7 @@ describe('Queue', (it) => {
       const succeededJob = await helpers.waitOn(queue, 'succeeded', true);
       t.is(succeededJob.id, job.id);
 
-      const jobData = await hget(queue.toKey('jobs'), job.id);
+      const jobData = await queue.client.hget(queue.toKey('jobs'), job.id);
       t.is(jobData, null);
 
       t.false(await job.isInSet('success'));
@@ -1006,8 +976,6 @@ describe('Queue', (it) => {
       });
 
       await queue.ready();
-
-      const {hget} = promisify.methods(queue.client, ['hget']);
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
@@ -1021,7 +989,7 @@ describe('Queue', (it) => {
       const succeededJob = await helpers.waitOn(queue, 'failed', true);
       t.is(succeededJob.id, job.id);
 
-      const jobData = await hget(queue.toKey('jobs'), job.id);
+      const jobData = await queue.client.hget(queue.toKey('jobs'), job.id);
       t.is(jobData, null);
 
       t.false(await job.isInSet('failed'));
@@ -1052,34 +1020,11 @@ describe('Queue', (it) => {
       t.true(await failedJob.isInSet('failed'));
     });
 
-    it('processes a job that throws an exception', async (t) => {
-      const queue = t.context.makeQueue();
-
-      queue.process(() => {
-        throw new Error('exception!');
-      });
-
-      const fail = sinon.spy();
-      queue.once('failed', fail);
-      const failed = helpers.waitOn(queue, 'failed');
-
-      const job = await queue.createJob({foo: 'bar'}).save();
-      t.truthy(job.id);
-      t.is(job.data.foo, 'bar');
-
-      await failed;
-      const [[failedJob, err]] = fail.args;
-
-      t.truthy(failedJob);
-      t.is(failedJob.data.foo, 'bar');
-      t.is(err.message, 'exception!');
-    });
-
     it('should capture error data', async (t) => {
       const queue = t.context.makeQueue();
 
       let stack;
-      queue.process((job) => {
+      queue.process(async (job) => {
         if (job.data.error === 'Error') {
           const err = new Error('has stack');
           stack = err.stack;
@@ -1232,7 +1177,9 @@ describe('Queue', (it) => {
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         if (job.options.retries) {
-          return helpers.defer(20);
+          // todo this was .defer(20) - no such thing
+          // assuming this is supposed to be delay, but how did it pass before?
+          return helpers.delay(20);
         }
         t.is(failCount, retries);
         finish();
@@ -1591,6 +1538,8 @@ describe('Queue', (it) => {
         if (deadQueue.running === concurrency) {
           spooled();
         }
+        // have to make sure these jobs never finish!
+        return new Promise(() => {});
       });
 
       await resume;
@@ -2021,8 +1970,7 @@ describe('Queue', (it) => {
 
       await queue.destroy();
 
-      const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
-      const keys = await getKeys(queue.toKey('*'));
+      const keys = await queue.client.keys(queue.toKey('*'));
       t.deepEqual(keys, []);
     });
 
@@ -2034,17 +1982,14 @@ describe('Queue', (it) => {
       await t.throws(queue.destroy(), 'closed');
     });
 
-    it('should support callbacks', async (t) => {
+    it('should support callbacks NO MORE', async (t) => {
+      // todo consider whether we still need this test or if redundant
       const queue = t.context.makeQueue();
 
       await queue.createJob({zoo: 't'}).save();
+      await queue.destroy();
 
-      const destroyPromise = helpers.deferred();
-      queue.destroy(destroyPromise.defer());
-      await destroyPromise;
-
-      const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
-      const keys = await getKeys(queue.toKey('*'));
+      const keys = await queue.client.keys(queue.toKey('*'));
       t.deepEqual(keys, []);
     });
   });

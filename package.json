@@ -4,8 +4,7 @@
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
-    "promise-callbacks": "^3.0.0",
-    "redis": "^2.7.1"
+    "ioredis": "^3.2.2"
   },
   "devDependencies": {
     "ava": "^0.21.0",
@@ -14,6 +13,7 @@
     "eslint": ">= 3",
     "lolex": "^2.0.0",
     "nyc": "^11.0.3",
+    "promise-callbacks": "^3.0.0",
     "sandboxed-module": "^2.0.3",
     "sinon": "^2.3.8"
   },
@@ -45,7 +45,7 @@
     "lua"
   ],
   "engines": {
-    "node": ">= 4"
+    "node": ">= 8"
   },
   "author": "Lewis J Ellis <me@lewisjellis.com>",
   "license": "MIT",
