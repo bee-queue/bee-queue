@@ -1,16 +1,13 @@
 {
+  "parserOptions": {
+    "ecmaVersion": 2017
+  },
   "env": {
     "node": true,
     "es6": true
   },
   "extends": ["plugin:prettier/recommended"],
   "overrides": [
-    {
-      "files": ["lib/**"],
-      "rules": {
-        "max-len": "error"
-      }
-    },
     {
       "files": ["benchmark/**", "examples/**"],
       "parserOptions": {
@@ -45,7 +42,7 @@
     "eol-last": "error",
     "eqeqeq": ["error", "smart"],
     "key-spacing": "warn",
-    "new-cap": ["error", {"capIsNew": false}],
+    "new-cap": ["error", { "capIsNew": false }],
     "no-console": "error",
     "no-floating-decimal": "error",
     "no-inner-declarations": "error",
@@ -56,24 +53,18 @@
     "no-trailing-spaces": "error",
     "no-undef": "error",
     "no-underscore-dangle": "off",
-    "no-unused-vars": ["error", {"vars": "all", "args": "after-used"}],
+    "no-unused-vars": ["error", { "vars": "all", "args": "after-used" }],
     "no-use-before-define": ["error", "nofunc"],
     "no-var": "error",
     "no-warning-comments": [
       "warn",
       {"terms": ["todo"], "location": "anywhere"}
     ],
-    "object-curly-spacing": ["error", "never"],
-    "prefer-const": ["error", {"destructuring": "all"}],
-    "quotes": ["error", "single"],
+    "prefer-const": ["error", { "destructuring": "all" }],
     "semi": ["error", "always"],
-    "semi-spacing": ["error", {"before": false, "after": true}],
+    "semi-spacing": ["error", { "before": false, "after": true }],
     "keyword-spacing": "error",
     "space-before-blocks": "error",
-    "space-before-function-paren": [
-      "error",
-      {"anonymous": "always", "named": "never"}
-    ],
     "space-in-parens": "error",
     "space-infix-ops": "error",
     "strict": "off"

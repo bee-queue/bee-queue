@@ -4,9 +4,7 @@
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
-    "p-finally": "^1.0.0",
-    "promise-callbacks": "^3.8.1",
-    "redis": "^2.7.1"
+    "ioredis": "^3.2.2"
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
@@ -27,6 +25,7 @@
     "lolex": "^6.0.0",
     "nyc": "^15.0.1",
     "prettier": "^2.0.4",
+    "promise-callbacks": "^3.8.2",
     "sandboxed-module": "^2.0.3",
     "semantic-release": "^17.2.2",
     "semver": "^7.2.1",
@@ -51,6 +50,11 @@
     "report": "npm run coverage && nyc report --reporter=html",
     "test": "npm run lint && ava"
   },
+  "ava": {
+    "files": [
+      "test/*-test.js"
+    ]
+  },
   "keywords": [
     "task",
     "job",
@@ -62,7 +66,7 @@
     "lua"
   ],
   "engines": {
-    "node": ">= 4"
+    "node": ">= 8"
   },
   "author": "Lewis J Ellis <me@lewisjellis.com>",
   "contributors": [

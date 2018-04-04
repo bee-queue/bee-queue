@@ -32,7 +32,7 @@ function reef(n = 1) {
 module.exports = (options) => {
   return new Promise((resolve) => {
     queue.on('ready', () => {
-      const {done, next} = reef(options.numRuns);
+      const { done, next } = reef(options.numRuns);
 
       queue.process(options.concurrency, () => {
         next();
@@ -41,7 +41,7 @@ module.exports = (options) => {
 
       const startTime = Date.now();
       for (let i = 0; i < options.numRuns; ++i) {
-        queue.createJob({i}).save();
+        queue.createJob({ i }).save();
       }
       return done.then(() => {
         const elapsed = Date.now() - startTime;

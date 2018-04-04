@@ -1,41 +1,12 @@
-import {describe} from 'ava-spec';
+import { describe } from 'ava-spec';
 
 import Queue from '../lib/queue';
-import helpers from '../lib/helpers';
+import helpers from './helpers';
 import sinon from 'sinon';
 
 import redis from '../lib/redis';
 
-import {EventEmitter as Emitter} from 'events';
-
-function delKeys(client, pattern) {
-  const promise = helpers.deferred(),
-    done = promise.defer();
-  client.keys(pattern, (err, keys) => {
-    if (err) return done(err);
-    if (keys.length) {
-      client.del(keys, done);
-    } else {
-      done();
-    }
-  });
-  return promise;
-}
-
-// A promise-based barrier.
-function reef(n = 1) {
-  const done = helpers.deferred(),
-    end = done.defer();
-  return {
-    done,
-    next() {
-      --n;
-      if (n < 0) return false;
-      if (n === 0) end();
-      return true;
-    },
-  };
-}
+import { EventEmitter as Emitter } from 'events';
 
 describe('Delayed jobs', (it) => {
   const redisUrl = process.env.BEE_QUEUE_TEST_REDIS;
@@ -100,10 +71,10 @@ describe('Delayed jobs', (it) => {
   });
 
   it.beforeEach(async (t) =>
-    delKeys(await gclient, `bq:${t.context.queueName}:*`)
+    helpers.delKeys(await gclient, `bq:${t.context.queueName}:*`)
   );
   it.afterEach(async (t) =>
-    delKeys(await gclient, `bq:${t.context.queueName}:*`)
+    helpers.delKeys(await gclient, `bq:${t.context.queueName}:*`)
   );
 
   it('should process delayed jobs', async (t) => {
@@ -120,7 +91,7 @@ describe('Delayed jobs', (it) => {
 
     const start = Date.now();
     await queue
-      .createJob({iamdelayed: true})
+      .createJob({ iamdelayed: true })
       .delayUntil(start + 500)
       .save();
     await helpers.delay(start + 10 - Date.now());
@@ -159,17 +130,17 @@ describe('Delayed jobs', (it) => {
 
     await Promise.all([
       queue
-        .createJob({is: 'early'})
+        .createJob({ is: 'early' })
         .delayUntil(start + 10)
         .save(),
 
       // These should process together.
       queue
-        .createJob({is: 'late', uid: 1})
+        .createJob({ is: 'late', uid: 1 })
         .delayUntil(start + 200)
         .save(),
       queue
-        .createJob({is: 'late', uid: 2})
+        .createJob({ is: 'late', uid: 2 })
         .delayUntil(start + 290)
         .save(),
     ]);
@@ -222,10 +193,10 @@ describe('Delayed jobs', (it) => {
     t.is(await scheduled, -1);
 
     // For when Job#save calls schedule, and the subsequent call from onMessage.
-    ({done: scheduled, next: onSchedule} = reef(2));
+    ({ done: scheduled, next: onSchedule } = helpers.reef(2));
 
     await queue
-      .createJob({is: 'distant'})
+      .createJob({ is: 'distant' })
       .delayUntil(start + 150)
       .save();
     t.is(mockTimer.schedule.secondCall.args[0], start + 150);
@@ -243,7 +214,7 @@ describe('Delayed jobs', (it) => {
     await success;
     t.true(Date.now() >= start + 150);
     t.true(processSpy.calledOnce);
-    t.deepEqual(processSpy.firstCall.args[0].data, {is: 'distant'});
+    t.deepEqual(processSpy.firstCall.args[0].data, { is: 'distant' });
 
     t.context.handleErrors(t);
   });
@@ -271,7 +242,7 @@ describe('Delayed jobs', (it) => {
     // Save after the second queue is ready to avoid a race condition between the addDelayedJob
     // script and the SUBSCRIBE command.
     await queue
-      .createJob({is: 'delayed'})
+      .createJob({ is: 'delayed' })
       .delayUntil(start + 150)
       .save();
     await success;
@@ -294,13 +265,13 @@ describe('Delayed jobs', (it) => {
 
     const start = Date.now();
     await queue
-      .createJob({is: 'delayed'})
+      .createJob({ is: 'delayed' })
       .setId('awesomejob')
       .delayUntil(start + 150)
       .save();
     await helpers.delay(Date.now() - start + 75);
     await queue
-      .createJob({is: 'delayed'})
+      .createJob({ is: 'delayed' })
       .setId('awesomejob')
       .delayUntil(start + 250)
       .save();

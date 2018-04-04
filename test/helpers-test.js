@@ -1,8 +1,8 @@
-import {describe} from 'ava-spec';
+import { describe } from 'ava-spec';
 
 import sinon from 'sinon';
 
-import {delay, finallyRejectsWithInitial} from '../lib/helpers';
+import { delay, finallyRejectsWithInitial } from '../lib/helpers';
 
 const mark = () =>
   ((start) => () =>

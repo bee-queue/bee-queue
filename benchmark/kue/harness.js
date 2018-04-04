@@ -18,7 +18,7 @@ function reef(n = 1) {
 }
 
 module.exports = (options) => {
-  const {done, next} = reef(options.numRuns);
+  const { done, next } = reef(options.numRuns);
 
   queue.process('test', options.concurrency, (job, jobDone) => {
     next();
@@ -27,7 +27,7 @@ module.exports = (options) => {
 
   const startTime = Date.now();
   for (let i = 0; i < options.numRuns; ++i) {
-    queue.create('test', {i}).removeOnComplete(true).save();
+    queue.create('test', { i }).removeOnComplete(true).save();
   }
   return done.then(() => {
     const elapsed = Date.now() - startTime;

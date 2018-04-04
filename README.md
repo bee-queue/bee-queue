@@ -12,7 +12,7 @@ A simple, fast, robust job/task queue for Node.js, backed by Redis.
 const Queue = require('bee-queue');
 const queue = new Queue('example');
 
-const job = queue.createJob({x: 2, y: 3});
+const job = queue.createJob({ x: 2, y: 3 });
 job.save();
 job.on('succeeded', (result) => {
   console.log(`Received result for job ${job.id}: ${result}`);
@@ -138,7 +138,7 @@ Jobs are created using `Queue.createJob(data)`, which returns a [Job](#job) obje
 Jobs have a chaining API for configuring the Job, and `.save([cb])` method to save the job into Redis and enqueue it for processing:
 
 ```js
-const job = addQueue.createJob({x: 2, y: 3});
+const job = addQueue.createJob({ x: 2, y: 3 });
 job
   .timeout(3000)
   .retries(2)
@@ -160,7 +160,10 @@ Normally, creating and saving jobs blocks the underlying redis client for the fu
 
 ```js
 addQueue
-  .saveAll([addQueue.createJob({x: 3, y: 4}), addQueue.createJob({x: 4, y: 5})])
+  .saveAll([
+    addQueue.createJob({ x: 3, y: 4 }),
+    addQueue.createJob({ x: 4, y: 5 }),
+  ])
   .then((errors) => {
     // The errors value is a Map associating Jobs with Errors. This will often be an empty Map.
   });
@@ -209,7 +212,7 @@ subQueue.process(10, function (job, done) {
 Handlers can send progress reports, which will be received as events on the original job instance:
 
 ```js
-const job = addQueue.createJob({x: 2, y: 3}).save();
+const job = addQueue.createJob({ x: 2, y: 3 }).save();
 job.on('progress', (progress) => {
   console.log(
     `Job ${job.id} reported progress: page ${progress.page} / ${progress.totalPages}`
@@ -218,9 +221,9 @@ job.on('progress', (progress) => {
 
 addQueue.process(async (job) => {
   // do some work
-  job.reportProgress({page: 3, totalPages: 11});
+  job.reportProgress({ page: 3, totalPages: 11 });
   // do more work
-  job.reportProgress({page: 9, totalPages: 11});
+  job.reportProgress({ page: 9, totalPages: 11 });
   // do the rest
 });
 ```
@@ -513,12 +516,12 @@ Be careful with this method; most potential uses would be better served by job e
 #### Queue#getJobs(type, page, [cb])
 
 ```js
-queue.getJobs('waiting', {start: 0, end: 25}).then((jobs) => {
+queue.getJobs('waiting', { start: 0, end: 25 }).then((jobs) => {
   const jobIds = jobs.map((job) => job.id);
   console.log(`Job ids: ${jobIds.join(' ')}`);
 });
 
-queue.getJobs('failed', {size: 100}).then((jobs) => {
+queue.getJobs('failed', { size: 100 }).then((jobs) => {
   const jobIds = jobs.map((job) => job.id);
   console.log(`Job ids: ${jobIds.join(' ')}`);
 });

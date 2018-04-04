@@ -1,29 +1,12 @@
-import {describe} from 'ava-spec';
+import { describe } from 'ava-spec';
 import * as url from 'url';
 
 import Queue from '../lib/queue';
-import helpers from '../lib/helpers';
+import helpers from './helpers';
 import sinon from 'sinon';
 
-import {promisify} from 'promise-callbacks';
-
 import redis from '../lib/redis';
-import actualRedis from 'redis';
-
-// A promise-based barrier.
-function reef(n = 1) {
-  const done = helpers.deferred(),
-    end = done.defer();
-  return {
-    done,
-    next() {
-      --n;
-      if (n < 0) return false;
-      if (n === 0) end();
-      return true;
-    },
-  };
-}
+import Redis from 'ioredis';
 
 async function recordUntil(emitter, trackedEvents, lastEvent) {
   const recordedEvents = [];
@@ -41,23 +24,14 @@ async function recordUntil(emitter, trackedEvents, lastEvent) {
   return recordedEvents;
 }
 
-async function delKeys(client, pattern) {
-  const keys = await helpers.callAsync((done) => client.keys(pattern, done));
-  if (keys.length) {
-    return helpers.callAsync((done) => client.del(keys, done));
-  }
-}
-
-async function forceStall(queue, {endDelay = 1} = {}) {
+async function forceStall(queue, { endDelay = 1 } = {}) {
   // Safety belts.
   await helpers.delay(1);
   await queue.checkStalledJobs();
-  await helpers.callAsync((done) =>
-    // This key prevents frequent running of the stall check as that would
-    // cause erroneous stalls, and its removal unblocks the discovery of
-    // stalled jobs.
-    queue.client.del(queue.toKey('stallBlock'), done)
-  );
+  // This key prevents frequent running of the stall check as that would
+  // cause erroneous stalls, and its removal unblocks the discovery of
+  // stalled jobs.
+  await queue.client.del(queue.toKey('stallBlock'));
   // Safety belts.
   await helpers.delay(endDelay);
 }
@@ -165,10 +139,10 @@ describe('Queue', (it) => {
   });
 
   it.beforeEach(async (t) =>
-    delKeys(await gclient, `bq:${t.context.queueName}:*`)
+    helpers.delKeys(await gclient, `bq:${t.context.queueName}:*`)
   );
   it.afterEach(async (t) =>
-    delKeys(await gclient, `bq:${t.context.queueName}:*`)
+    helpers.delKeys(await gclient, `bq:${t.context.queueName}:*`)
   );
 
   it('should initialize without ensuring scripts', async (t) => {
@@ -179,11 +153,6 @@ describe('Queue', (it) => {
     await queue.ready();
 
     t.context.handleErrors(t);
-  });
-
-  it.cb('should support a ready callback', (t) => {
-    const queue = t.context.makeQueue();
-    queue.ready(t.end);
   });
 
   it('should indicate whether it is running', async (t) => {
@@ -225,18 +194,7 @@ describe('Queue', (it) => {
         t.false(redis.isReady(queue.eclient));
       });
 
-      it.cb('should support callbacks', (t) => {
-        const queue = t.context.makeQueue();
-
-        queue
-          .ready()
-          .then(() => {
-            queue.close(t.end);
-          })
-          .catch(t.end);
-      });
-
-      it('should not fail when called again', async (t) => {
+      it('should not fail after a second call', async (t) => {
         const queue = t.context.makeQueue();
 
         await queue.ready();
@@ -245,11 +203,11 @@ describe('Queue', (it) => {
         await t.notThrows(queue.close());
       });
 
-      it.cb('should support callbacks when called again', (t) => {
-        const queue = t.context.makeQueue();
+      // it.cb('should support callbacks when called again', (t) => {
+      //   const queue = t.context.makeQueue();
 
-        queue.close().then(() => void queue.close(t.end), t.end);
-      });
+      //   queue.close().then(() => void queue.close(t.end), t.end);
+      // });
 
       it('should produce quit errors during close', async (t) => {
         const queue = t.context.makeQueue();
@@ -272,7 +230,7 @@ describe('Queue', (it) => {
           [symbol]: true,
         };
 
-        const stub = sinon.stub(actualRedis, 'createClient').callThrough();
+        const stub = sinon.stub(Redis, 'createClient').callThrough();
         const relatedStub = stub
           .withArgs(sinon.match((value) => value && value[symbol]))
           .callsFake(function () {
@@ -314,20 +272,20 @@ describe('Queue', (it) => {
         const processSpy = sinon.spy(async () => {});
         queue.process(processSpy);
 
-        await queue.createJob({is: 'first'}).save();
+        await queue.createJob({ is: 'first' }).save();
         await helpers.waitOn(queue, 'succeeded', true);
         t.true(processSpy.calledOnce);
         processSpy.resetHistory();
 
         // Close the queue so queue3 will process later jobs.
-        queue.close();
+        await queue.close();
 
         const queue2 = t.context.makeQueue({
           // If the other queue is still somehow running, ensure that we can't take work from it.
           isWorker: false,
         });
 
-        await queue2.createJob({is: 'second'}).save();
+        await queue2.createJob({ is: 'second' }).save();
         await helpers.delay(50);
 
         const queue3 = t.context.makeQueue();
@@ -347,7 +305,7 @@ describe('Queue', (it) => {
 
         const started = helpers.deferred(),
           resume = helpers.deferred();
-        queue.process(() => {
+        queue.process(async () => {
           setImmediate(started.defer(), null);
           return resume;
         });
@@ -373,7 +331,7 @@ describe('Queue', (it) => {
         const started = helpers.deferred(),
           resumed = helpers.deferred(),
           resume = resumed.defer();
-        const processSpy = sinon.spy(() => {
+        const processSpy = sinon.spy(async () => {
           setImmediate(started.defer(), null);
           return resumed;
         });
@@ -382,19 +340,19 @@ describe('Queue', (it) => {
         const successSpy = sinon.spy();
         queue.on('succeeded', successSpy);
 
-        await queue.createJob({is: 'first'}).save();
+        await queue.createJob({ is: 'first' }).save();
         await started;
 
         // Close the queue, save a new job, and then complete the first job.
         const closed = queue.close();
-        await queue.createJob({is: 'second'}).save();
+        await queue.createJob({ is: 'second' }).save();
         resume(null);
         await closed;
 
         // Verify that the second job wasn't picked up for processing.
         t.true(processSpy.calledOnce);
         t.true(successSpy.calledOnce);
-        t.deepEqual(processSpy.firstCall.args[0].data, {is: 'first'});
+        t.deepEqual(processSpy.firstCall.args[0].data, { is: 'first' });
       });
 
       it('should stop the check timer', async (t) => {
@@ -497,25 +455,26 @@ describe('Queue', (it) => {
 
         await queue.close();
 
-        t.true(client.ready);
+        t.true(redis.isReady(client));
         t.false(client.quit.called);
 
-        await t.notThrows(helpers.callAsync((done) => client.ping(done)));
+        await t.notThrows(client.ping());
 
         queue = t.context.makeQueue({
           redis: client,
           quitCommandClient: true,
         });
 
+        // TODO: have Queue#close wait for the queue to close, perhaps?
+        // TODO: also pretend the quit worked if there was an NR_CLOSED
+        // https://github.com/NodeRedis/node-redis/blob/0041e3e53d5292b13d96ce076653c5b91b314fda/lib/individualCommands.js#L84
         await queue.close();
+        await helpers.delay(50); // ioredis#614 bleh
 
-        t.false(client.ready);
+        t.false(redis.isReady(client));
         t.true(client.quit.called);
 
-        await t.throws(
-          helpers.callAsync((done) => client.ping(done)),
-          (err) => redis.isAbortError(err)
-        );
+        await t.throws(client.ping(), (err) => redis.isAbortError(err));
       });
 
       it('should not quit the command client when quitCommandClient=false', async (t) => {
@@ -529,16 +488,21 @@ describe('Queue', (it) => {
         sinon.spy(client, 'quit');
 
         await queue.close();
+        await helpers.delay(50); // ioredis#614 bleh
 
-        t.true(client.ready);
+        t.true(redis.isReady(client));
         t.false(client.quit.called);
 
-        await t.notThrows(helpers.callAsync((done) => client.ping(done)));
+        await t.notThrows(client.ping());
 
-        await helpers.callAsync((done) => client.quit(done));
+        await client.quit();
       });
     });
 
+    // todo probably also test where job is already being processed by worker and connection is lost?
+    // and where producer tries to enqueue but conn is destroyed, does it still get enqueued
+    // note: node_redis threw error event, ioredis does not and has strong reconnection powers built in
+    // so we actually end up processing on first call here instead of second
     it('should recover from a connection loss', async (t) => {
       const queue = t.context.makeQueue({
         redis: {
@@ -553,57 +517,55 @@ describe('Queue', (it) => {
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
 
-        // First getNextJob fails on the disconnect, second should succeed.
-        t.is(jobSpy.callCount, 2);
+        t.is(jobSpy.callCount, 1);
       });
 
       // Not called at all yet because queue.process uses setImmediate.
       t.is(jobSpy.callCount, 0);
 
       // Override _waitForJob.
-      const waitJob = queue._waitForJob,
-        wait = helpers.deferred();
-      let waitDone = wait.defer();
+      const waitForJob = queue._waitForJob;
+      const waitingForJob = helpers.deferred();
+      let waitDone = waitingForJob.defer();
       queue._waitForJob = function (...args) {
         if (waitDone) {
           waitDone();
           waitDone = null;
         }
-        return waitJob.apply(this, args);
+        return waitForJob.apply(this, args);
       };
 
-      await wait;
+      await waitingForJob;
 
-      const errored = helpers.waitOn(queue, 'error');
-
+      // todo ensure this is how to abruptly kill ioredis connections
       queue.bclient.stream.destroy();
+      await helpers.waitOn(queue.bclient, 'reconnecting');
+      await helpers.waitOn(queue.bclient, 'ready');
+      // t.true(redis.isAbortError(err)); todo i think we just dont get these in ioredis maybe?
 
-      const err = await errored;
-      t.true(redis.isAbortError(err));
-
-      queue.createJob({foo: 'bar'}).save();
-
+      queue.createJob({ foo: 'bar' }).save();
       await helpers.waitOn(queue, 'succeeded', true);
 
-      t.is(jobSpy.callCount, 2);
-
-      t.context.queueErrors = t.context.queueErrors.filter((e) => e !== err);
+      t.is(jobSpy.callCount, 1);
+      t.is(t.context.queueErrors.length, 0);
     });
   });
 
   it.describe('Constructor', (it) => {
     it('creates a queue with default redis settings', async (t) => {
+      const host = redisHost || 'localhost';
       const queue = t.context.makeQueue();
 
       await queue.ready();
 
-      const host = redisHost || '127.0.0.1';
-      t.is(queue.client.connection_options.host, host);
-      t.is(queue.bclient.connection_options.host, host);
-      t.is(queue.client.connection_options.port, 6379);
-      t.is(queue.bclient.connection_options.port, 6379);
-      t.true(queue.client.selected_db == null);
-      t.true(queue.bclient.selected_db == null);
+      // todo not sure if this is our best bet for testing connection-ness or if we need all this
+      // maybe consider using isClient instead of just prodding internal state?
+      t.is(queue.client.options.host, host);
+      t.is(queue.client.options.port, 6379);
+      t.is(queue.client.options.db, 0);
+      t.is(queue.bclient.options.host, host);
+      t.is(queue.bclient.options.port, 6379);
+      t.is(queue.bclient.options.db, 0);
     });
 
     it('creates a queue with passed redis settings', async (t) => {
@@ -617,10 +579,12 @@ describe('Queue', (it) => {
 
       await queue.ready();
 
-      t.is(queue.client.connection_options.host, host);
-      t.is(queue.bclient.connection_options.host, host);
-      t.is(queue.client.selected_db, 1);
-      t.is(queue.bclient.selected_db, 1);
+      t.is(queue.client.options.host, host);
+      t.is(queue.client.options.port, 6379);
+      t.is(queue.client.options.db, 1);
+      t.is(queue.bclient.options.host, host);
+      t.is(queue.bclient.options.port, 6379);
+      t.is(queue.bclient.options.db, 1);
     });
 
     it('creates a queue with isWorker false', async (t) => {
@@ -630,8 +594,7 @@ describe('Queue', (it) => {
 
       await queue.ready();
 
-      const host = redisHost || '127.0.0.1';
-      t.is(queue.client.connection_options.host, host);
+      t.is(queue.client.options.host, redisHost || 'localhost');
       t.is(queue.bclient, null);
     });
 
@@ -649,12 +612,15 @@ describe('Queue', (it) => {
 
       await queue.close();
 
-      t.true(client.ready);
-      t.false(queue.eclient.ready);
+      t.true(redis.isReady(client));
+      // ioredis still has status = ready immediately after quit() resolves...
+      // so just uhh, wait a second for it to catch up...filed ioredis#614
+      await helpers.delay(50);
+      t.false(redis.isReady(queue.eclient));
     });
 
     it('should create a Queue with a connecting redis instance', async (t) => {
-      const client = actualRedis.createClient(redisUrl);
+      const client = new Redis();
 
       const queue = t.context.makeQueue({
         redis: client,
@@ -669,12 +635,13 @@ describe('Queue', (it) => {
 
     await queue.ready();
 
-    const {hget} = promisify.methods(queue.client, ['hget']);
-
-    const job = await queue.createJob({foo: 'bar'}).save();
+    const job = await queue.createJob({ foo: 'bar' }).save();
     t.truthy(job.id);
 
-    const jobData = await hget(`bq:${t.context.queueName}:jobs`, job.id);
+    const jobData = await queue.client.hget(
+      `bq:${t.context.queueName}:jobs`,
+      job.id
+    );
 
     t.is(jobData, job.toData());
   });
@@ -738,7 +705,7 @@ describe('Queue', (it) => {
         isWorker: false,
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
 
       t.truthy(job.id);
 
@@ -760,7 +727,7 @@ describe('Queue', (it) => {
         finish();
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
 
       return end;
@@ -773,7 +740,7 @@ describe('Queue', (it) => {
         t.is(job.data.foo, 'bar');
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
 
       const succeededJob = await helpers.waitOn(queue, 'succeeded');
@@ -791,7 +758,7 @@ describe('Queue', (it) => {
         throw new Error('failed!');
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
 
       const failedJob = await helpers.waitOn(queue, 'failed');
@@ -809,34 +776,24 @@ describe('Queue', (it) => {
       const counts = await queue.checkHealth();
       t.is(counts.newestJob, 0);
     });
-
-    it('should support callbacks', async (t) => {
-      const queue = t.context.makeQueue();
-
-      await queue.createJob({foo: 'bar'}).save();
-
-      const counts = await helpers.callAsync((done) => queue.checkHealth(done));
-
-      t.is(counts.waiting, 1);
-    });
   });
 
   it.describe('getJobs', (it) => {
     it('gets waiting jobs', async (t) => {
       const queue = t.context.makeQueue();
 
-      const job = await queue.createJob({foo: 'bar'}).save();
-      const jobs = await queue.getJobs('waiting', {start: 0, end: 2});
+      const job = await queue.createJob({ foo: 'bar' }).save();
+      const jobs = await queue.getJobs('waiting', { start: 0, end: 2 });
       t.deepEqual(jobs[0].id, job.id);
     });
 
     it('gets active jobs', async (t) => {
       const queue = t.context.makeQueue();
 
-      await queue.createJob({foo: 'bar'}).save();
+      await queue.createJob({ foo: 'bar' }).save();
 
       queue.process(async (job) => {
-        const jobs = await queue.getJobs('active', {start: 0, end: 100});
+        const jobs = await queue.getJobs('active', { start: 0, end: 100 });
         t.is(jobs[0].id, job.id);
       });
 
@@ -849,18 +806,18 @@ describe('Queue', (it) => {
       queue.process(async () => {});
 
       const job = await queue
-        .createJob({foo: 'bar'})
+        .createJob({ foo: 'bar' })
         .delayUntil(Date.now() + 10000)
         .save();
 
-      const jobs = await queue.getJobs('delayed', {start: 0, end: 1});
+      const jobs = await queue.getJobs('delayed', { start: 0, end: 1 });
       t.is(jobs[0].id, job.id);
     });
 
     it('gets failed jobs', async (t) => {
       const queue = t.context.makeQueue();
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
 
       queue.process(async () => {
         throw new Error('failed');
@@ -868,7 +825,7 @@ describe('Queue', (it) => {
 
       await helpers.waitOn(queue, 'failed', true);
 
-      const jobs = await queue.getJobs('failed', {size: 1});
+      const jobs = await queue.getJobs('failed', { size: 1 });
       t.is(jobs[0].id, job.id);
     });
 
@@ -877,11 +834,11 @@ describe('Queue', (it) => {
 
       queue.process(async () => {});
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
 
       await helpers.waitOn(queue, 'succeeded', true);
 
-      const jobs = await queue.getJobs('succeeded', {size: 1});
+      const jobs = await queue.getJobs('succeeded', { size: 1 });
       t.is(jobs[0].id, job.id);
     });
 
@@ -898,20 +855,21 @@ describe('Queue', (it) => {
       // Choose a big number for numbers of jobs created, because otherwise the
       // set will be encoded as an intset and SSCAN will ignore the COUNT param.
       // https://redis.io/commands/scan#the-count-option
-      const allJobs = new Array(10000)
+      // todo: used to be 10,000, but seems to still work at 1,000, determine minimum?
+      const allJobs = new Array(1000)
         .fill()
-        .map(() => queue.createJob({foo: 'bar'}));
+        .map(() => queue.createJob({ foo: 'bar' }));
       await Promise.all(allJobs.map((job) => job.save()));
 
       // Wait for all jobs to process to make sure the SET encoding is a hash table
       // rather than an intset.
-      const {done, next} = reef(allJobs.length);
+      const { done, next } = helpers.reef(allJobs.length);
       queue.process(async () => {
         next();
       });
       await done;
 
-      const jobs = await queue.getJobs('succeeded', {size: 80});
+      const jobs = await queue.getJobs('succeeded', { size: 80 });
 
       // Remove duplicates
       t.is(new Set(jobs.map((job) => job.id)).size, 80);
@@ -920,13 +878,13 @@ describe('Queue', (it) => {
     it('accepts start, end parameters for list and zset types', async (t) => {
       const queue = t.context.makeQueue();
 
-      await t.notThrows(queue.getJobs('waiting', {start: 0, end: 10}));
+      await t.notThrows(queue.getJobs('waiting', { start: 0, end: 10 }));
     });
 
     it('accepts size parameter for set types', async (t) => {
       const queue = t.context.makeQueue();
 
-      await t.notThrows(queue.getJobs('succeeded', {size: 10}));
+      await t.notThrows(queue.getJobs('succeeded', { size: 10 }));
     });
 
     it('rejects improper queue type', async (t) => {
@@ -935,19 +893,18 @@ describe('Queue', (it) => {
       await t.throws(queue.getJobs('not-a-queue-type'), /improper queue type/i);
     });
 
-    it('should support callbacks', async (t) => {
+    it('finds waiting jobs', async (t) => {
+      // todo consider whether we still need this test or if redundant
       const queue = t.context.makeQueue();
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
 
-      let jobs = await helpers.callAsync((done) =>
-        queue.getJobs('waiting', {start: 0, end: 1}, done)
-      );
+      let jobs = await queue.getJobs('waiting', { start: 0, end: 1 });
 
       t.is(jobs.length, 1);
       t.is(jobs[0].id, job.id);
 
-      jobs = await helpers.callAsync((done) => queue.getJobs('waiting', done));
+      jobs = await queue.getJobs('waiting');
 
       t.is(jobs.length, 1);
       t.is(jobs[0].id, job.id);
@@ -956,9 +913,9 @@ describe('Queue', (it) => {
     it('uses stored jobs', async (t) => {
       const queue = t.context.makeQueue();
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
 
-      const jobs = await queue.getJobs('waiting', {start: 0, end: 1});
+      const jobs = await queue.getJobs('waiting', { start: 0, end: 1 });
       t.is(jobs.length, 1);
       t.is(jobs[0], job);
     });
@@ -968,9 +925,9 @@ describe('Queue', (it) => {
         storeJobs: false,
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
 
-      const jobs = await queue.getJobs('waiting', {start: 0, end: 1});
+      const jobs = await queue.getJobs('waiting', { start: 0, end: 1 });
       t.is(jobs.length, 1);
       t.not(jobs[0], job);
     });
@@ -980,7 +937,7 @@ describe('Queue', (it) => {
     it('gets an job created by the same queue instance', async (t) => {
       const queue = t.context.makeQueue();
 
-      const createdJob = await queue.createJob({foo: 'bar'}).save();
+      const createdJob = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(createdJob.id);
 
       const job = await queue.getJob(createdJob.id);
@@ -1002,7 +959,7 @@ describe('Queue', (it) => {
         isWorker: false,
       });
 
-      const createdJob = await queue.createJob({foo: 'bar'}).save();
+      const createdJob = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(createdJob.id);
 
       const job = await reader.getJob(createdJob.id);
@@ -1016,24 +973,12 @@ describe('Queue', (it) => {
         storeJobs: false,
       });
 
-      await queue.createJob({foo: 'bar'}).setId('amazingjob').save();
+      await queue.createJob({ foo: 'bar' }).setId('amazingjob').save();
 
       const job = await queue.getJob('amazingjob');
       t.truthy(job);
       t.is(job.id, 'amazingjob');
-      t.deepEqual(job.data, {foo: 'bar'});
-    });
-
-    it('should support callbacks', async (t) => {
-      const queue = t.context.makeQueue();
-
-      const job = await queue.createJob({foo: 'bar'}).save();
-
-      const gotJob = await helpers.callAsync((done) =>
-        queue.getJob(job.id, done)
-      );
-
-      t.is(gotJob.id, job.id);
+      t.deepEqual(job.data, { foo: 'bar' });
     });
   });
 
@@ -1046,8 +991,8 @@ describe('Queue', (it) => {
       });
 
       await queue.saveAll([
-        queue.createJob({foo: 'bar'}).setId('asdf'),
-        queue.createJob({foo: 'bar2'}).setId('asdf2'),
+        queue.createJob({ foo: 'bar' }).setId('asdf'),
+        queue.createJob({ foo: 'bar2' }).setId('asdf2'),
       ]);
 
       const [bar, bar2] = await Promise.all([
@@ -1056,8 +1001,8 @@ describe('Queue', (it) => {
       ]);
       t.truthy(bar);
       t.truthy(bar2);
-      t.deepEqual(bar.data, {foo: 'bar'});
-      t.deepEqual(bar2.data, {foo: 'bar2'});
+      t.deepEqual(bar.data, { foo: 'bar' });
+      t.deepEqual(bar2.data, { foo: 'bar2' });
     });
 
     it('should produce internal errors', async (t) => {
@@ -1094,23 +1039,28 @@ describe('Queue', (it) => {
 
       await queue.ready();
 
-      const stub = sinon
-        .stub(queue.client, 'internal_send_command')
-        .callsFake(function (commandObj) {
-          if (
-            commandObj.command.toUpperCase() === 'EVALSHA' &&
-            commandObj.args.some((arg) => /"hij"/.test(arg))
-          ) {
-            // This is just a randomly generated string passed through sha1sum. It
-            // will not be a loaded script, which will cause the command to fail.
-            commandObj.args[0] = '91ea7bce9a02621ada10e620f546467cad1a6b07';
-          }
-          return stub.wrappedMethod.call(this, commandObj);
+      const stub = sinon.stub(queue.client, 'sendCommand');
+      stub
+        .callThrough()
+        .withArgs(
+          sinon.match({
+            name: sinon.match(/^EVALSHA$/i),
+            args: sinon.match((args) =>
+              args.some((arg) => arg.includes('"hij"'))
+            ),
+          })
+        )
+        .callsFake(function (...args) {
+          const [commandObj] = args;
+          // This is just a randomly generated string passed through sha1sum. It
+          // will not be a loaded script, which will cause the command to fail.
+          commandObj.args[0] = '91ea7bce9a02621ada10e620f546467cad1a6b07';
+          return stub.wrappedMethod.apply(this, args);
         });
 
       const jobs = [
-        queue.createJob({abc: 'def'}),
-        queue.createJob({def: 'hij'}),
+        queue.createJob({ abc: 'def' }),
+        queue.createJob({ def: 'hij' }),
       ];
 
       const errors = await queue.saveAll(jobs);
@@ -1118,7 +1068,7 @@ describe('Queue', (it) => {
       t.is(errors.size, 1);
       const errPair = errors[Symbol.iterator]().next().value;
       t.is(errPair[0], jobs[1]);
-      t.is(errPair[1].code, 'NOSCRIPT');
+      t.regex(errPair[1].message, /^NOSCRIPT\b/);
     });
 
     it('should reject on batch execution failure', async (t) => {
@@ -1131,7 +1081,7 @@ describe('Queue', (it) => {
       await queue.ready();
 
       const batchStub = sinon
-        .stub(queue.client, 'batch')
+        .stub(queue.client, 'pipeline')
         .callsFake(function () {
           const batch = batchStub.wrappedMethod.apply(this, arguments);
           sinon.stub(batch, 'exec').yields(new Error('test error'));
@@ -1140,8 +1090,8 @@ describe('Queue', (it) => {
 
       await t.throws(
         queue.saveAll([
-          queue.createJob({abc: 'def'}),
-          queue.createJob({def: 'hij'}),
+          queue.createJob({ abc: 'def' }),
+          queue.createJob({ def: 'hij' }),
         ]),
         Error,
         'test error'
@@ -1172,11 +1122,11 @@ describe('Queue', (it) => {
 
       await wait;
 
-      const job = queue.createJob({foo: 'bar'}).setId('deadjob');
+      const job = queue.createJob({ foo: 'bar' }).setId('deadjob');
       await Promise.all([
         job.save(),
         queue.removeJob(job.id),
-        queue.createJob({foo: 'bar'}).setId('goodjob').save(),
+        queue.createJob({ foo: 'bar' }).setId('goodjob').save(),
       ]);
 
       const goodJob = await helpers.waitOn(queue, 'succeeded');
@@ -1185,14 +1135,14 @@ describe('Queue', (it) => {
       t.context.handleErrors(t);
     });
 
-    it('should support callbacks', async (t) => {
+    it('resolves', async (t) => {
       t.plan(0);
 
       const queue = t.context.makeQueue();
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
 
-      await helpers.callAsync((done) => queue.removeJob(job.id, done));
+      return queue.removeJob(job.id);
     });
   });
 
@@ -1205,7 +1155,7 @@ describe('Queue', (it) => {
         return 'baz';
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
@@ -1234,14 +1184,14 @@ describe('Queue', (it) => {
 
       const success = helpers.waitOn(queue, 'succeeded', true);
 
-      await queue.createJob({foo: 'baz'}).setId('amazingjob').save();
+      await queue.createJob({ foo: 'baz' }).setId('amazingjob').save();
       await success;
 
       const job = await queue.getJob('amazingjob');
 
       t.truthy(job);
       t.is(job.id, 'amazingjob');
-      t.deepEqual(job.data, {foo: 'baz'});
+      t.deepEqual(job.data, { foo: 'baz' });
       t.true(await job.isInSet('succeeded'));
     });
 
@@ -1252,20 +1202,18 @@ describe('Queue', (it) => {
 
       await queue.ready();
 
-      const {hget} = promisify.methods(queue.client, ['hget']);
-
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
       const succeededJob = await helpers.waitOn(queue, 'succeeded', true);
       t.is(succeededJob.id, job.id);
 
-      const jobData = await hget(queue.toKey('jobs'), job.id);
+      const jobData = await queue.client.hget(queue.toKey('jobs'), job.id);
       t.is(jobData, null);
 
       t.false(await job.isInSet('success'));
@@ -1278,21 +1226,19 @@ describe('Queue', (it) => {
 
       await queue.ready();
 
-      const {hget} = promisify.methods(queue.client, ['hget']);
-
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         throw new Error('failed :D');
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
       const succeededJob = await helpers.waitOn(queue, 'failed', true);
       t.is(succeededJob.id, job.id);
 
-      const jobData = await hget(queue.toKey('jobs'), job.id);
+      const jobData = await queue.client.hget(queue.toKey('jobs'), job.id);
       t.is(jobData, null);
 
       t.false(await job.isInSet('failed'));
@@ -1310,7 +1256,7 @@ describe('Queue', (it) => {
       queue.once('failed', fail);
       const failed = helpers.waitOn(queue, 'failed');
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
@@ -1323,34 +1269,11 @@ describe('Queue', (it) => {
       t.true(await failedJob.isInSet('failed'));
     });
 
-    it('processes a job that throws an exception', async (t) => {
-      const queue = t.context.makeQueue();
-
-      queue.process(() => {
-        throw new Error('exception!');
-      });
-
-      const fail = sinon.spy();
-      queue.once('failed', fail);
-      const failed = helpers.waitOn(queue, 'failed');
-
-      const job = await queue.createJob({foo: 'bar'}).save();
-      t.truthy(job.id);
-      t.is(job.data.foo, 'bar');
-
-      await failed;
-      const [[failedJob, err]] = fail.args;
-
-      t.truthy(failedJob);
-      t.is(failedJob.data.foo, 'bar');
-      t.is(err.message, 'exception!');
-    });
-
     it('should capture error data', async (t) => {
       const queue = t.context.makeQueue();
 
       let stack;
-      queue.process((job) => {
+      queue.process(async (job) => {
         if (job.data.error === 'Error') {
           const err = new Error('has stack');
           stack = err.stack;
@@ -1359,9 +1282,9 @@ describe('Queue', (it) => {
         throw job.data.error;
       });
 
-      const errors = ['Error', {message: 'has message'}, 'is string', true];
+      const errors = ['Error', { message: 'has message' }, 'is string', true];
 
-      const jobs = errors.map((error) => queue.createJob({error}));
+      const jobs = errors.map((error) => queue.createJob({ error }));
       const afterFailed = jobs.map((job) => helpers.waitOn(job, 'failed'));
 
       await Promise.all(jobs.map((job) => job.save()));
@@ -1405,7 +1328,7 @@ describe('Queue', (it) => {
 
       const succeeded = helpers.waitOn(queue, 'succeeded');
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
@@ -1425,7 +1348,7 @@ describe('Queue', (it) => {
       queue.once('failed', fail);
       const failed = helpers.waitOn(queue, 'failed');
 
-      const job = await queue.createJob({foo: 'bar'}).timeout(10).save();
+      const job = await queue.createJob({ foo: 'bar' }).timeout(10).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
       t.is(job.options.timeout, 10);
@@ -1465,7 +1388,7 @@ describe('Queue', (it) => {
         t.is(err.message, failMsg);
       });
 
-      const job = await queue.createJob({foo: 'bar'}).retries(retries).save();
+      const job = await queue.createJob({ foo: 'bar' }).retries(retries).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
       t.is(job.options.retries, retries);
@@ -1505,7 +1428,9 @@ describe('Queue', (it) => {
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         if (job.options.retries) {
-          return helpers.defer(20);
+          // todo this was .defer(20) - no such thing
+          // assuming this is supposed to be delay, but how did it pass before?
+          return helpers.delay(20);
         }
         t.is(failCount, retries);
         finish();
@@ -1518,7 +1443,7 @@ describe('Queue', (it) => {
       });
 
       const job = await queue
-        .createJob({foo: 'bar'})
+        .createJob({ foo: 'bar' })
         .timeout(10)
         .retries(retries)
         .save();
@@ -1586,7 +1511,7 @@ describe('Queue', (it) => {
 
       const jobs = [];
       for (let i = 0; i < numJobs; i++) {
-        jobs.push(queue.createJob({count: i}));
+        jobs.push(queue.createJob({ count: i }));
       }
 
       // Save all the jobs.
@@ -1616,7 +1541,7 @@ describe('Queue', (it) => {
       });
 
       for (let i = 0; i < numJobs; i++) {
-        await queue.createJob({count: i}).save();
+        await queue.createJob({ count: i }).save();
       }
 
       return end;
@@ -1643,7 +1568,7 @@ describe('Queue', (it) => {
 
       for (let i = 0; i < numJobs; i++) {
         setTimeout(() => {
-          queue.createJob({count: i}).save().catch(finish);
+          queue.createJob({ count: i }).save().catch(finish);
         }, Math.random() * 50);
       }
 
@@ -1690,10 +1615,11 @@ describe('Queue', (it) => {
       }
 
       for (let i = 0; i < numJobs; i++) {
-        queue.createJob({count: i}).save();
+        queue.createJob({ count: i }).save();
       }
 
-      return end.then(() => t.context.handleErrors(t));
+      await end;
+      t.context.handleErrors(t);
     });
   });
 
@@ -1727,7 +1653,7 @@ describe('Queue', (it) => {
           strategy: 'my-custom-backoff',
           delay: 100,
         });
-        t.deepEqual(job.data, {is: 'my-custom-backoff'});
+        t.deepEqual(job.data, { is: 'my-custom-backoff' });
         calls.push(Date.now());
         if (calls.length === 1) {
           throw new Error('forced retry');
@@ -1738,7 +1664,7 @@ describe('Queue', (it) => {
       const succeed = helpers.waitOn(queue, 'succeeded', true);
 
       await queue
-        .createJob({is: 'my-custom-backoff'})
+        .createJob({ is: 'my-custom-backoff' })
         .retries(2)
         .backoff('my-custom-backoff', 100)
         .save();
@@ -1763,7 +1689,7 @@ describe('Queue', (it) => {
           strategy: 'fixed',
           delay: 100,
         });
-        t.deepEqual(job.data, {is: 'fixed'});
+        t.deepEqual(job.data, { is: 'fixed' });
         calls.push(Date.now());
         if (calls.length === 1) {
           throw new Error('forced retry');
@@ -1774,7 +1700,7 @@ describe('Queue', (it) => {
       const succeed = helpers.waitOn(queue, 'succeeded', true);
 
       await queue
-        .createJob({is: 'fixed'})
+        .createJob({ is: 'fixed' })
         .retries(2)
         .backoff('fixed', 100)
         .save();
@@ -1798,7 +1724,7 @@ describe('Queue', (it) => {
         t.deepEqual(job.options.backoff, {
           strategy: 'immediate',
         });
-        t.deepEqual(job.data, {is: 'immediate'});
+        t.deepEqual(job.data, { is: 'immediate' });
         calls.push(Date.now());
         if (calls.length === 1) {
           throw new Error('forced retry');
@@ -1809,7 +1735,7 @@ describe('Queue', (it) => {
       const succeed = helpers.waitOn(queue, 'succeeded', true);
 
       await queue
-        .createJob({is: 'immediate'})
+        .createJob({ is: 'immediate' })
         .retries(2)
         .backoff('immediate')
         .save();
@@ -1834,7 +1760,7 @@ describe('Queue', (it) => {
           strategy: 'exponential',
           delay: 30 * Math.pow(2, calls.length),
         });
-        t.deepEqual(job.data, {is: 'exponential'});
+        t.deepEqual(job.data, { is: 'exponential' });
         calls.push(Date.now());
         if (calls.length < 3) {
           throw new Error('forced retry');
@@ -1844,7 +1770,7 @@ describe('Queue', (it) => {
       const succeed = helpers.waitOn(queue, 'succeeded', true);
 
       await queue
-        .createJob({is: 'exponential'})
+        .createJob({ is: 'exponential' })
         .retries(3)
         .backoff('exponential', 30)
         .save();
@@ -1868,9 +1794,9 @@ describe('Queue', (it) => {
       });
 
       const jobs = [
-        queue.createJob({foo: 'bar1'}),
-        queue.createJob({foo: 'bar2'}),
-        queue.createJob({foo: 'bar3'}),
+        queue.createJob({ foo: 'bar1' }),
+        queue.createJob({ foo: 'bar2' }),
+        queue.createJob({ foo: 'bar3' }),
       ];
 
       // Save the three jobs.
@@ -1883,7 +1809,7 @@ describe('Queue', (it) => {
       // them as stalled.
       await forceStall(queue);
 
-      const {done, next} = reef(jobs.length);
+      const { done, next } = helpers.reef(jobs.length);
       queue.process(async () => {
         next();
       });
@@ -1900,7 +1826,7 @@ describe('Queue', (it) => {
 
       // Create 1025 jobs
       const jobs = Array.from(new Array(1025)).map((_, i) =>
-        queue.createJob({foo: `bar${i}`})
+        queue.createJob({ foo: `bar${i}` })
       );
 
       // Save the jobs.
@@ -1913,7 +1839,7 @@ describe('Queue', (it) => {
       // them as stalled.
       await forceStall(queue);
 
-      const {done, next} = reef(jobs.length);
+      const { done, next } = helpers.reef(jobs.length);
       queue.process(async () => {
         next();
       });
@@ -1934,7 +1860,7 @@ describe('Queue', (it) => {
           await Promise.all([
             // Do nada.
             stallQueue._getNextJob(),
-            stallQueue.createJob({foo: 'bar'}).save(),
+            stallQueue.createJob({ foo: 'bar' }).save(),
           ]);
 
           await stallQueue.close();
@@ -1947,7 +1873,7 @@ describe('Queue', (it) => {
 
       await forceStall(queue);
 
-      const {done, next} = reef(queues.length);
+      const { done, next } = helpers.reef(queues.length);
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         next();
@@ -1968,18 +1894,20 @@ describe('Queue', (it) => {
 
       const jobs = [];
       for (let i = 0; i < numJobs; i++) {
-        jobs.push(deadQueue.createJob({count: i}));
+        jobs.push(deadQueue.createJob({ count: i }));
       }
 
       // Save all the jobs.
       await Promise.all(jobs.map((job) => job.save()));
 
-      const {done: resume, next: spooled} = reef();
+      const { done: resume, next: spooled } = helpers.reef();
       deadQueue.process(concurrency, () => {
         // Wait for it to get all spooled up...
         if (deadQueue.running === concurrency) {
           spooled();
         }
+        // have to make sure these jobs never finish!
+        return new Promise(() => {});
       });
 
       await resume;
@@ -1994,7 +1922,7 @@ describe('Queue', (it) => {
         endDelay: 2,
       });
 
-      const {done, next} = reef(numJobs);
+      const { done, next } = helpers.reef(numJobs);
       queue.process(async () => {
         next() || t.fail('processed too many jobs');
       });
@@ -2034,8 +1962,8 @@ describe('Queue', (it) => {
 
       // Save the two jobs.
       const firstJobs = await Promise.all([
-        deadQueue.createJob({foo: 'bar1'}).save(),
-        deadQueue.createJob({foo: 'bar2'}).save(),
+        deadQueue.createJob({ foo: 'bar1' }).save(),
+        deadQueue.createJob({ foo: 'bar2' }).save(),
       ]);
 
       await deadJobs.shift();
@@ -2070,8 +1998,8 @@ describe('Queue', (it) => {
       deadQueue.process((job) => deadJobs.pushSuspend(job));
 
       const secondJobs = await Promise.all([
-        deadQueue.createJob({foo: 'bar1'}).save(),
-        deadQueue.createJob({foo: 'bar2'}).save(),
+        deadQueue.createJob({ foo: 'bar1' }).save(),
+        deadQueue.createJob({ foo: 'bar2' }).save(),
       ]);
 
       const secondJobIds = new Set(secondJobs.map((job) => job.id));
@@ -2154,9 +2082,9 @@ describe('Queue', (it) => {
       const deadQueue = t.context.makeQueue();
 
       const jobs = [
-        deadQueue.createJob({foo: 'bar1'}),
-        deadQueue.createJob({foo: 'bar2'}),
-        deadQueue.createJob({foo: 'bar3'}),
+        deadQueue.createJob({ foo: 'bar1' }),
+        deadQueue.createJob({ foo: 'bar2' }),
+        deadQueue.createJob({ foo: 'bar3' }),
       ];
 
       // Save all the jobs.
@@ -2166,7 +2094,7 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       let jobCount = 0;
 
-      const {done, next} = reef();
+      const { done, next } = helpers.reef();
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar' + ++jobCount);
         if (jobCount < 3) return;
@@ -2182,7 +2110,7 @@ describe('Queue', (it) => {
     it('does not process an in-progress job when a new queue starts', async (t) => {
       const queue = t.context.makeQueue();
 
-      await queue.createJob({foo: 'bar'}).save();
+      await queue.createJob({ foo: 'bar' }).save();
 
       const jobDone = helpers.deferred(),
         finishJob = jobDone.defer();
@@ -2208,7 +2136,7 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();
 
-      const job = queue.createJob({foo: 'bar'});
+      const job = queue.createJob({ foo: 'bar' });
       const record = Promise.all([
         recordUntil(job, ['succeeded'], 'succeeded'),
         recordUntil(queue, ['job succeeded'], 'job succeeded'),
@@ -2230,7 +2158,7 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();
 
-      const job = queue.createJob({foo: 'bar'});
+      const job = queue.createJob({ foo: 'bar' });
       const record = Promise.all([
         recordUntil(job, ['succeeded'], 'succeeded'),
         recordUntil(queue, ['job succeeded'], 'job succeeded'),
@@ -2252,7 +2180,7 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();
 
-      const job = queue.createJob({foo: 'bar'});
+      const job = queue.createJob({ foo: 'bar' });
       const record = Promise.all([
         recordUntil(job, ['failed'], 'failed'),
         recordUntil(queue, ['job failed'], 'job failed'),
@@ -2280,7 +2208,7 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();
 
-      const job = queue.createJob({foo: 'bar'});
+      const job = queue.createJob({ foo: 'bar' });
       const record = Promise.all([
         recordUntil(job, ['progress', 'succeeded'], 'succeeded'),
         recordUntil(queue, ['job progress', 'job succeeded'], 'job succeeded'),
@@ -2311,7 +2239,7 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();
 
-      const job = queue.createJob({foo: 'bar'}).retries(1);
+      const job = queue.createJob({ foo: 'bar' }).retries(1);
       const record = Promise.all([
         recordUntil(job, ['retrying', 'succeeded'], 'succeeded'),
         recordUntil(queue, ['job retrying', 'job succeeded'], 'job succeeded'),
@@ -2356,7 +2284,7 @@ describe('Queue', (it) => {
       t.is(queue.eclient, null);
 
       await queue
-        .createJob({foo: 'bar'})
+        .createJob({ foo: 'bar' })
         // Holy race condition, batman!
         .on('succeeded', () => t.fail('should not trigger a succeeded event'))
         .save();
@@ -2378,7 +2306,7 @@ describe('Queue', (it) => {
       });
 
       await queue
-        .createJob({foo: 'bar'})
+        .createJob({ foo: 'bar' })
         .on('succeeded', () => t.fail('should not trigger a succeeded event'))
         .save();
 
@@ -2394,8 +2322,8 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();
 
-      const job1 = queue.createJob({foo: 'bar'});
-      const job2 = queue.createJob({foo: 'baz'});
+      const job1 = queue.createJob({ foo: 'bar' });
+      const job2 = queue.createJob({ foo: 'baz' });
       const record = Promise.all([
         recordUntil(job1, ['succeeded'], 'succeeded'),
         recordUntil(job2, ['succeeded'], 'succeeded'),
@@ -2433,7 +2361,7 @@ describe('Queue', (it) => {
         t.is(job.data.foo, 'bar');
       });
 
-      const job = await queue.createJob({foo: 'bar'}).save();
+      const job = await queue.createJob({ foo: 'bar' }).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
@@ -2441,14 +2369,13 @@ describe('Queue', (it) => {
       t.truthy(successJob);
 
       await queue
-        .createJob({foo: 'bip'})
+        .createJob({ foo: 'bip' })
         .delayUntil(Date.now() + 10 * 24 * 60 * 60 * 1000)
         .save();
 
       await queue.destroy();
 
-      const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
-      const keys = await getKeys(queue.toKey('*'));
+      const keys = await queue.client.keys(queue.toKey('*'));
       t.deepEqual(keys, []);
     });
 
@@ -2458,18 +2385,6 @@ describe('Queue', (it) => {
       await queue.close();
 
       await t.throws(queue.destroy(), 'closed');
-    });
-
-    it('should support callbacks', async (t) => {
-      const queue = t.context.makeQueue();
-
-      await queue.createJob({zoo: 't'}).save();
-
-      await helpers.callAsync((done) => queue.destroy(done));
-
-      const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
-      const keys = await getKeys(queue.toKey('*'));
-      t.deepEqual(keys, []);
     });
   });
 });
