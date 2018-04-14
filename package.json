@@ -32,7 +32,8 @@
     "lib"
   ],
   "scripts": {
-    "build-docs": "vuepress build docs",
+    "vuepress-feature-html-hack": "sed -i -e 's|{{ feature.details }}|<span v-html=\"feature.details\"></span>|g' node_modules/vuepress/lib/default-theme/Home.vue",
+    "build-docs": "npm run vuepress-feature-html-hack && vuepress build docs",
     "precommit": "npm run eslint",
     "test": "npm run eslint && ava",
     "eslint": "eslint lib/ test/",
