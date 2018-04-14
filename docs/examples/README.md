@@ -1,8 +1,3 @@
-# Basic Examples
-hi there
+# Examples Part One
 
-## Example 1
-hi
-
-## Example 2
-hi
+Hello there

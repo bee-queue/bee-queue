@@ -5,7 +5,7 @@ module.exports = {
   head: [
     ['link', { rel: 'icon', href: `/logo.png` }]
   ],
-  ga: '', // todo GA ID
+  ga: 'UA-42739772-3',
   serviceWorker: true,
   themeConfig: {
     repo: 'bee-queue/bee-queue',
@@ -26,22 +26,13 @@ module.exports = {
       },
     ],
     sidebar: {
-      '/guide/': [
-        {
-          title: 'Guide',
-          collapsable: false,
-          children: [
-            '',
-          ]
-        }
-      ],
       '/examples/': [
         {
           title: 'Examples',
           collapsable: false,
           children: [
             '',
-            'reusing-connections'
+            'reusing-connections',
           ]
         },
       ]

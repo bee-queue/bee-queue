@@ -11,7 +11,7 @@ features:
 - title: Robust
   details: Designed with concurrency, atomicity, and failure in mind. Each line of code has two lines of tests.
 - title: Runs At Scale
-  details: Mixmax's back end uses Bee-Queue to process over a billion jobs every week. Read their <a href="https://mixmax.com/blog/bee-queue-v1-node-redis-queue" target="_blank">blog post.</a>
+  details: Mixmax's back end uses Bee-Queue to process over a billion jobs every week. Read their <a href="https://mixmax.com/blog/bee-queue-v1-node-redis-queue" target="_blank" rel="noopener">blog post.</a>
 - title: Modern JavaScript API
   details: A fluent interface for adding timeouts, retry policies, and delayed execution. Works great with async/await.
 - title: Widely Used

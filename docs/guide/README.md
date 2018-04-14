@@ -1,3 +1,7 @@
+---
+sidebar: auto
+---
+
 # Guide Part One
 Hello there
 
