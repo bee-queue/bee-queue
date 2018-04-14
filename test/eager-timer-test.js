@@ -1,10 +1,12 @@
-import {describe} from 'ava-spec';
+import { describe } from 'ava-spec';
 import sandbox from 'sandboxed-module';
 import lolex from 'lolex';
 import sinon from 'sinon';
 
 function maybeCoverage() {
-  return Object.keys(require.cache).some((path) => /node_modules\/nyc/.test(path));
+  return Object.keys(require.cache).some((path) =>
+    /node_modules\/nyc/.test(path)
+  );
 }
 
 describe('EagerTimer', (it) => {
@@ -17,28 +19,32 @@ describe('EagerTimer', (it) => {
       locals: {
         setTimeout: clock.setTimeout,
         clearTimeout: clock.clearTimeout,
-        Date: clock.Date
+        Date: clock.Date,
       },
       // Voodoo magic to support nyc.
-      sourceTransformers: maybeCoverage() ? {
-        nyc(source) {
-          const Instrumenter = require('nyc/lib/instrumenters/istanbul');
-          const instrumenter = Instrumenter(process.cwd(), {});
-          const instrumentMethod = instrumenter.instrumentSync.bind(instrumenter);
-          return instrumentMethod(source, this.filename);
-        }
-      } : {}
+      sourceTransformers: maybeCoverage()
+        ? {
+            nyc(source) {
+              const Instrumenter = require('nyc/lib/instrumenters/istanbul');
+              const instrumenter = Instrumenter(process.cwd(), {});
+              const instrumentMethod = instrumenter.instrumentSync.bind(
+                instrumenter
+              );
+              return instrumentMethod(source, this.filename);
+            },
+          }
+        : {},
     });
 
     const timer = new EagerTimer(500);
     const trigger = sinon.spy();
     timer.on('trigger', trigger);
 
-    Object.assign(t.context, {EagerTimer, timer, clock, start, trigger});
+    Object.assign(t.context, { EagerTimer, timer, clock, start, trigger });
   });
 
   it('should trigger in the future', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 200);
     t.false(trigger.called);
@@ -47,7 +53,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should not trigger after the maximum delay', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 600);
     t.false(trigger.called);
@@ -56,7 +62,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should trigger again', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 600);
     t.is(clock.next(), start + 500);
@@ -66,7 +72,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should overwrite a later timer', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 300);
     timer.schedule(start + 200);
@@ -76,7 +82,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should overwrite a later timer after a delay', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 300);
     clock.tick(5);
@@ -88,7 +94,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should not overwrite an earlier timer', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 20);
     timer.schedule(start + 300);
@@ -98,7 +104,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should not overwrite an earlier timer with the maximum delay', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 20);
     timer.schedule(start + 1000);
@@ -108,7 +114,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should trigger after the maximum delay for negative times', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(-1);
     t.is(clock.next(), start + 500);
@@ -116,7 +122,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should trigger after the maximum delay on null', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(null);
     t.is(clock.next(), start + 500);
@@ -124,7 +130,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should trigger after the maximum delay on undefined', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(undefined);
     t.is(clock.next(), start + 500);
@@ -132,7 +138,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should trigger after the maximum delay on NaN', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(NaN);
     t.is(clock.next(), start + 500);
@@ -140,7 +146,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should not overwrite an earlier timer on null', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 20);
     timer.schedule(null);
@@ -150,7 +156,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should trigger immediately for passed timestamps', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start - 5);
     t.true(trigger.calledOnce);
@@ -158,7 +164,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should not trigger after stopping', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 50);
     clock.tick(25);
@@ -168,7 +174,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should not schedule immediately after stopping', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 50);
     clock.tick(25);
@@ -179,7 +185,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should not schedule later after stopping', (t) => {
-    const {clock, timer, start, trigger} = t.context;
+    const { clock, timer, start, trigger } = t.context;
 
     timer.schedule(start + 50);
     clock.tick(25);
@@ -190,7 +196,7 @@ describe('EagerTimer', (it) => {
   });
 
   it('should fail on invalid maximum delays', (t) => {
-    const {EagerTimer} = t.context;
+    const { EagerTimer } = t.context;
 
     t.throws(() => new EagerTimer(-1), /positive integer/i);
     t.throws(() => new EagerTimer(NaN), /positive integer/i);

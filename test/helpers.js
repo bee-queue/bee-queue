@@ -1,9 +1,9 @@
-const {delay, waitOn, deferred} = require('promise-callbacks');
+const { delay, waitOn, deferred } = require('promise-callbacks');
 
 // A promise-based barrier.
 function reef(n = 1) {
   let next;
-  const done = new Promise(resolve => {
+  const done = new Promise((resolve) => {
     next = () => {
       --n;
       if (n < 0) return false;
@@ -11,7 +11,7 @@ function reef(n = 1) {
       return true;
     };
   });
-  return {done, next};
+  return { done, next };
 }
 
 async function delKeys(client, pattern) {
@@ -26,5 +26,5 @@ module.exports = {
   delKeys,
   deferred,
   delay,
-  waitOn
+  waitOn,
 };
