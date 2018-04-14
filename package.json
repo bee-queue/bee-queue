@@ -19,7 +19,8 @@
     "prettier": "^1.12.0",
     "promise-callbacks": "^3.0.0",
     "sandboxed-module": "^2.0.3",
-    "sinon": "^2.3.8"
+    "sinon": "^2.3.8",
+    "vuepress": "^0.3.0"
   },
   "files": [
     "HISTORY.md",
@@ -31,6 +32,7 @@
     "lib"
   ],
   "scripts": {
+    "build-docs": "vuepress build docs",
     "precommit": "npm run eslint",
     "test": "npm run eslint && ava",
     "eslint": "eslint lib/ test/",
