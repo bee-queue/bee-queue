@@ -8,6 +8,7 @@ import {promisify} from 'promise-callbacks';
 
 import redis from '../lib/redis';
 import {createClient} from 'redis';
+import {Cluster} from 'ioredis';
 
 // A promise-based barrier.
 function reef(n = 1) {
@@ -554,6 +555,30 @@ describe('Queue', (it) => {
       });
 
       await t.notThrows(queue.createJob().save());
+    });
+
+    it('should create a Queue with an existing ioredis instance', async (t) => {
+      const client = new Cluster([{port: 30001}, {port: 30002}]);
+
+      t.true(redis.isCluster(client));
+      t.false(redis.isCluster());
+      t.false(redis.isCluster(await redis.createClient()));
+
+      const queue = t.context.makeQueue({
+        redis: client
+      });
+
+      t.is(queue.settings.keyPrefix, `bq:{${t.context.queueName}}:`);
+
+      await queue.createJob().save();
+
+      t.is(queue.client, client);
+      t.not(queue.eclient, client);
+
+      await queue.close();
+
+      t.true(redis.isReady(client));
+      t.false(redis.isReady(queue.eclient));
     });
   });
 
