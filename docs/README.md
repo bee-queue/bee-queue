@@ -45,7 +45,7 @@ const Queue = require('bee-queue');
 const queue = new Queue('example');
 
 queue.process(async (job) => {
-  console.log(`Processing job ${job.id}!`);
+  console.log(`Processing job ${job.id}!!!!!!!!!!!`);
   return job.data.x + job.data.y;
 });
 ```
