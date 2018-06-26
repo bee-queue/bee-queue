@@ -665,6 +665,8 @@ Stored in `job.options.retries` and decremented each time the job is retried.
 
 Defaults to 0.
 
+_N.B.: bee-queue's retries jobs by re-enqueuing failed jobs as delayed jobs. This means you need to enable `activateDelayedJobs` on any queue that uses retry/backoff functionality._
+
 #### Job#backoff(strategy, delayFactor)
 
 ```js
@@ -685,6 +687,8 @@ Sets the backoff policy when handling retries.
 This setting is stored in `job.options.backoff` as `{strategy, delay}`.
 
 Defaults to `'immediate'`.
+
+_N.B.: bee-queue's retries jobs by re-enqueuing failed jobs as delayed jobs. This means you need to enable `activateDelayedJobs` on any queue that uses retry/backoff functionality._
 
 #### Job#delayUntil(date|timestamp)
 

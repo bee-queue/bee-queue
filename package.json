@@ -11,7 +11,7 @@
     "ava": "^0.21.0",
     "ava-spec": "^1.1.0",
     "coveralls": "^2.11.2",
-    "eslint": ">= 3",
+    "eslint": "^3",
     "lolex": "^2.0.0",
     "nyc": "^11.0.3",
     "sandboxed-module": "^2.0.3",
