@@ -1,6 +1,10 @@
+/// <reference types="node" />
+/// <reference types="redis" />
+
+import { EventEmitter } from 'events';
 import { ClientOpts } from 'redis';
 
-declare class BeeQueue {
+declare class BeeQueue<T = any> extends EventEmitter {
   name: string;
   keyPrefix: string;
   jobs: any;
@@ -11,9 +15,9 @@ declare class BeeQueue {
 
   on(ev: "ready",     fn: () => void): this;
   on(ev: "error",     fn: (err: Error) => void): this;
-  on(ev: "succeeded", fn: (job: BeeQueue.Job, result: any) => void): this;
-  on(ev: "retrying",  fn: (job: BeeQueue.Job, err: Error) => void): this;
-  on(ev: "failed",    fn: (job: BeeQueue.Job, err: Error) => void): this;
+  on(ev: "succeeded", fn: (job: BeeQueue.Job<T>, result: any) => void): this;
+  on(ev: "retrying",  fn: (job: BeeQueue.Job<T>, err: Error) => void): this;
+  on(ev: "failed",    fn: (job: BeeQueue.Job<T>, err: Error) => void): this;
   on(ev: "stalled",   fn: (jobId: string) => void): this;
 
   on(ev: "job succeeded", fn: (jobId: string, result: any) => void): this;
@@ -21,18 +25,18 @@ declare class BeeQueue {
   on(ev: "job failed",    fn: (jobId: string, err: Error) => void): this;
   on(ev: "job progress",  fn: (jobId: string, progress: number) => void): this;
 
-  createJob<T>(data: T): BeeQueue.Job;
+  createJob<U>(data: U): BeeQueue.Job<T>;
 
-  getJob(jobId: string, cb: (job: BeeQueue.Job) => void): void;
-  getJob(jobId: string): Promise<BeeQueue.Job>;
+  getJob(jobId: string, cb: (job: BeeQueue.Job<T>) => void): void;
+  getJob(jobId: string): Promise<BeeQueue.Job<T>>;
 
-  getJobs(type: string, page: BeeQueue.Page, cb: (jobs: BeeQueue.Job[]) => void): void;
-  getJobs(type: string, page: BeeQueue.Page): Promise<BeeQueue.Job[]>;
+  getJobs(type: string, page: BeeQueue.Page, cb: (jobs: BeeQueue.Job<T>[]) => void): void;
+  getJobs(type: string, page: BeeQueue.Page): Promise<BeeQueue.Job<T>[]>;
 
-  process<T>(handler: (job: BeeQueue.Job) => Promise<T>): void;
-  process<T>(concurrency: number, handler: (job: BeeQueue.Job) => Promise<T>): void;
-  process<T>(handler: (job: BeeQueue.Job, done: BeeQueue.DoneCallback<T>) => void): void;
-  process<T>(concurrency: number, handler: (job: BeeQueue.Job, done: BeeQueue.DoneCallback<T>) => void): void;
+  process<U>(handler: (job: BeeQueue.Job<T>) => Promise<U>): void;
+  process<U>(handler: (job: BeeQueue.Job<T>, done: BeeQueue.DoneCallback<U>) => void): void;
+  process<U>(concurrency: number, handler: (job: BeeQueue.Job<T>) => Promise<U>): void;
+  process<U>(concurrency: number, handler: (job: BeeQueue.Job<T>, done: BeeQueue.DoneCallback<U>) => void): void;
 
   checkStalledJobs(interval?: number): Promise<number>;
   checkStalledJobs(interval: number, cb: (err: Error, numStalled: number) => void): void
@@ -76,11 +80,11 @@ declare namespace BeeQueue {
     redisScanCount?: number
   }
 
-  interface Job {
+  interface Job<T> extends EventEmitter {
     id: string;
-    data: any;
+    data: T;
     readonly options: any;
-    queue: BeeQueue;
+    queue: BeeQueue<T>;
     progress: number;
 
     on(ev: "succeeded", fn: (result: any) => void): this;
