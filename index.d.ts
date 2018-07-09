@@ -25,6 +25,9 @@ declare class BeeQueue<T = any> extends EventEmitter {
   on(ev: "job failed",    fn: (jobId: string, err: Error) => void): this;
   on(ev: "job progress",  fn: (jobId: string, progress: number) => void): this;
 
+  ready(): Promise<this>;
+  ready(cb: (err: Error | null) => void): this;
+
   createJob<U>(data: U): BeeQueue.Job<T>;
 
   getJob(jobId: string, cb: (job: BeeQueue.Job<T>) => void): void;
