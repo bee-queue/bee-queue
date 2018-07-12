@@ -28,7 +28,7 @@ declare class BeeQueue<T = any> extends EventEmitter {
   ready(): Promise<this>;
   ready(cb: (err: Error | null) => void): this;
 
-  createJob<U>(data: U): BeeQueue.Job<T>;
+  createJob<U extends T>(data: U): BeeQueue.Job<U>;
 
   getJob(jobId: string, cb: (job: BeeQueue.Job<T>) => void): void;
   getJob(jobId: string): Promise<BeeQueue.Job<T>>;
