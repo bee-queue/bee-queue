@@ -9,6 +9,9 @@ declare class BeeQueue {
 
   constructor(name: string, settings?: BeeQueue.QueueSettings);
 
+  ready(cb?: (err?: Error | null) => any): Promise<BeeQueue>
+  isRunning (): boolean
+
   on(ev: "ready",     fn: () => void): this;
   on(ev: "error",     fn: (err: Error) => void): this;
   on(ev: "succeeded", fn: (job: BeeQueue.Job, result: any) => void): this;
