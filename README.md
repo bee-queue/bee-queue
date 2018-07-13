@@ -580,7 +580,7 @@ const counts = await queue.checkHealth();
 console.log('job state counts:', counts);
 ```
 
-#### Queue#close([cb])
+#### Queue#close([timeout], [cb])
 
 Closes the queue's connections to Redis. Idempotent.
 

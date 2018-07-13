@@ -1710,6 +1710,47 @@ describe('Queue', (it) => {
       t.throws(() => job.backoff('fixed', 44.5), /positive integer/i);
     });
 
+    it('should support custom backoff strategies', async (t) => {
+      const queue = t.context.makeQueue({
+        activateDelayedJobs: true,
+      });
+
+      queue.backoffStrategies.set(
+        'my-custom-backoff',
+        (job) => job.options.backoff.delay
+      );
+
+      const calls = [];
+
+      queue.process(async (job) => {
+        t.deepEqual(job.options.backoff, {
+          strategy: 'my-custom-backoff',
+          delay: 100,
+        });
+        t.deepEqual(job.data, {is: 'my-custom-backoff'});
+        calls.push(Date.now());
+        if (calls.length === 1) {
+          throw new Error('forced retry');
+        }
+        t.is(calls.length, 2);
+      });
+
+      const succeed = helpers.waitOn(queue, 'succeeded', true);
+
+      await queue
+        .createJob({is: 'my-custom-backoff'})
+        .retries(2)
+        .backoff('my-custom-backoff', 100)
+        .save();
+
+      await succeed;
+
+      t.is(calls.length, 2);
+
+      // Ensure there was a delay.
+      t.true(calls[1] - calls[0] >= 100);
+    });
+
     it('should handle fixed backoff', async (t) => {
       const queue = t.context.makeQueue({
         activateDelayedJobs: true,
