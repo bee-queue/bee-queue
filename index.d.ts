@@ -85,7 +85,7 @@ declare namespace BeeQueue {
 
     setId(id: string): this;
     retries(n: number): this;
-    backoff(strategy: "immediate" | "fixed" | "exponential", delayFactor: number): this;
+    backoff(strategy: "immediate" | "fixed" | "exponential", delayFactor?: number): this;
     delayUntil(dateOrTimestamp: Date | number): this;
     timeout(milliseconds: number): this;
     save(): Promise<this>;
