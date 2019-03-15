@@ -548,7 +548,7 @@ describe('Queue', (it) => {
         },
       });
 
-      const jobSpy = sinon.spy(queue, '_getNextJob');
+      const jobSpy = sinon.spy(queue, '_waitForJob');
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
