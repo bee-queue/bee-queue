@@ -589,6 +589,38 @@ describe('Queue', (it) => {
 
       t.context.queueErrors = t.context.queueErrors.filter((e) => e !== err);
     });
+
+    it('should backoff retries to brpoplpush', async (t) => {
+      const queue = t.context.makeQueue({
+        initialRedisFailureRetryDelay: 1,
+      });
+
+      await helpers.waitOn(queue, 'ready');
+
+      queue.bclient.brpoplpush = function (source, destination, timeout, cb) {
+        cb(new Error('redis failed'));
+      };
+
+      const jobSpy = sinon.spy(queue, '_waitForJob');
+      const errors = [];
+      queue.on('error', (err) => {
+        t.is(err.message, 'redis failed');
+        errors.push(err);
+      });
+
+      queue.process(() => {});
+
+      // Not called at all yet because queue.process uses setImmediate.
+      t.is(jobSpy.callCount, 0);
+
+      await helpers.delay(12);
+      t.is(jobSpy.callCount, 4);
+      t.is(errors.length, 4);
+
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => !errors.includes(e)
+      );
+    });
   });
 
   it.describe('Constructor', (it) => {
