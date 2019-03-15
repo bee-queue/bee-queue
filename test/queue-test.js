@@ -592,7 +592,7 @@ describe('Queue', (it) => {
 
     it('should backoff retries to brpoplpush', async (t) => {
       const queue = t.context.makeQueue({
-        initialRedisFailureRetryDelay: 1,
+        initialRedisFailureRetryDelay: 10,
       });
 
       await helpers.waitOn(queue, 'ready');
@@ -601,7 +601,6 @@ describe('Queue', (it) => {
         cb(new Error('redis failed'));
       };
 
-      const jobSpy = sinon.spy(queue, '_waitForJob');
       const errors = [];
       queue.on('error', (err) => {
         t.is(err.message, 'redis failed');
@@ -610,15 +609,25 @@ describe('Queue', (it) => {
 
       queue.process(() => {});
 
-      // Not called at all yet because queue.process uses setImmediate.
-      t.is(jobSpy.callCount, 0);
-
-      await helpers.delay(12);
-      t.is(jobSpy.callCount, 4);
-      t.is(errors.length, 4);
-
+      const firstErr = await helpers.waitOn(queue, 'error');
+      t.is(firstErr.message, 'redis failed');
+      const start = new Date();
       t.context.queueErrors = t.context.queueErrors.filter(
-        (e) => !errors.includes(e)
+        (e) => e !== firstErr
+      );
+
+      const secondErr = await helpers.waitOn(queue, 'error');
+      t.is(secondErr.message, 'redis failed');
+      t.true(new Date() - start > 10);
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => e !== secondErr
+      );
+
+      const thirdErr = await helpers.waitOn(queue, 'error');
+      t.is(thirdErr.message, 'redis failed');
+      t.true(new Date() - start > 30);
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => e !== thirdErr
       );
     });
   });
