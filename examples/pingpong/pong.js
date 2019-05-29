@@ -1,12 +1,16 @@
-var Queue = require('../../');
+'use strict'
 
-var pingQueue = Queue('ping');
-var pongQueue = Queue('pong');
+const Queue = require('../../')
 
-pingQueue.process(function (job, done) {
-  console.log('Pong received ping');
-  pongQueue.createJob().save(function () {
-    console.log('Pong sent back pong');
-    done();
-  });
-});
+const pingQueue = new Queue('ping')
+const pongQueue = new Queue('pong')
+
+pingQueue.process(async function (job) {
+  console.log(`Ping job received: (ID: ${job.id})`)
+
+  await pongQueue.createJob().save()
+  console.log('Created pong job');
+
+})
+
+console.log('Pong queue is ready to process jobs')
