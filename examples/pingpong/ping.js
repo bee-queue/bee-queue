@@ -1,17 +1,18 @@
-var Queue = require('../../');
-var pingQueue = Queue('ping');
-var pongQueue = Queue('pong');
+/* eslint-disable no-console */
+'use strict';
 
-pongQueue.process(function (job, done) {
-  console.log('Ping received back pong');
-  done();
+const Queue = require('../../');
+
+const pingQueue = new Queue('ping');
+const pongQueue = new Queue('pong');
+
+pongQueue.process(async (job) => {
+  console.log(`Pong job received (ID: ${job.id})`);
 });
 
-var sendPing = function () {
-  pingQueue.createJob().save(function () {
-    console.log('Ping sent ping');
-  });
+const sendPing = async () => {
+  await pingQueue.createJob().save();
+  console.log('Created ping job');
 };
 
-sendPing();
-setTimeout(sendPing, 2000);
+setInterval(sendPing, 1000);
