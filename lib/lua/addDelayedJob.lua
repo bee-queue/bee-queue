@@ -12,6 +12,12 @@ local jobId = ARGV[1]
 if jobId == "" then
   jobId = "" .. redis.call("incr", KEYS[1])
 end
+if string.sub(jobId, 1, 2) == "r:" then
+  local id = string.gmatch(jobId, "[^:]*$")()
+  if id == "" then
+    jobId = jobId .. redis.call("incr", KEYS[1])
+  end
+end
 if redis.call("hexists", KEYS[2], jobId) == 1 then return nil end
 redis.call("hset", KEYS[2], jobId, ARGV[2])
 redis.call("zadd", KEYS[3], tonumber(ARGV[3]), jobId)

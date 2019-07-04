@@ -264,4 +264,34 @@ describe('Delayed jobs', (it) => {
     // Verify that we don't overwrite the job.
     t.is(job.options.delay, start + 150);
   });
+
+  it('recurring jobs should be called 3 times', async (t) => {
+    const queue = t.context.makeQueue({
+      activateDelayedJobs: true,
+    });
+
+    const processSpy = sinon.spy(async () => {});
+    queue.process(processSpy);
+
+    await queue.ready();
+
+    const start = Date.now();
+    await queue.createJob({}).setId('recurring').setInterval(100).save();
+    // Wait for the three jobs to completely succeed.
+    await helpers.waitOn(queue, 'succeeded', true);
+    t.true(Date.now() < start + 100);
+    await helpers.waitOn(queue, 'succeeded', true);
+    t.true(Date.now() > start + 100 && Date.now() < start + 200);
+    await helpers.waitOn(queue, 'succeeded', true);
+    t.true(Date.now() > start + 200 && Date.now() < start + 300);
+
+    await queue.removeJob('r:100:recurring');
+    t.true(processSpy.calledThrice);
+
+    t.deepEqual(processSpy.firstCall.args[0].count, 1);
+    t.deepEqual(processSpy.secondCall.args[0].count, 2);
+    t.deepEqual(processSpy.thirdCall.args[0].count, 3);
+
+    t.context.handleErrors(t);
+  });
 });

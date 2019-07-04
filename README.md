@@ -31,12 +31,13 @@ Bee-Queue is meant to power a distributed worker pool and was built with short, 
 
 Thanks to the folks at [Mixmax](https://mixmax.com), Bee-Queue is once again being regularly [maintained](https://mixmax.com/blog/bee-queue-v1-node-redis-queue)!
 
-[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/Automattic/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job prioritization and repeatable jobs, which Bee-Queue [currently does not](#contributing). Bee-Queue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
+[Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/Automattic/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job prioritization which Bee-Queue [currently does not](#contributing). Bee-Queue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
 
 - Create, save, and process jobs
 - Concurrent processing
 - Job timeouts, retries, and retry strategies
 - Scheduled jobs
+- Recurring jobs
 - Pass events via Pub/Sub
   - Progress reporting
   - Send job results back to producers
@@ -148,7 +149,7 @@ job
 
 The Job's `save` method returns a Promise in addition to calling the optional callback.
 
-Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, and `.timeout(ms)` for setting options.
+Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, `.setInterval(ms|string)`, and `.timeout(ms)` for setting options.
 
 Jobs can later be retrieved from Redis using [Queue#getJob](#queuegetjobjobid-cb), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
 
@@ -277,8 +278,8 @@ The `settings` fields are:
 - `storeJobs`: boolean. Disable if this worker does not need to associate events with specific `Job` instances. This normally improves [memory usage](https://github.com/bee-queue/bee-queue/issues/54), as the storage of jobs is unnecessary for many use-cases.
 - `ensureScripts`: boolean. Ensure that the Lua scripts exist in redis before running any commands against redis.
 - `activateDelayedJobs`: boolean. Activate delayed jobs once they've passed their `delayUntil` timestamp. Note that this must be enabled on at least one `Queue` instance for the delayed retry strategies (`fixed` and `exponential`) - this will reactivate them after their computed delay.
-- `removeOnSuccess`: boolean. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down.
-- `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
+- `removeOnSuccess`: boolean. Enable to have this worker automatically remove its successfully completed jobs from Redis, so as to keep memory usage down. Doesn't work with recurring jobs.
+- `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries. Doesn't work with recurring jobs.
 - `quitCommandClient`: boolean. Whether to `QUIT` the redis command client (the client it sends normal operations over) when `Queue#close` is called. This defaults to `true` for normal usage, and `false` if an existing `RedisClient` object was provided to the `redis` option.
 - `redisScanCount`: number. For setting the value of the `SSCAN` Redis command used in `Queue#getJobs` for succeeded and failed job types.
 
@@ -637,7 +638,7 @@ The job has sent a [progress report](#jobreportprogressn) of `progress` percent.
 
 ### Methods
 
-Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, and `.timeout(ms)`.
+Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, `.setInterval(ms|string)`, and `.timeout(ms)`.
 
 #### Job#setId(id)
 
@@ -709,6 +710,18 @@ const job = await queue.createJob({...})
 Sets a job runtime timeout in milliseconds; if the job's handler function takes longer than the timeout to call `done`, the worker assumes the job has failed and reports it as such (causing the job to retry if applicable).
 
 Defaults to no timeout.
+
+#### Job#setInterval(ms|string)
+
+```js
+const job = await queue.createJob({...})
+  .setInterval('10s')
+  .save();
+```
+
+Sets interval for a recurring job; when using `setInterval` your queue must not have either `removeOnSuccess` or `removeOnFailure` set as true and your id must not contain a `:`.
+
+You can supply the interval as numeric ms e.g. `1000` or as text `1s`, `1m`, `1h`, and `1d` respectively for 1 second, 1 minute, 1 hour, and 1 day.
 
 #### Job#save([cb])
 
