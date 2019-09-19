@@ -56,6 +56,10 @@ Thanks to the folks at [Mixmax](https://mixmax.com), Bee-Queue is once again bei
 $ npm install bee-queue
 ```
 
+```sh
+$ yarn add bee-queue
+```
+
 You'll also need [Redis 2.8+](http://redis.io/topics/quickstart)* running somewhere.
 
 \* We've been noticing that some jobs get delayed by virtue of an issue with Redis < 3.2, and therefore recommend the use of Redis 3.2+.
