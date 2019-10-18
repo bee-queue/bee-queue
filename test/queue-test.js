@@ -1142,6 +1142,40 @@ describe('Queue', (it) => {
       t.is(callCount, 2);
     });
 
+    it('processes and retries a job that fails after sameWorker timeout', async (t) => {
+      const queue = t.context.makeQueue({
+        delayFailedJobsByWorker: 1000
+      });
+
+      let callCount = 0;
+      let failedTs = 0;
+      queue.process(async (job) => {
+        callCount++;
+        t.is(job.data.foo, 'bar');
+        if (callCount <= 1) {
+          failedTs = Date.now();
+          throw new Error('failed!');
+        }
+        t.truthy(Date.now() - failedTs >= 1000);
+      });
+
+      queue.on('failed', (job, err) => {
+        t.truthy(job);
+        t.is(job.data.foo, 'bar');
+        t.is(err.message, 'failed!');
+        job.retry();
+      });
+
+      const succeeded = helpers.waitOn(queue, 'succeeded');
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+      t.truthy(job.id);
+      t.is(job.data.foo, 'bar');
+
+      await succeeded;
+      t.is(callCount, 2);
+    });
+
     it('processes a job that times out', async (t) => {
       const queue = t.context.makeQueue();
 
