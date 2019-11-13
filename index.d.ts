@@ -67,7 +67,8 @@ declare namespace BeeQueue {
     removeOnSuccess?: boolean,
     removeOnFailure?: boolean,
     quitCommandClient?: boolean;
-    redisScanCount?: number
+    redisScanCount?: number,
+    delayFailedJobsByWorker: number
   }
 
   interface Job {
