@@ -1,3 +1,12 @@
+1.2.3 / 2020-01-28
+==================
+
+  * Allow arbitrary values for progress (#109).
+  * Fix cleanup of event redis client (#178).
+  * Fix bluebird warning spam (#85).
+  * Update Typescript definition for `Queue#close` method (#180).
+  * Remove Node 4, 6 from CI (#156, 223151c).
+
 1.2.2 / 2018-01-25
 ==================
 
