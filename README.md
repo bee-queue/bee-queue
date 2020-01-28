@@ -232,46 +232,46 @@ To make this happen, workers periodically phone home to Redis about each job the
 
 By default, every time you create a queue instance with `new Queue()` a new redis connection will be created. If you have a small number of queues accross a large number of servers this will probably be fine. If you have a large number of queues with a small number of servers, this will probably be fine too. If your deployment gets a bit larger you will likely need to optimize the Redis connections.
 
-Let's say for example you have a web application with 30 producer queues and you run 10 webservers & 10 worker servers, each one with 4 processes/server. With the default settings this is going to add up to a lot of Redis connections.
+Let's say for example you have a web application with 30 producer queues and you run 10 webservers & 10 worker servers, each one with 4 processes/server. With the default settings this is going to add up to a lot of Redis connections. Each Redis connection consumes a fairly large chunk of memory, and it adds up quickly!
 
 The producer queues are the ones that run on the webserver and they push jobs into the queue. These queues do not need to receive events so they can all share one redis connection by passing in an instance of [node_redis `RedisClient`](https://github.com/NodeRedis/node_redis#rediscreateclient).
 
 Example:
 
-```javascript
+```js
 // producer queues running on the web server
-const Queue = require('bee-queue')
-const redis = require('redis')
+const Queue = require('bee-queue');
+const redis = require('redis');
 const sharedConfig = {
   getEvents: false,
   isWorker: false,
   redis: redis.createClient(process.env.REDIS_URL)
-}
+};
 
-const emailQueue = new Queue('EMAIL_DELIVERY', sharedConfig)
-const facebookUpdateQueue = new Queue('FACEBOOK_UPDATE', sharedConfig)
+const emailQueue = new Queue('EMAIL_DELIVERY', sharedConfig);
+const facebookUpdateQueue = new Queue('FACEBOOK_UPDATE', sharedConfig);
 
-emailQueue.createJob({})
-facebookUpdateQueue.createJob({})
+emailQueue.createJob({});
+facebookUpdateQueue.createJob({});
 ```
 
 Note that these "producer queues" above are only relevant for the processes that have to put jobs into the queue, not for the workers that need to actually process the jobs.
 
 In your worker process where you define how to process the job with `queue.process` you will have to run "worker queues" instead of "producer queues". In the example below, even though you are passing in the shared config with the same redis instance, because this is a worker queue Bee-Queue will `duplicate()` the client because it needs the blocking commands for PubSub subscriptions. This will result in a new connection for each queue.
 
-```javascript
+```js
 // worker queues running on the worker server
-const Queue = require('bee-queue')
-const redis = require('redis')
+const Queue = require('bee-queue');
+const redis = require('redis');
 const sharedConfig = {
   redis: redis.createClient(process.env.REDIS_URL)
-}
+};
 
-const emailQueue = new Queue('EMAIL_DELIVERY', sharedConfig)
-const facebookUpdateQueue = new Queue('FACEBOOK_UPDATE', sharedConfig)
+const emailQueue = new Queue('EMAIL_DELIVERY', sharedConfig);
+const facebookUpdateQueue = new Queue('FACEBOOK_UPDATE', sharedConfig);
 
-emailQueue.process((job) => { })
-facebookUpdateQueue.process((job) => { })
+emailQueue.process((job) => {});
+facebookUpdateQueue.process((job) => {});
 ```
 
 For a more detailed example and explanation see [#96](https://github.com/bee-queue/bee-queue/issues/96)
