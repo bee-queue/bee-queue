@@ -42,8 +42,8 @@ declare class BeeQueue {
   checkHealth(cb: (counts: BeeQueue.HealthCheckResult) => void): void;
 
   close(cb: () => void): void;
-  close(timeout?: number): Promise<void>;
-  close(timeout: number, cb: () => void): void;
+  close(timeout?: number | null): Promise<void>;
+  close(timeout: number | undefined | null, cb: () => void): void;
 
   removeJob(jobId: string): Promise<void>;
   removeJob(jobId: string, cb: () => void): void
