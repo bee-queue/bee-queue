@@ -37,6 +37,7 @@ Thanks to the folks at [Mixmax](https://mixmax.com), Bee-Queue is once again bei
 - Concurrent processing
 - Job timeouts, retries, and retry strategies
 - Scheduled jobs
+- External rate limiter support
 - Pass events via Pub/Sub
   - Progress reporting
   - Send job results back to producers
@@ -188,6 +189,48 @@ subQueue.process(10, function (job, done) {
   });
 });
 ```
+
+## Use With a Rate Limiter
+
+You can integrate Bee-Queue with any external rate limiter of your choice to throttle jobs.
+
+`Queue.process` takes a function as an optional second argument, which if provided will be run just prior to executing each job. This allows you to query an external limiter and optionally reschedule the job if it is not cleared to run. The limiter query function helps the queue rapidly scan for jobs which are ready to run rather than tying up your concurrency with waiting jobs.
+
+The limiter query function can use a callback or return a promise. The promise should resolve to an object which at minimum contains a boolean `ready` parameter, `true` if the job is ready to run.
+
+```js
+limiterQueue.process(
+  async (job) => {
+    console.log(`Processing job ${job.id} after ${job.data.tries} tries`);
+    // Do some work
+  },
+  async (job) => {
+    const tries = job.data.tries + 1;
+    const data = { ...job.data, tries };
+    // You can plug in any non-blocking external rate limiter here
+    const result = await limiter.check();
+    if (result.ok) {
+      return {
+        ready: true,
+        // (optional) this will replace the existing job data
+        data
+      }
+    } else {
+      return {
+        ready: false,
+        // (optional) this will replace the existing job data
+        data,
+        // (optional) reschedule the job to try again at this timestamp
+        // if 0 or not specified, the job goes to the end of the waiting queue
+        delayUntil: Date.now() + result.msUntilReady
+      }
+    }
+  }
+);
+```
+
+Additionally if the limiter check promise rejects or passes an error to the callback the job will be immediately failed with no retry logic.
+
 
 ## Progress Reporting
 
@@ -508,7 +551,7 @@ Looks up jobs by their queue type. When looking up jobs of type `waiting`, `acti
 
 Note that large values of the attributes of `page` may cause excess load on the Redis server.
 
-#### Queue#process([concurrency], handler(job, done))
+#### Queue#process([concurrency], handler(job, done), [limiterQuery(job, done)])
 
 Begins processing jobs with the provided handler function.
 
@@ -526,6 +569,14 @@ The handler function should either:
 - Never ever [block](http://www.slideshare.net/async_io/practical-use-of-mongodb-for-nodejs/47) [the](http://blog.mixu.net/2011/02/01/understanding-the-node-js-event-loop/) [event](https://strongloop.com/strongblog/node-js-performance-event-loop-monitoring/) [loop](http://zef.me/blog/4561/node-js-and-the-case-of-the-blocked-event-loop) (for very long). If you do, the stall detection might think the job stalled, when it was really just blocking the event loop.
 
 _N.B. If the handler returns a `Promise`, calls to the `done` callback will be ignored._
+
+The limiter query function acts exactly the same way as the handler function above, but it expects the promise or callback to return an object with the following properties:
+
+- `ready`: boolean, `true` if the job is ready to run
+- `delayUntil`: (optional) Date or integer, timestamp that the job will be rescheduled for. If 0 or not specified the job will be placed at the end of the waiting queue.
+- `data`: (optional) any, replaces `job.data` if present
+
+If the promise rejects or the callback returns an error, the job will be immediately failed without any retry logic.
 
 #### Queue#checkStalledJobs([interval], [cb])
 
