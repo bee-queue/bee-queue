@@ -1464,6 +1464,40 @@ describe('Queue', (it) => {
       t.true(calls[1] - calls[0] >= 100);
     });
 
+    it('should handle immediate backoff', async (t) => {
+      const queue = t.context.makeQueue({
+        activateDelayedJobs: true
+      });
+
+      const calls = [];
+
+      queue.process(async (job) => {
+        t.deepEqual(job.options.backoff, {
+          strategy: 'immediate'
+        });
+        t.deepEqual(job.data, {is: 'immediate'});
+        calls.push(Date.now());
+        if (calls.length === 1) {
+          throw new Error('forced retry');
+        }
+        t.is(calls.length, 2);
+      });
+
+      const succeed = helpers.waitOn(queue, 'succeeded', true);
+
+      await queue.createJob({is: 'immediate'})
+        .retries(2)
+        .backoff('immediate')
+        .save();
+
+      await succeed;
+
+      t.is(calls.length, 2);
+
+      // Temporal sanity
+      t.true(calls[1] >= calls[0]);
+    });
+
     it('should handle exponential backoff', async (t) => {
       const queue = t.context.makeQueue({
         activateDelayedJobs: true
