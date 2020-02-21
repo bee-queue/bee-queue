@@ -645,21 +645,25 @@ describe('Queue', (it) => {
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
-        throw new Error('failed for retry!');
+        if (job.options.retries) throw new Error('failed for retry!');
+        // job succeeds on the retry
       });
+
+      const emits = Promise.all([
+        helpers.waitOn(queue, 'retrying'),
+        helpers.waitOn(queue, 'succeeded'),
+      ]);
 
       const job = await queue.createJob({foo: 'bar', retries: 1}).save();
       t.truthy(job.id);
 
-      const retriedJob = await helpers.waitOn(queue, 'retrying');
+      const [retriedJob, succeededJob] = await emits;
       t.is(retriedJob.id, job.id);
-
-      // job fails after the 1 retry
-      const failedJob = await helpers.waitOn(queue, 'failed');
-      t.is(failedJob.id, job.id);
+      t.is(succeededJob.id, job.id);
 
       const counts = await queue.checkHealth();
-      t.is(counts.failed, 1);
+      t.is(counts.failed, 0);
+      t.is(counts.succeed, 1);
     });
 
     it('should not report the latest job for custom job ids', async (t) => {
@@ -1201,9 +1205,7 @@ describe('Queue', (it) => {
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
-        if (job.options.retries) {
-          throw new Error(failMsg);
-        }
+        if (job.options.retries) throw new Error(failMsg);
         t.is(retryCount, retries);
         finish();
       });
@@ -1222,6 +1224,8 @@ describe('Queue', (it) => {
       const job = await queue.createJob({foo: 'bar'}).retries(retries).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
+      // HsW wonders if there's a race condition: could job handling decrement
+      // job.options.retries before the above await returns?
       t.is(job.options.retries, retries);
 
       return end;
