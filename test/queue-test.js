@@ -1212,7 +1212,7 @@ describe('Queue', (it) => {
         t.is(err.message, failMsg);
       });
 
-      queue.on('failed', (job, err) => {
+      queue.on('failed', () => {
         t.fail('unexpected queue failed message');
       });
 
