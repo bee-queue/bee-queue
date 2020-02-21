@@ -1267,7 +1267,7 @@ describe('Queue', (it) => {
         t.is(job.data.foo, 'bar');
       });
 
-      queue.on('failed', (job, err) => {
+      queue.on('failed', () => {
         t.fail('unexpected queue failed message');
       });
 
