@@ -654,8 +654,11 @@ describe('Queue', (it) => {
       const retriedJob = await helpers.waitOn(queue, 'retrying');
       t.is(retriedJob.id, job.id);
 
-      const counts = await queue.checkHealth();
       // job fails after the 1 retry
+      const failedJob = await helpers.waitOn(queue, 'failed');
+      t.is(failedJob.id, job.id);
+
+      const counts = await queue.checkHealth();
       t.is(counts.failed, 1);
     });
 
