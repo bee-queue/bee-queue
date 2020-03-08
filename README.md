@@ -595,7 +595,7 @@ Promise resolves to the queue (or callback is called wth `null` argument) when t
 const Queue = require('bee-queue');
 const queue = new Queue('example');
 queue.ready()
-  .then(async queue => {
+  .then(async (queue) => {
     console.log('isRunning:', queue.isRunning());
     const checkHealth = await queue.checkHealth();
     console.log('checkHealth:', checkHealth);
