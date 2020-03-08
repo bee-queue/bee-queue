@@ -598,7 +598,7 @@ queue.ready()
   .then(async queue => {
     console.log('isRunning:', queue.isRunning());
     const checkHealth = await queue.checkHealth();
-    console.log('checkHealth:', JSON.stringify(checkHealth));
+    console.log('checkHealth:', checkHealth);
   })
   .catch(err => console.log('unreadyable', err));
 ```
