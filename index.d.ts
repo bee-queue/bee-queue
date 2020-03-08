@@ -48,7 +48,7 @@ declare class BeeQueue {
   isRunning(): boolean;
 
   ready(): Promise<this>;
-  ready(cb: () => void): void;
+  ready(cb: () => void): Promise<this>;
 
   removeJob(jobId: string): Promise<void>;
   removeJob(jobId: string, cb: () => void): void
