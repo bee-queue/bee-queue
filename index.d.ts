@@ -83,7 +83,7 @@ declare namespace BeeQueue {
     queue: BeeQueue;
     progress: number;
 
-    on(ev: "succeeded", fn: (err: Error) => void): this;
+    on(ev: "succeeded", fn: (result: any) => void): this;
     on(ev: "retrying",  fn: (err: Error) => void): this;
     on(ev: "failed",    fn: (err: Error) => void): this;
     on(ev: "progress",  fn: (progress: number) => void): this;
