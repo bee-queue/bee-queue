@@ -585,7 +585,7 @@ process.on('uncaughtException', async () => {
 ```
 #### Queue#isRunning()
 
-Returns `true` unless the Queue is shutting down due to a call to `Queue#close()`;
+Returns `true` unless the Queue is shutting down due to a call to `Queue#close()`.
 
 #### Queue#ready([cb])
 
