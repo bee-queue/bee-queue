@@ -600,7 +600,7 @@ queue.ready()
     const checkHealth = await queue.checkHealth();
     console.log('checkHealth:', checkHealth);
   })
-  .catch(err => console.log('unreadyable', err));
+  .catch((err) => console.log('unreadyable', err));
 ```
 
 #### Queue#removeJob(jobId, [cb])
