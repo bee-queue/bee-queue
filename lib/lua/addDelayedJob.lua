@@ -1,5 +1,5 @@
 --[[
-key 1 -> bq:name:id (job ID counter)
+key 1 -> bq:name:id (most recently created job ID -- only purpose is for checkHealth() newestJob)
 key 2 -> bq:name:jobs
 key 3 -> bq:name:delayed
 key 4 -> bq:name:earlierDelayed
@@ -9,10 +9,8 @@ arg 3 -> job delay timestamp
 ]]
 
 local jobId = ARGV[1]
-if jobId == "" then
-  jobId = "" .. redis.call("incr", KEYS[1])
-end
 if redis.call("hexists", KEYS[2], jobId) == 1 then return nil end
+redis.call("set", KEYS[1], jobId)
 redis.call("hset", KEYS[2], jobId, ARGV[2])
 redis.call("zadd", KEYS[3], tonumber(ARGV[3]), jobId)
 
