@@ -342,7 +342,7 @@ describe('Queue', (it) => {
         const jobs = spitter();
         queue.process((job) => jobs.pushSuspend(job));
 
-        await queue.createJob({}).save();
+        const job = await queue.createJob({}).save();
         const [, finishJob] = await jobs.shift();
 
         await t.throws(queue.close(10));
@@ -352,7 +352,7 @@ describe('Queue', (it) => {
 
         const errors = t.context.queueErrors, count = errors.length;
         t.context.queueErrors = errors.filter((err) => {
-          return err.message !== 'unable to update the status of succeeded job 1';
+          return err.message !== `unable to update the status of succeeded job ${job.id}`;
         });
         t.is(t.context.queueErrors.length, count - 1);
         t.context.handleErrors(t);
@@ -1163,7 +1163,7 @@ describe('Queue', (it) => {
       const [[failedJob, err]] = fail.args;
 
       t.truthy(failedJob);
-      t.is(job.id, '1');
+      t.is(job.id, failedJob.id);
       t.is(failedJob.data.foo, 'bar');
       t.is(err.message, `Job ${job.id} timed out (10 ms)`);
     });
