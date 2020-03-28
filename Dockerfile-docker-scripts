@@ -1,0 +1,14 @@
+FROM node:lts-alpine
+
+RUN apk add bash redis
+
+WORKDIR /bee-queue
+COPY package.json package-lock.json /bee-queue/
+RUN cd /bee-queue && npm --version && npm ci
+
+ENTRYPOINT ["/bee-queue/docker-scripts/entrypoint.sh"]
+
+COPY .eslintrc.json /bee-queue/
+COPY docker-scripts /bee-queue/docker-scripts/
+COPY test /bee-queue/test/
+COPY lib /bee-queue/lib/
