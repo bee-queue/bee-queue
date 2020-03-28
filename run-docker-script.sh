@@ -18,22 +18,29 @@ if [ "$scriptName" = -h -o "$scriptName" = --help ] ; then
 $SCRIPT -- Run a default test script or commands of your choice in a Docker
 container with the bee-queue library and a Redis server.
 
-Usage: $SCRIPT [command]
+Usage: $SCRIPT [command ...args]
 
 The optional command argument is an executable or or a script to run in the
 container.  The default command is docker-scripts/default-docker-script.sh which
 runs tests, the linter, and test coverage.
 
+You can run Node JS tools and scripts, e.g.
+
+  $SCRIPT  npx ava --fail-fast --verbose
+
 If you want to work interactively in the container, use bash, e.g.
 
   $SCRIPT  bash
 
-Any script you want to use must be in the ./docker-scripts directory.  E.g. your
+Scripts must be in the ./docker-scripts directory.  E.g. your custom testing
 script ./docker-scripts/my-testing.sh would be run via
 
   $SCRIPT  docker-scripts/my-testing.sh
 
-Note: You can ignore the Transparent Huge Pages warning from Redis.
+Notes:
+- The very first time this script is used it takes a while for Docker to
+  populate its caches.
+- You can ignore the Transparent Huge Pages warning from the Redis server.
 EOF
 
 exit 0
