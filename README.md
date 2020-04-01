@@ -583,6 +583,25 @@ process.on('uncaughtException', async () => {
   process.exit(1);
 });
 ```
+#### Queue#isRunning()
+
+Returns `true` unless the Queue is shutting down due to a call to `Queue#close()`.
+
+#### Queue#ready([cb])
+
+Promise resolves to the queue (or callback is called wth `null` argument) when the queue (and Redis) are ready for jobs.  Learn more about `'ready'` in [Queue Local Events](#queue-local-events).
+
+```js
+const Queue = require('bee-queue');
+const queue = new Queue('example');
+queue.ready()
+  .then(async (queue) => {
+    console.log('isRunning:', queue.isRunning());
+    const checkHealth = await queue.checkHealth();
+    console.log('checkHealth:', checkHealth);
+  })
+  .catch((err) => console.log('unreadyable', err));
+```
 
 #### Queue#removeJob(jobId, [cb])
 
@@ -686,7 +705,7 @@ The job has sent a [progress report](#jobreportprogressn) of `progress` percent.
 
 ### Methods
 
-Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, and `.timeout(ms)`.
+Each Job can be configured with the chainable commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, and `.timeout(ms)`.
 
 #### Job#setId(id)
 

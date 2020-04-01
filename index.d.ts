@@ -25,7 +25,7 @@ declare class BeeQueue {
 
   getJob(jobId: string, cb: (job: BeeQueue.Job) => void): void;
   getJob(jobId: string): Promise<BeeQueue.Job>;
-  
+
   getJobs(type: string, page: BeeQueue.Page, cb: (jobs: BeeQueue.Job[]) => void): void;
   getJobs(type: string, page: BeeQueue.Page): Promise<BeeQueue.Job[]>;
 
@@ -44,6 +44,11 @@ declare class BeeQueue {
   close(cb: () => void): void;
   close(timeout?: number | null): Promise<void>;
   close(timeout: number | undefined | null, cb: () => void): void;
+
+  isRunning(): boolean;
+
+  ready(): Promise<this>;
+  ready(cb: () => void): Promise<this>;
 
   removeJob(jobId: string): Promise<void>;
   removeJob(jobId: string, cb: () => void): void
@@ -78,7 +83,7 @@ declare namespace BeeQueue {
     queue: BeeQueue;
     progress: number;
 
-    on(ev: "succeeded", fn: (err: Error) => void): this;
+    on(ev: "succeeded", fn: (result: any) => void): this;
     on(ev: "retrying",  fn: (err: Error) => void): this;
     on(ev: "failed",    fn: (err: Error) => void): this;
     on(ev: "progress",  fn: (progress: number) => void): this;
