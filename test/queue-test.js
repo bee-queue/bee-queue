@@ -963,6 +963,118 @@ describe('Queue', (it) => {
     });
   });
 
+  it.describe('saveAll', (it) => {
+    it('should save all the provided jobs', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      await queue.saveAll([
+        queue.createJob({foo: 'bar'}).setId('asdf'),
+        queue.createJob({foo: 'bar2'}).setId('asdf2'),
+      ]);
+
+      const [bar, bar2] = await Promise.all([
+        queue.getJob('asdf'),
+        queue.getJob('asdf2'),
+      ]);
+      t.truthy(bar);
+      t.truthy(bar2);
+      t.deepEqual(bar.data, {foo: 'bar'});
+      t.deepEqual(bar2.data, {foo: 'bar2'});
+    });
+
+    it('should produce internal errors', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      const circ = () => {
+        const value = {};
+        value.value = value;
+        return value;
+      };
+
+      const errors = await queue.saveAll([
+        queue.createJob(circ()),
+        queue.createJob(circ()),
+      ]);
+
+      t.is(errors.size, 2);
+      for (const err of errors.values()) {
+        t.is(err.name, 'TypeError');
+        t.regex(err.message, /circular/);
+      }
+    });
+
+    it('should produce redis errors', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      await queue.ready();
+
+      const stub = sinon
+        .stub(queue.client, 'internal_send_command')
+        .callsFake(function (commandObj) {
+          if (
+            commandObj.command.toUpperCase() === 'EVALSHA' &&
+            commandObj.args.some((arg) => /"hij"/.test(arg))
+          ) {
+            // This is just a randomly generated string passed through sha1sum. It
+            // will not be a loaded script, which will cause the command to fail.
+            commandObj.args[0] = '91ea7bce9a02621ada10e620f546467cad1a6b07';
+          }
+          return stub.wrappedMethod.call(this, commandObj);
+        });
+
+      const jobs = [
+        queue.createJob({abc: 'def'}),
+        queue.createJob({def: 'hij'}),
+      ];
+
+      const errors = await queue.saveAll(jobs);
+
+      t.is(errors.size, 1);
+      const errPair = errors[Symbol.iterator]().next().value;
+      t.is(errPair[0], jobs[1]);
+      t.is(errPair[1].code, 'NOSCRIPT');
+    });
+
+    it('should reject on batch execution failure', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      await queue.ready();
+
+      const batchStub = sinon
+        .stub(queue.client, 'batch')
+        .callsFake(function () {
+          const batch = batchStub.wrappedMethod.apply(this, arguments);
+          sinon.stub(batch, 'exec').yields(new Error('test error'));
+          return batch;
+        });
+
+      await t.throws(
+        queue.saveAll([
+          queue.createJob({abc: 'def'}),
+          queue.createJob({def: 'hij'}),
+        ]),
+        Error,
+        'test error'
+      );
+    });
+  });
+
   it.describe('removeJob', (it) => {
     it('should not cause an error if immediately removed', async (t) => {
       const queue = t.context.makeQueue();
