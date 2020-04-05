@@ -29,10 +29,24 @@ declare class BeeQueue {
   getJobs(type: string, page: BeeQueue.Page, cb: (jobs: BeeQueue.Job[]) => void): void;
   getJobs(type: string, page: BeeQueue.Page): Promise<BeeQueue.Job[]>;
 
-  process<T>(handler: (job: BeeQueue.Job) => Promise<T>): void;
-  process<T>(concurrency: number, handler: (job: BeeQueue.Job) => Promise<T>): void;
-  process<T>(handler: (job: BeeQueue.Job, done: BeeQueue.DoneCallback<T>) => void): void;
-  process<T>(concurrency: number, handler: (job: BeeQueue.Job, done: BeeQueue.DoneCallback<T>) => void): void;
+  process<T>(
+    handler: (job: BeeQueue.Job) => Promise<T>,
+    limiterQuery?: (job: BeeQueue.Job) => Promise<BeeQueue.LimiterQueryResult>
+  ): void;
+  process<T>(
+    concurrency: number,
+    handler: (job: BeeQueue.Job) => Promise<T>,
+    limiterQuery?: (job: BeeQueue.Job) => Promise<BeeQueue.LimiterQueryResult>
+  ): void;
+  process<T>(
+    handler: (job: BeeQueue.Job, done: BeeQueue.DoneCallback<T>) => void,
+    limiterQuery?: (job: BeeQueue.Job, done: BeeQueue.DoneCallback<BeeQueue.LimiterQueryResult>) => void
+  ): void;
+  process<T>(
+    concurrency: number,
+    handler: (job: BeeQueue.Job, done: BeeQueue.DoneCallback<T>,
+    limiterQuery?: (job: BeeQueue.Job, done: BeeQueue.DoneCallback<BeeQueue.LimiterQueryResult>) => void) => void
+  ): void;
 
   checkStalledJobs(interval?: number): Promise<number>;
   checkStalledJobs(interval: number, cb: (err: Error, numStalled: number) => void): void
@@ -113,6 +127,12 @@ declare namespace BeeQueue {
     failed:     number;
     delayed:    number;
     newestJob?: string;
+  }
+
+  interface LimiterQueryResult {
+    ready: boolean;
+    delayUntil?: Date | number;
+    data?: any;
   }
 
   type DoneCallback<T> = (error: Error | null, result?: T) => void;

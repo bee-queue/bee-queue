@@ -1416,6 +1416,175 @@ describe('Queue', (it) => {
     });
   });
 
+  it.describe('Limiter', (it) => {
+    it('processes a job with an open limiter', async (t) => {
+      const queue = t.context.makeQueue();
+
+      let limiterPassed = false;
+
+      queue.process(async () => {
+        t.truthy(limiterPassed);
+        return 'done';
+      }, async (job) => {
+        t.is(job.data.foo, 'bar');
+        limiterPassed = true;
+        return {ready: true};
+      });
+
+      await queue.createJob({foo: 'bar'}).save();
+
+      const success = sinon.spy();
+      queue.once('succeeded', success);
+      await helpers.waitOn(queue, 'succeeded');
+      const [[succeededJob, data]] = success.args;
+      t.truthy(succeededJob);
+      t.is(data, 'done');
+      t.true(await succeededJob.isInSet('succeeded'));
+    });
+
+    it('processes a job with an open limiter (using callback)', async (t) => {
+      const queue = t.context.makeQueue();
+
+      let limiterPassed = false;
+
+      queue.process((job, done) => {
+        t.truthy(limiterPassed);
+        done(null, 'done');
+      }, (job, done) => {
+        t.is(job.data.foo, 'bar');
+        limiterPassed = true;
+        done(null, {ready: true});
+      });
+
+      await queue.createJob({foo: 'bar'}).save();
+
+      const success = sinon.spy();
+      queue.once('succeeded', success);
+      await helpers.waitOn(queue, 'succeeded');
+      const [[succeededJob, data]] = success.args;
+      t.truthy(succeededJob);
+      t.is(data, 'done');
+      t.true(await succeededJob.isInSet('succeeded'));
+    });
+
+    it('saves job data passed by the limiter (open)', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async (job) => {
+        t.is(job.data.foo, 'boo');
+      }, async () => {
+        return {ready: true, data: {foo: 'boo'}};
+      });
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      await helpers.waitOn(queue, 'succeeded');
+
+      // Make sure updated job has been saved in Redis
+      const savedJob = await queue.getJob(job.id);
+      t.is(savedJob.data.foo, 'boo');
+    });
+
+    it('requeues a job when the limiter is closed', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const getWaitingJob = async () => {
+        const memberPromise = helpers.deferred();
+        queue.client.lpop(queue.toKey('waiting'), memberPromise.defer());
+        return memberPromise;
+      };
+
+      queue.process(async () => {
+        t.fail('job should not run when limiter is closed');
+      }, async () => {
+        return {ready: false};
+      });
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      const success = sinon.spy();
+      queue.once('limited', success);
+      await helpers.waitOn(queue, 'limited');
+      const [[limitedJob, data]] = success.args;
+      t.truthy(limitedJob);
+      t.is(data, 0);
+      t.is(await getWaitingJob(), job.id);
+    });
+
+    it('saves job data passed by the limiter (closed)', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async () => {
+        t.fail('job should not run when limiter is closed');
+      }, async () => {
+        return {ready: false, data: {foo: 'boo'}};
+      });
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      await helpers.waitOn(queue, 'limited');
+
+      // Make sure updated job data has been saved in memory
+      t.is(queue.jobs.get(job.id).data.foo, 'boo');
+      // Make sure updated job has been saved in Redis
+      queue.jobs.delete(job.id);
+      const savedJob = await queue.getJob(job.id);
+      t.is(savedJob.data.foo, 'boo');
+    });
+
+    it('requeues a job with a closed limiter and delay', async (t) => {
+      const queue = t.context.makeQueue();
+      const delay = Date.now() + 5000;
+
+      const getDelayedJob = async (id) => {
+        const memberPromise = helpers.deferred();
+        queue.client.zscore(queue.toKey('delayed'), id, memberPromise.defer());
+        return memberPromise;
+      };
+
+      queue.process(async () => {
+        t.fail('job should not run when limiter is closed');
+      }, async () => {
+        return {ready: false, delayUntil: delay};
+      });
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      const success = sinon.spy();
+      queue.once('limited', success);
+      await helpers.waitOn(queue, 'limited');
+      const [[limitedJob, data]] = success.args;
+      t.truthy(limitedJob);
+      t.is(data, delay);
+      t.is(parseInt(await getDelayedJob(job.id), 10), delay);
+    });
+
+    it('fails the job if limiterQuery function rejects', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async () => {
+        t.fail('job should not run when limiter is closed');
+      }, async () => {
+        throw 'limiter failure';
+      });
+
+      const failedEvent = sinon.spy();
+      queue.once('job failed', failedEvent);
+
+      const job = await queue.createJob({foo: 'bar'}).save();
+
+      await helpers.waitOn(queue, 'error');
+      const errors = t.context.queueErrors;
+      t.is(errors.length, 1);
+      t.is(errors[0], 'limiter failure');
+      t.context.queueErrors = [];
+      t.true(await job.isInSet('failed'));
+      const [[jobId, err]] = failedEvent.args;
+      t.is(jobId, job.id);
+      t.is(err.message, 'limiter failure');
+    });
+  });
+
   it.describe('Backoff', (it) => {
     it('should fail for invalid backoff strategies and delays', (t) => {
       const queue = t.context.makeQueue({
