@@ -15,9 +15,9 @@ It runs one Redis server and onc client process (Node JS).
 It scales to run 6 worker processes (Node JS).
 
 ```bash
-$ docker-compose up --build --scale worker=6
+$ ./go.sh --scale worker=6
 
- ... a bunch of Docker build and docker-compose startup...
+ ... logging from Docker build and docker-compose startup...
  ... (be patient the first time as Docker populates its caches)
  ... then the periodic logs
 
@@ -67,4 +67,5 @@ In `config.js`:
 * client.js -- code for the client, the interesting stuff
 * config.js -- some parameters
 * docker-compose.yml -- declarative specification for the Docker containers
+* go.sh -- script to copy bee-queue package files for Docker and then use docker-compose to build and run
 * worker.js -- code for the workers
