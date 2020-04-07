@@ -8,11 +8,11 @@ The counts for two callbacks that should be the same will diverge, and the loss 
 
 ## Run
 
-You need Docker and docker-compose installed.
+You need Docker and docker-compose installed,and also bash and rsync.
 
-The following docker-compose command builds a simple Docker image and then runs the container configuration in docker-compose.yml.
+The following command copies the current bee-queue branch package, builds a simple Docker image, and then runs the container configuration in docker-compose.yml.
 It runs one Redis server and onc client process (Node JS).
-It scales to run 6 worker processes (Node JS).
+It uses docker-compose --scale to run 6 worker processes (Node JS).
 
 ```bash
 $ ./go.sh --scale worker=6
@@ -28,7 +28,7 @@ client_1  | {"numJobSaveSuccess":24535,"numJobSaveError":0,"numQueueSucceeded":2
 client_1  | {"numJobSaveSuccess":32370,"numJobSaveError":0,"numQueueSucceeded":32368,"numQueueFailed":0,"numJobSucceeded":31636,"throughput":"2158","numSucceededLost":732,"succededLossPercent":"2.3"}
 ```
 
-## The stats
+## The lost-job stats
 
 * numJobSaveSuccess -- number of jobs successfully saved by the client Queue
 * numJobSaveError -- number of jobs with errors while trying to save, should be zero
@@ -51,12 +51,13 @@ $ docker exec -it issue-189_client_1 top
 The race condition involves a job getting run immediately after it has been entered into Redis, before the Queue that submitted it has registered it.
 The queue thus fails to pass on the succeeded event callback.
 
-You need several workers so that there is often one ready to run the job immediately after it gets into Redis (scale worker).
-Workers need to be able to keep busy while asynchronous stuff is happening (concurrency).
-You need enough recurring jobs that you get decent statistics (numChains).
+You need several workers so that there is often one ready to run the job immediately after it gets into Redis (--scale worker=6).
+Workers need to be able to keep busy while asynchronous stuff is happening (concurrency=2).
+You need enough recurring jobs that you get decent statistics (numChains=5).
 
-You can change the worker scaling in the docker-compose command.
+You can change the worker scaling on the command-line.
 More workers means more likelihood of jobs being lost due to the race, but throughput eventually suffers.
+
 In `config.js`:
 * concurrency -- number of "simultaneous" jobs a worker process will run
 * numChains -- number of separate, recurrent job chains to start
