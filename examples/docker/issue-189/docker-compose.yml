@@ -1,0 +1,16 @@
+version: '3.7'
+
+services:
+
+  # bee-queue Queue.createJob()
+  client:
+    build: .
+    command: node client.js
+
+  # bee-queue Queue.process()
+  worker:
+    build: .
+    command: node worker.js
+
+  redis:
+    image: redis:alpine
