@@ -39,6 +39,13 @@ client_1  | {"numJobSaveSuccess":32370,"numJobSaveError":0,"numQueueSucceeded":3
 * numSucceededLost -- number of lost jobs, (numQueueSucceeded - numJobSucceeded)
 * succededLossPercent -- percentage jobs that have been lost, since start
 
+## The leak
+
+If you run the following in another shell, you will see the slow growth of memory (VSZ) used by the client:
+```bash
+$ docker exec -it issue-189_client_1 top
+```
+
 ## Tinker
 
 The race condition involves a job getting run immediately after it has been entered into Redis, before the Queue that submitted it has registered it.
