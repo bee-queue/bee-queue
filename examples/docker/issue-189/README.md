@@ -57,7 +57,7 @@ In `config.js`:
 ## Code
 
 * Dockerfile -- builds a Docker image with bee-queue library and the *.js files
-client.js -- code for the client, the interesting stuff
-config.js -- some parameters
-docker-compose.yml -- declarative specification for the Docker containers
-worker.js -- code for the workers
+* client.js -- code for the client, the interesting stuff
+* config.js -- some parameters
+* docker-compose.yml -- declarative specification for the Docker containers
+* worker.js -- code for the workers
