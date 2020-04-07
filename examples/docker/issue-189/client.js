@@ -1,3 +1,5 @@
+// A bee-queue client that keeps up a steady pressure of new jobs based on completion of jobs
+
 const Queue = require('bee-queue');
 
 const { queueName, numChains } = require('./config');
@@ -7,10 +9,8 @@ console.log(`client constructing Queue '${queueName}' and connecting to Redis`);
 const stats = {
   numJobSaveSuccess: 0,
   numJobSaveError: 0,
-
   numQueueSucceeded: 0,
   numQueueFailed: 0,
-
   numJobSucceeded: 0,
 };
 
@@ -45,7 +45,6 @@ const createJob = () => {
     .catch(() => ++stats.numJobSaveError);
 };
 
-
 const start = () => {
   for (let i = 0; i < numChains; ++i) {
     createJob();
@@ -61,8 +60,20 @@ const logStats = () => {
   console.log(JSON.stringify(sample));
 };
 
+const logHealth = async () => {
+  const health = await queue.checkHealth();
+  console.log(`health: ${JSON.stringify(health)}`);
+};
+
 queue.ready()
-  .then(start)
+  .then(logHealth)
   .then(() => (startTime = Date.now()))
+  .then(start)
   .then(() => setInterval(logStats, 3000))
-  .then(() => console.log(`client for Queue '${queue.name}' is running`));
+  .then(logHealth)
+  .then(() => console.log(`client for Queue '${queue.name}' is running`))
+  .catch(error => {
+    console.log('catastrophe in queue.ready() promise chain:', error);
+    console.log('client will exit with non-zero code');
+    process.exit(1);
+  });

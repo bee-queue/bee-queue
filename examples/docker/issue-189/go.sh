@@ -16,6 +16,11 @@ set -x
 # Copy sources from local bee-queue branch
 rsync --archive --delete --delete-excluded --exclude .git/ --exclude node_modules/ --exclude examples/ ../../.. bee-queue
 
+# docker-compose makes it surprisingly hard to have new, empty persistence, so we use clubs
+touch redisData
+rm -r redisData
+mkdir redisData
+
 # Build image and run containers
 docker-compose up --build --no-color --force-recreate --remove-orphans --abort-on-container-exit --timeout 3 "$@"
 

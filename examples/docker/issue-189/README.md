@@ -28,6 +28,8 @@ client_1  | {"numJobSaveSuccess":24535,"numJobSaveError":0,"numQueueSucceeded":2
 client_1  | {"numJobSaveSuccess":32370,"numJobSaveError":0,"numQueueSucceeded":32368,"numQueueFailed":0,"numJobSucceeded":31636,"throughput":"2158","numSucceededLost":732,"succededLossPercent":"2.3"}
 ```
 
+In addition to the ongoing job-completion stats from the client you will get background-saving reports from Redis.
+
 ## The lost-job stats
 
 * numJobSaveSuccess -- number of jobs successfully saved by the client Queue
