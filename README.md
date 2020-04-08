@@ -64,6 +64,7 @@ You'll also need [Redis 2.8+](http://redis.io/topics/quickstart)* running somewh
 
 - [Motivation](#motivation)
 - [Benchmarks](#benchmarks)
+- [Web Interface](#web-interface)
 - [Overview](#overview)
   - [Creating Queues](#creating-queues)
   - [Creating Jobs](#creating-jobs)
