@@ -392,7 +392,7 @@ queue.on('failed', (job, err) => {
 });
 ```
 
-This queue has processed `job`, but its handler reported a failure either by rejecting its returned Promise, or by calling `done(err)`.
+This queue has processed `job`, but its handler reported a failure either by rejecting its returned Promise, or by calling `done(err)`. Note that if you pass an async function to process, you must reject it by returning `Promise.reject(...)` or throwing an exception ([done does not apply](https://github.com/bee-queue/bee-queue/issues/95)).
 
 #### stalled
 
