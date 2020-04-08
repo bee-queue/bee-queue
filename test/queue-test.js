@@ -460,12 +460,12 @@ describe('Queue', (it) => {
       // Override _waitForJob.
       const waitJob = queue._waitForJob, wait = helpers.deferred();
       let waitDone = wait.defer();
-      queue._waitForJob = function (...args) {
+      queue._waitForJob = function () {
         if (waitDone) {
           waitDone();
           waitDone = null;
         }
-        return waitJob.apply(this, args);
+        return waitJob.apply(this);
       };
 
       await wait;
@@ -878,35 +878,34 @@ describe('Queue', (it) => {
   });
 
   it.describe('removeJob', (it) => {
-
-    it('should not cause an error if removed before started', async (t) => {
-      // creates three jobs, waits until all are saved, then processes, first job removes the second one
-
+    it('should not error if active then removed before running', async (t) => {
       const queue = t.context.makeQueue();
 
-      const wait = helpers.deferred(), finishWait = wait.defer();
-
-      await queue.createJob({foo: 'bar'}).setId('goodjob1').save();
-      const deadjob = await queue.createJob({foo: 'bar'}).setId('deadjob').save();
-      await queue.createJob({foo: 'bar'}).setId('goodjob2').save();
+      // Inject removeJob() inside _waitForJob the first time it's called
+      const waitJob = queue._waitForJob, wait = helpers.deferred();
+      let waitDone = wait.defer();
+      queue._waitForJob = function () {
+        const args = [];
+        if (waitDone) {
+          args.push((jobId) => this.removeJob(jobId));
+          waitDone();
+          waitDone = null;
+        }
+        return waitJob.apply(this, args);
+      };
 
       queue.process(async (job) => {
-        await wait;
-        if (job.id === 'goodjob1') {
-          t.is(deadjob.id, 'deadjob');
-          await queue.removeJob(deadjob.id);
-        }
         if (job.id === 'deadjob') {
-          t.fail('should not get to process deadjob');
+          t.fail('should not be able to process the job');
         }
       });
 
-      finishWait();
+      await wait;
+      await queue.createJob({foo: 'bar'}).setId('deadjob').save();
+      await queue.createJob({foo: 'bar'}).setId('goodjob').save();
 
-      const succeeded1 = await helpers.waitOn(queue, 'succeeded');
-      t.is(succeeded1.id, 'goodjob1');
-      const succeeded2 = await helpers.waitOn(queue, 'succeeded');
-      t.is(succeeded2.id, 'goodjob2');
+      const goodJob = await helpers.waitOn(queue, 'succeeded');
+      t.is(goodJob.id, 'goodjob');
 
       t.context.handleErrors(t);
     });
