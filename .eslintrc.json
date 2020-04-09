@@ -3,6 +3,12 @@
     "node": true,
     "es6": true
   },
+  "overrides": [{
+    "files": ["benchmark/**", "examples/**"],
+    "rules": {
+      "no-console": "off"
+    }
+  }],
   "rules": {
     "array-bracket-spacing": [2, "never"],
     "brace-style": [2, "1tbs"],

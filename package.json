@@ -11,10 +11,11 @@
     "ava": "^0.21.0",
     "ava-spec": "^1.1.0",
     "coveralls": "^2.11.2",
-    "eslint": ">= 3",
+    "eslint": "^6.8.0",
     "lolex": "^2.0.0",
     "nyc": "^11.0.3",
     "sandboxed-module": "^2.0.3",
+    "semver": "^7.2.1",
     "sinon": "^2.3.8"
   },
   "files": [
@@ -27,12 +28,13 @@
     "lib"
   ],
   "scripts": {
-    "test": "npm run eslint && ava",
-    "eslint": "eslint lib/ test/",
+    "test": "npm run lint && ava",
+    "lint": "eslint .",
+    "lint:ifsupported": "if node -e \"process.exit(+!require('semver').gte(process.version, '8.3.0'))\"; then npm run lint; fi",
     "coverage": "nyc ava",
     "report": "npm run coverage && nyc report --reporter=html",
     "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
-    "ci": "npm run eslint && npm run coverage-and-publish"
+    "ci": "npm run lint:ifsupported && npm run coverage-and-publish"
   },
   "keywords": [
     "task",
