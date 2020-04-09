@@ -1,13 +1,13 @@
-var Queue = require('../../');
-var pingQueue = Queue('ping');
-var pongQueue = Queue('pong');
+let Queue = require('../../');
+let pingQueue = Queue('ping');
+let pongQueue = Queue('pong');
 
 pongQueue.process(function (job, done) {
   console.log('Ping received back pong');
   done();
 });
 
-var sendPing = function () {
+let sendPing = function () {
   pingQueue.createJob().save(function () {
     console.log('Ping sent ping');
   });

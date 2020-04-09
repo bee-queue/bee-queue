@@ -1,13 +1,13 @@
-var logger = require('morgan');
-var express = require('express');
-var app = express();
+let logger = require('morgan');
+let express = require('express');
+let app = express();
 app.use(logger('dev'));
 
-var Queue = require('../../');
-var queue = Queue('express-example');
+let Queue = require('../../');
+let queue = Queue('express-example');
 
 app.get('/run/:x/:y', function (req, res) {
-  var job = queue.createJob({
+  let job = queue.createJob({
     x: req.params.x,
     y: req.params.y
   });
@@ -27,7 +27,7 @@ app.get('/run/:x/:y', function (req, res) {
 });
 
 var server = app.listen(3000, function () {
-  var host = server.address().address;
-  var port = server.address().port;
+  let host = server.address().address;
+  let port = server.address().port;
   console.log('Example app listening at http://%s:%s', host, port);
 });
