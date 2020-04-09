@@ -30,7 +30,7 @@
   "scripts": {
     "test": "npm run lint && ava",
     "lint": "eslint .",
-    "lint:ifsupported": "if node -e \"process.exit(+!require('semver').gte(process.version, '8.3.0'))\"; then npm run lint; fi",
+    "lint:ifsupported": "if node -e '({...0})' 2>/dev/null; then npm run lint; fi",
     "coverage": "nyc ava",
     "report": "npm run coverage && nyc report --reporter=html",
     "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
