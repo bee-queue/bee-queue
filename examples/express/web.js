@@ -1,10 +1,10 @@
-let logger = require('morgan');
-let express = require('express');
-let app = express();
+const logger = require('morgan');
+const express = require('express');
+const app = express();
 app.use(logger('dev'));
 
-let Queue = require('../../');
-let queue = Queue('express-example');
+const Queue = require('../../');
+const queue = Queue('express-example');
 
 app.get('/run/:x/:y', function (req, res) {
   let job = queue.createJob({
@@ -17,7 +17,7 @@ app.get('/run/:x/:y', function (req, res) {
     res.send('output: ' + result);
   });
 
-  job.save(function (err, job) {
+  job.save(function (err) {
     if (err) {
       console.log('job failed to save');
       return res.send('job failed to save');
@@ -26,8 +26,8 @@ app.get('/run/:x/:y', function (req, res) {
   });
 });
 
-var server = app.listen(3000, function () {
-  let host = server.address().address;
-  let port = server.address().port;
+const server = app.listen(3000, function () {
+  const host = server.address().address;
+  const port = server.address().port;
   console.log('Example app listening at http://%s:%s', host, port);
 });
