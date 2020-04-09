@@ -7,6 +7,7 @@ node_js:
 services: redis
 # this runs eslint, runs the tests, instruments their coverage, and
 # publishes it to coveralls.io
+install: npm ci
 script: npm run ci
 after_script:
   - redis-cli script flush
