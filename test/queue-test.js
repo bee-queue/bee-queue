@@ -192,13 +192,19 @@ describe('Queue', (it) => {
         }).catch(t.end);
       });
 
-      it('should not fail after a second call', async (t) => {
+      it('should not fail when called again', async (t) => {
         const queue = t.context.makeQueue();
 
         await queue.ready();
 
         await queue.close();
         await t.notThrows(queue.close());
+      });
+
+      it.cb('should support callbacks when called again', (t) => {
+        const queue = t.context.makeQueue();
+
+        queue.close().then(() => void queue.close(t.end), t.end);
       });
 
       it('should stop processing even with a redis retry strategy', async (t) => {
