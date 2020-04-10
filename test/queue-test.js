@@ -242,7 +242,7 @@ describe('Queue', (it) => {
         await queue.createJob({is: 'first'}).save();
         await helpers.waitOn(queue, 'succeeded', true);
         t.true(processSpy.calledOnce);
-        processSpy.reset();
+        processSpy.resetHistory();
 
         // Close the queue so queue3 will process later jobs.
         queue.close();
@@ -1815,7 +1815,7 @@ describe('Queue', (it) => {
       // necessary and deterministic (until the implementation changes).
       await new Promise((resolve) => setImmediate(resolve));
       t.true(spy.calledWithExactly(null, 12));
-      spy.reset();
+      spy.resetHistory();
 
       await Promise.all([
         queue.checkStalledJobs(1, spy),

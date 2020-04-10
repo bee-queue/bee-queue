@@ -20,7 +20,7 @@
     "prettier": "^2.0.4",
     "sandboxed-module": "^2.0.3",
     "semver": "^7.2.1",
-    "sinon": "^2.3.8"
+    "sinon": "^7.5.0"
   },
   "files": [
     "HISTORY.md",
