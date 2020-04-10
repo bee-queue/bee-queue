@@ -10,7 +10,7 @@
   "devDependencies": {
     "ava": "^0.25.0",
     "ava-spec": "^1.1.0",
-    "coveralls": "^2.11.2",
+    "coveralls": "^3.0.11",
     "eslint": "^6.8.0",
     "lolex": "^2.0.0",
     "nyc": "^11.0.3",
