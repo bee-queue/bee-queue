@@ -30,7 +30,9 @@ describe('EagerTimer', (it) => {
               const instrumentMethod = instrumenter.instrumentSync.bind(
                 instrumenter
               );
-              return instrumentMethod(source, this.filename);
+              return instrumentMethod(source, this.filename, {
+                registerMap() {},
+              });
             },
           }
         : {},
