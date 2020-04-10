@@ -9,9 +9,9 @@ git:
   autocrlf: input
 
 services: redis
+install: npm ci || (nvm i --lts --latest-npm && npm ci; nvm use "$TRAVIS_NODE_VERSION")
 # this runs eslint, runs the tests, instruments their coverage, and
 # publishes it to coveralls.io
-install: npm ci || (nvm i --lts --latest-npm && npm ci; nvm use "$TRAVIS_NODE_VERSION")
 script: npm run ci
 after_script:
   - redis-cli script flush
