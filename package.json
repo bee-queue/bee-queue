@@ -12,8 +12,11 @@
     "ava-spec": "^1.1.0",
     "coveralls": "^3.0.11",
     "eslint": "^6.8.0",
+    "eslint-config-prettier": "^6.10.1",
+    "eslint-plugin-prettier": "^3.1.2",
     "lolex": "^2.0.0",
     "nyc": "^11.0.3",
+    "prettier": "^2.0.4",
     "sandboxed-module": "^2.0.3",
     "semver": "^7.2.1",
     "sinon": "^2.3.8"
@@ -28,10 +31,10 @@
     "lib"
   ],
   "scripts": {
-    "ci": "if node -e '({...0})' 2>/dev/null; then npm run lint && npm run coverage-and-publish; else ava; fi",
+    "ci": "if node -e '({...0})' 2>/dev/null && node -e '\"\".trimEnd()' 2>/dev/null; then npm run lint && npm run coverage-and-publish; else ava; fi",
     "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
     "coverage": "nyc ava",
-    "lint": "eslint .",
+    "lint": "eslint . && prettier --check '**/*.html|json|md|sublime-project|ts|yml'",
     "report": "npm run coverage && nyc report --reporter=html",
     "test": "npm run lint && ava"
   },

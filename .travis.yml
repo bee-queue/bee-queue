@@ -4,6 +4,10 @@ node_js:
   - 8
   - 10
   - node
+
+git:
+  autocrlf: input
+
 services: redis
 # this runs eslint, runs the tests, instruments their coverage, and
 # publishes it to coveralls.io

@@ -3,51 +3,75 @@
     "node": true,
     "es6": true
   },
-  "overrides": [{
-    "files": ["benchmark/**", "examples/**"],
-    "rules": {
-      "no-console": "off"
+  "extends": ["plugin:prettier/recommended"],
+  "overrides": [
+    {
+      "files": ["lib/**"],
+      "rules": {
+        "max-len": "error"
+      }
+    },
+    {
+      "files": ["benchmark/**", "examples/**"],
+      "rules": {
+        "no-console": "off"
+      }
+    },
+    {
+      "files": ["test/**"],
+      "parserOptions": {
+        "ecmaVersion": 2017,
+        "sourceType": "module"
+      },
+      "rules": {
+        "handle-callback-err": "warn",
+        "no-shadow": "off",
+        "no-warning-comments": "off"
+      }
     }
-  }],
+  ],
   "rules": {
-    "array-bracket-spacing": [2, "never"],
-    "brace-style": [2, "1tbs"],
-    "camelcase": 2,
-    "comma-style": [2, "last"],
-    "computed-property-spacing": [2, "never"],
-    "consistent-this": [2, "self"],
-    "curly": [1, "multi-line"],
-    "dot-notation": 2,
-    "eol-last": 2,
-    "eqeqeq": [2, "smart"],
-    "indent": [2, 2, {"SwitchCase": 1, "VariableDeclarator": { "var": 2, "let": 2, "const": 3}}],
-    "key-spacing": 1,
-    "new-cap": [2, {"capIsNew": false}],
-    "no-console": 2,
-    "no-extra-parens": 1,
-    "no-floating-decimal": 2,
-    "no-inner-declarations": 2,
-    "no-mixed-spaces-and-tabs": 2,
-    "no-multiple-empty-lines": [2, {"max": 2}],
-    "no-redeclare": 2,
-    "no-shadow": 1,
-    "no-spaced-func": 2,
-    "no-trailing-spaces": 2,
-    "no-undef": 2,
-    "no-underscore-dangle": 0,
-    "no-unused-vars": [2, {"vars": "all", "args": "after-used"}],
-    "no-use-before-define": [2, "nofunc"],
-    "no-var": 2,
-    "no-warning-comments": [1, {"terms": ["todo"], "location": "anywhere"}],
-    "object-curly-spacing": [2, "never"],
-    "quotes": [2, "single"],
-    "semi": [2, "always"],
-    "semi-spacing": [2, {"before": false, "after": true}],
-    "keyword-spacing": 2,
-    "space-before-blocks": 2,
-    "space-before-function-paren": [2, {"anonymous": "always", "named": "never"}],
-    "space-in-parens": 2,
-    "space-infix-ops": 2,
-    "strict": 0
+    "array-bracket-spacing": ["error", "never"],
+    "brace-style": ["error", "1tbs"],
+    "camelcase": "error",
+    "comma-style": ["error", "last"],
+    "computed-property-spacing": ["error", "never"],
+    "consistent-this": ["error", "self"],
+    "curly": ["warn", "multi-line"],
+    "dot-notation": "error",
+    "eol-last": "error",
+    "eqeqeq": ["error", "smart"],
+    "key-spacing": "warn",
+    "new-cap": ["error", {"capIsNew": false}],
+    "no-console": "error",
+    "no-floating-decimal": "error",
+    "no-inner-declarations": "error",
+    "no-mixed-spaces-and-tabs": "error",
+    "no-redeclare": "error",
+    "no-shadow": "warn",
+    "no-spaced-func": "error",
+    "no-trailing-spaces": "error",
+    "no-undef": "error",
+    "no-underscore-dangle": "off",
+    "no-unused-vars": ["error", {"vars": "all", "args": "after-used"}],
+    "no-use-before-define": ["error", "nofunc"],
+    "no-var": "error",
+    "no-warning-comments": [
+      "warn",
+      {"terms": ["todo"], "location": "anywhere"}
+    ],
+    "object-curly-spacing": ["error", "never"],
+    "quotes": ["error", "single"],
+    "semi": ["error", "always"],
+    "semi-spacing": ["error", {"before": false, "after": true}],
+    "keyword-spacing": "error",
+    "space-before-blocks": "error",
+    "space-before-function-paren": [
+      "error",
+      {"anonymous": "always", "named": "never"}
+    ],
+    "space-in-parens": "error",
+    "space-infix-ops": "error",
+    "strict": "off"
   }
 }
