@@ -98,6 +98,7 @@ describe('Queue', (it) => {
       queueErrors: [],
       makeQueue,
       handleErrors,
+      consumeError,
     });
 
     function makeQueue(...args) {
@@ -111,6 +112,12 @@ describe('Queue', (it) => {
       if (t) return t.notThrows(handleErrors);
       if (ctx.queueErrors && ctx.queueErrors.length) {
         throw ctx.queueErrors[0];
+      }
+    }
+
+    function consumeError() {
+      if (ctx.queueErrors && ctx.queueErrors.length) {
+        throw ctx.queueErrors.shift();
       }
     }
   });
@@ -1790,6 +1797,52 @@ describe('Queue', (it) => {
       t.is(goodJobs.count(), 0);
 
       t.context.handleErrors(t);
+    });
+
+    it('should correctly handle check callbacks', async (t) => {
+      const queue = t.context.makeQueue({
+        stallInterval: 1,
+      });
+
+      sinon.stub(queue, '_doStalledJobCheck').callsFake(() => {
+        queue.emit('test:stalledJobCheck');
+        return Promise.resolve(12);
+      });
+
+      const spy = sinon.spy();
+      await queue.checkStalledJobs(spy);
+      // Gotta wait for the nextTick to occur for the callback; a bit hacky, but
+      // necessary and deterministic (until the implementation changes).
+      await new Promise((resolve) => setImmediate(resolve));
+      t.true(spy.calledWithExactly(null, 12));
+      spy.reset();
+
+      await Promise.all([
+        queue.checkStalledJobs(1, spy),
+        helpers.waitOn(queue, 'test:stalledJobCheck'),
+      ]);
+      await helpers.waitOn(queue, 'test:stalledJobCheck');
+
+      t.true(spy.calledWithExactly(null, 12));
+    });
+
+    it('should emit unhandled exceptions', async (t) => {
+      const queue = t.context.makeQueue({
+        stallInterval: 1,
+      });
+
+      sinon
+        .stub(queue, '_doStalledJobCheck')
+        .callsFake(() => Promise.reject(new Error('test error')));
+
+      const immediateError = await t.throws(
+        queue.checkStalledJobs(1),
+        Error,
+        'test error'
+      );
+      await helpers.waitOn(queue, 'error');
+      const firstError = t.throws(t.context.consumeError, Error, 'test error');
+      t.not(firstError, immediateError);
     });
   });
 
