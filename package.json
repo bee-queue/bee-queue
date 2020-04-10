@@ -28,13 +28,12 @@
     "lib"
   ],
   "scripts": {
-    "test": "npm run lint && ava",
-    "lint": "eslint .",
-    "lint:ifsupported": "if node -e '({...0})' 2>/dev/null; then npm run lint; fi",
-    "coverage": "nyc ava",
-    "report": "npm run coverage && nyc report --reporter=html",
+    "ci": "if node -e '({...0})' 2>/dev/null; then npm run lint && npm run coverage-and-publish; else ava; fi",
     "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
-    "ci": "npm run lint:ifsupported && npm run coverage-and-publish"
+    "coverage": "nyc ava",
+    "lint": "eslint .",
+    "report": "npm run coverage && nyc report --reporter=html",
+    "test": "npm run lint && ava"
   },
   "keywords": [
     "task",
