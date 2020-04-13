@@ -12,7 +12,7 @@
     "ava-spec": "^1.1.0",
     "coveralls": "^3.0.11",
     "eslint": "^6.8.0",
-    "lolex": "^2.0.0",
+    "lolex": "^6.0.0",
     "nyc": "^11.0.3",
     "sandboxed-module": "^2.0.3",
     "semver": "^7.2.1",
