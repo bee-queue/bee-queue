@@ -235,6 +235,20 @@ describe('Queue', (it) => {
         queue.close().then(() => void queue.close(t.end), t.end);
       });
 
+      it('should produce quit errors during close', async (t) => {
+        const queue = t.context.makeQueue();
+
+        await queue.ready();
+
+        sinon
+          .stub(queue.client, 'quit')
+          .callsFake((done) =>
+            process.nextTick(done, new Error('quit test error'))
+          );
+
+        return t.throws(queue.close(), Error, 'quit test error');
+      });
+
       it('should stop processing even with a redis retry strategy', async (t) => {
         const queue = t.context.makeQueue({
           redis: {
