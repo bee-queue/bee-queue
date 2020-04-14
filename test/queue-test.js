@@ -28,7 +28,7 @@ async function recordUntil(emitter, trackedEvents, lastEvent) {
   const recordedEvents = [];
 
   const done = helpers.waitOn(emitter, lastEvent);
-  for (let event of trackedEvents) {
+  for (const event of trackedEvents) {
     const handler = (...values) => {
       recordedEvents.push([event, ...values]);
     };
@@ -1462,7 +1462,7 @@ describe('Queue', (it) => {
         finish(null, Promise.all(processors.map((queue) => queue.close())));
       };
 
-      for (let queue of processors) {
+      for (const queue of processors) {
         queue.process(handleJob).on('succeeded', success);
       }
 
@@ -1563,7 +1563,7 @@ describe('Queue', (it) => {
         activateDelayedJobs: true,
       });
 
-      let calls = [];
+      const calls = [];
 
       queue.process(async (job) => {
         t.deepEqual(job.options.backoff, {

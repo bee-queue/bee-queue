@@ -193,7 +193,7 @@ describe('Delayed jobs', (it) => {
     const mockTimer = new Emitter();
     mockTimer.schedule = sinon.spy((value) => onSchedule(null, value));
     mockTimer.stop = sinon.spy();
-    for (let listener of queue._delayedTimer.listeners('trigger')) {
+    for (const listener of queue._delayedTimer.listeners('trigger')) {
       mockTimer.on('trigger', listener);
     }
     queue._delayedTimer = mockTimer;

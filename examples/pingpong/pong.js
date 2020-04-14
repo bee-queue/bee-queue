@@ -1,7 +1,7 @@
-let Queue = require('../../');
+const Queue = require('../../');
 
-let pingQueue = Queue('ping');
-let pongQueue = Queue('pong');
+const pingQueue = Queue('ping');
+const pongQueue = Queue('pong');
 
 pingQueue.process(function (job, done) {
   console.log('Pong received ping');
