@@ -61,6 +61,7 @@
       {"terms": ["todo"], "location": "anywhere"}
     ],
     "object-curly-spacing": ["error", "never"],
+    "prefer-const": ["error", {"destructuring": "all"}],
     "quotes": ["error", "single"],
     "semi": ["error", "always"],
     "semi-spacing": ["error", {"before": false, "after": true}],
