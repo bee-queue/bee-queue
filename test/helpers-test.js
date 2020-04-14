@@ -24,7 +24,7 @@ describe('finallyRejectsWithInitial', (it) => {
     t.true(spy.calledOnce);
     spy.resetHistory();
 
-    await finallyRejectsWithInitial(delay(10), spy);
+    await finallyRejectsWithInitial(delay(11), spy);
     t.true(spy.calledOnce);
   });
 
@@ -64,7 +64,7 @@ describe('finallyRejectsWithInitial', (it) => {
     const measure = mark();
     await t.throws(
       finallyRejectsWithInitial(
-        delay(10).then(() => Promise.reject(new Error('err 1'))),
+        delay(11).then(() => Promise.reject(new Error('err 1'))),
         stub
       ),
       'err 1'
@@ -75,7 +75,7 @@ describe('finallyRejectsWithInitial', (it) => {
   });
 
   it('waits for the returned Promise', async (t) => {
-    const stub = sinon.stub().returns(delay(10, 'twelve'));
+    const stub = sinon.stub().returns(delay(11, 'twelve'));
 
     const measure = mark();
     t.is(
