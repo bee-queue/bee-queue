@@ -5,7 +5,7 @@ import sinon from 'sinon';
 
 function maybeCoverage() {
   return Object.keys(require.cache).some((path) =>
-    /node_modules\/nyc/.test(path)
+    path.includes('node_modules/nyc')
   );
 }
 
