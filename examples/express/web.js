@@ -7,9 +7,9 @@ const Queue = require('../../');
 const queue = Queue('express-example');
 
 app.get('/run/:x/:y', function (req, res) {
-  let job = queue.createJob({
+  const job = queue.createJob({
     x: req.params.x,
-    y: req.params.y
+    y: req.params.y,
   });
 
   job.on('succeeded', function (result) {

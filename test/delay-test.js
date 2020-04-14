@@ -9,7 +9,8 @@ import redis from '../lib/redis';
 import {EventEmitter as Emitter} from 'events';
 
 function delKeys(client, pattern) {
-  const promise = helpers.deferred(), done = promise.defer();
+  const promise = helpers.deferred(),
+    done = promise.defer();
   client.keys(pattern, (err, keys) => {
     if (err) return done(err);
     if (keys.length) {
@@ -23,7 +24,8 @@ function delKeys(client, pattern) {
 
 // A promise-based barrier.
 function reef(n = 1) {
-  const done = helpers.deferred(), end = done.defer();
+  const done = helpers.deferred(),
+    end = done.defer();
   return {
     done,
     next() {
@@ -31,7 +33,7 @@ function reef(n = 1) {
       if (n < 0) return false;
       if (n === 0) end();
       return true;
-    }
+    },
   };
 }
 
@@ -76,21 +78,27 @@ describe('Delayed jobs', (it) => {
     // Close all the queues that were created during the test, and wait for them to close before
     // ending the test.
     if (t.context.queues) {
-      return Promise.all(t.context.queues.map((queue) => {
-        if (!queue.paused) {
-          return queue.close();
-        }
-      }));
+      return Promise.all(
+        t.context.queues.map((queue) => {
+          if (!queue.paused) {
+            return queue.close();
+          }
+        })
+      );
     }
   });
 
-  it.beforeEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
-  it.afterEach(async (t) => delKeys(await gclient, `bq:${t.context.queueName}:*`));
+  it.beforeEach(async (t) =>
+    delKeys(await gclient, `bq:${t.context.queueName}:*`)
+  );
+  it.afterEach(async (t) =>
+    delKeys(await gclient, `bq:${t.context.queueName}:*`)
+  );
 
   it('should process delayed jobs', async (t) => {
     const queue = t.context.makeQueue({
       activateDelayedJobs: true,
-      getEvents: false
+      getEvents: false,
     });
 
     const processSpy = sinon.spy(async () => {});
@@ -100,7 +108,10 @@ describe('Delayed jobs', (it) => {
     const succeeded = helpers.waitOn(queue, 'succeeded');
 
     const start = Date.now();
-    await queue.createJob({iamdelayed: true}).delayUntil(start + 500).save();
+    await queue
+      .createJob({iamdelayed: true})
+      .delayUntil(start + 500)
+      .save();
     await helpers.delay(start + 10 - Date.now());
     t.false(processSpy.called);
     await Promise.all([raised, succeeded]);
@@ -121,7 +132,7 @@ describe('Delayed jobs', (it) => {
       delayedDebounce: 150,
 
       // Set this far later than the timeout to ensure we pull the
-      nearTermWindow: 10000
+      nearTermWindow: 10000,
     });
 
     const processSpy = sinon.spy(async () => {});
@@ -136,11 +147,20 @@ describe('Delayed jobs', (it) => {
     const start = Date.now();
 
     await Promise.all([
-      queue.createJob({is: 'early'}).delayUntil(start + 10).save(),
+      queue
+        .createJob({is: 'early'})
+        .delayUntil(start + 10)
+        .save(),
 
       // These should process together.
-      queue.createJob({is: 'late', uid: 1}).delayUntil(start + 200).save(),
-      queue.createJob({is: 'late', uid: 2}).delayUntil(start + 290).save(),
+      queue
+        .createJob({is: 'late', uid: 1})
+        .delayUntil(start + 200)
+        .save(),
+      queue
+        .createJob({is: 'late', uid: 2})
+        .delayUntil(start + 290)
+        .save(),
     ]);
 
     // Wait for the three jobs to completely succeed.
@@ -164,15 +184,16 @@ describe('Delayed jobs', (it) => {
   it('should process a distant delayed job', async (t) => {
     const queue = t.context.makeQueue({
       activateDelayedJobs: true,
-      nearTermWindow: 100
+      nearTermWindow: 100,
     });
 
-    let scheduled = helpers.deferred(), onSchedule = scheduled.defer();
+    let scheduled = helpers.deferred(),
+      onSchedule = scheduled.defer();
 
     const mockTimer = new Emitter();
     mockTimer.schedule = sinon.spy((value) => onSchedule(null, value));
     mockTimer.stop = sinon.spy();
-    for (let listener of queue._delayedTimer.listeners('trigger')) {
+    for (const listener of queue._delayedTimer.listeners('trigger')) {
       mockTimer.on('trigger', listener);
     }
     queue._delayedTimer = mockTimer;
@@ -192,7 +213,10 @@ describe('Delayed jobs', (it) => {
     // For when Job#save calls schedule, and the subsequent call from onMessage.
     ({done: scheduled, next: onSchedule} = reef(2));
 
-    await queue.createJob({is: 'distant'}).delayUntil(start + 150).save();
+    await queue
+      .createJob({is: 'distant'})
+      .delayUntil(start + 150)
+      .save();
     t.is(mockTimer.schedule.secondCall.args[0], start + 150);
     await scheduled;
 
@@ -216,7 +240,7 @@ describe('Delayed jobs', (it) => {
   it('should process delayed jobs from other workers', async (t) => {
     const queue = t.context.makeQueue({
       getEvents: false,
-      activateDelayedJobs: false
+      activateDelayedJobs: false,
     });
 
     const processSpy = sinon.spy(async () => {});
@@ -227,7 +251,7 @@ describe('Delayed jobs', (it) => {
     const queue2 = t.context.makeQueue({
       isWorker: false,
       getEvents: false,
-      activateDelayedJobs: true
+      activateDelayedJobs: true,
     });
 
     const start = Date.now();
@@ -235,7 +259,10 @@ describe('Delayed jobs', (it) => {
 
     // Save after the second queue is ready to avoid a race condition between the addDelayedJob
     // script and the SUBSCRIBE command.
-    await queue.createJob({is: 'delayed'}).delayUntil(start + 150).save();
+    await queue
+      .createJob({is: 'delayed'})
+      .delayUntil(start + 150)
+      .save();
     await success;
     t.true(processSpy.calledOnce);
   });
@@ -244,7 +271,7 @@ describe('Delayed jobs', (it) => {
     const queue = t.context.makeQueue({
       getEvents: false,
       sendEvents: false,
-      activateDelayedJobs: true
+      activateDelayedJobs: true,
     });
 
     const processSpy = sinon.spy(async () => {});
@@ -255,9 +282,17 @@ describe('Delayed jobs', (it) => {
     await queue.ready();
 
     const start = Date.now();
-    await queue.createJob({is: 'delayed'}).setId('awesomejob').delayUntil(start + 150).save();
+    await queue
+      .createJob({is: 'delayed'})
+      .setId('awesomejob')
+      .delayUntil(start + 150)
+      .save();
     await helpers.delay(Date.now() - start + 75);
-    await queue.createJob({is: 'delayed'}).setId('awesomejob').delayUntil(start + 250).save();
+    await queue
+      .createJob({is: 'delayed'})
+      .setId('awesomejob')
+      .delayUntil(start + 250)
+      .save();
 
     const job = await success;
 

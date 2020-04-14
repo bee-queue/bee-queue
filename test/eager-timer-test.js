@@ -4,7 +4,9 @@ import lolex from 'lolex';
 import sinon from 'sinon';
 
 function maybeCoverage() {
-  return Object.keys(require.cache).some((path) => /node_modules\/nyc/.test(path));
+  return Object.keys(require.cache).some((path) =>
+    path.includes('node_modules/nyc')
+  );
 }
 
 describe('EagerTimer', (it) => {
@@ -17,17 +19,23 @@ describe('EagerTimer', (it) => {
       locals: {
         setTimeout: clock.setTimeout,
         clearTimeout: clock.clearTimeout,
-        Date: clock.Date
+        Date: clock.Date,
       },
       // Voodoo magic to support nyc.
-      sourceTransformers: maybeCoverage() ? {
-        nyc(source) {
-          const Instrumenter = require('nyc/lib/instrumenters/istanbul');
-          const instrumenter = Instrumenter(process.cwd(), {});
-          const instrumentMethod = instrumenter.instrumentSync.bind(instrumenter);
-          return instrumentMethod(source, this.filename);
-        }
-      } : {}
+      sourceTransformers: maybeCoverage()
+        ? {
+            nyc(source) {
+              const Instrumenter = require('nyc/lib/instrumenters/istanbul');
+              const instrumenter = Instrumenter(process.cwd(), {});
+              const instrumentMethod = instrumenter.instrumentSync.bind(
+                instrumenter
+              );
+              return instrumentMethod(source, this.filename, {
+                registerMap() {},
+              });
+            },
+          }
+        : {},
     });
 
     const timer = new EagerTimer(500);

@@ -1,5 +1,5 @@
-let Queue = require('../../');
-let queue = Queue('express-example');
+const Queue = require('../../');
+const queue = Queue('express-example');
 
 queue.on('ready', function () {
   queue.process(function (job, done) {

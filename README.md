@@ -12,7 +12,7 @@ A simple, fast, robust job/task queue for Node.js, backed by Redis.
 const Queue = require('bee-queue');
 const queue = new Queue('example');
 
-const job = queue.createJob({x: 2, y: 3})
+const job = queue.createJob({x: 2, y: 3});
 job.save();
 job.on('succeeded', (result) => {
   console.log(`Received result for job ${job.id}: ${result}`);
@@ -56,7 +56,7 @@ Thanks to the folks at [Mixmax](https://mixmax.com), Bee-Queue is once again bei
 $ npm install bee-queue
 ```
 
-You'll also need [Redis 2.8+](http://redis.io/topics/quickstart)* running somewhere.
+You'll also need [Redis 2.8+](http://redis.io/topics/quickstart)\* running somewhere.
 
 \* We've been noticing that some jobs get delayed by virtue of an issue with Redis < 3.2, and therefore recommend the use of Redis 3.2+.
 
@@ -123,9 +123,9 @@ Queues are very lightweight — the only significant overhead is connecting to R
 ```js
 const subQueue = new Queue('subtraction', {
   redis: {
-    host: 'somewhereElse'
+    host: 'somewhereElse',
   },
-  isWorker: false
+  isWorker: false,
 });
 ```
 
@@ -197,14 +197,16 @@ Handlers can send progress reports, which will be received as events on the orig
 ```js
 const job = addQueue.createJob({x: 2, y: 3}).save();
 job.on('progress', (progress) => {
-  console.log(`Job ${job.id} reported progress: page ${progress.page} / ${progress.totalPages}`);
+  console.log(
+    `Job ${job.id} reported progress: page ${progress.page} / ${progress.totalPages}`
+  );
 });
 
 addQueue.process(async (job) => {
   // do some work
-  job.reportProgress({ page: 3, totalPages: 11 });
+  job.reportProgress({page: 3, totalPages: 11});
   // do more work
-  job.reportProgress({ page: 9, totalPages: 11 });
+  job.reportProgress({page: 9, totalPages: 11});
   // do the rest
 });
 ```
@@ -246,7 +248,7 @@ const redis = require('redis');
 const sharedConfig = {
   getEvents: false,
   isWorker: false,
-  redis: redis.createClient(process.env.REDIS_URL)
+  redis: redis.createClient(process.env.REDIS_URL),
 };
 
 const emailQueue = new Queue('EMAIL_DELIVERY', sharedConfig);
@@ -265,7 +267,7 @@ In your worker process where you define how to process the job with `queue.proce
 const Queue = require('bee-queue');
 const redis = require('redis');
 const sharedConfig = {
-  redis: redis.createClient(process.env.REDIS_URL)
+  redis: redis.createClient(process.env.REDIS_URL),
 };
 
 const emailQueue = new Queue('EMAIL_DELIVERY', sharedConfig);
@@ -295,7 +297,7 @@ const queue = new Queue('test', {
     host: '127.0.0.1',
     port: 6379,
     db: 0,
-    options: {}
+    options: {},
   },
   isWorker: true,
   getEvents: true,
@@ -305,7 +307,7 @@ const queue = new Queue('test', {
   activateDelayedJobs: false,
   removeOnSuccess: false,
   removeOnFailure: false,
-  redisScanCount: 100
+  redisScanCount: 100,
 });
 ```
 
@@ -316,11 +318,13 @@ The `settings` fields are:
 - `nearTermWindow`: number, ms; the window during which delayed jobs will be specifically scheduled using `setTimeout` - if all delayed jobs are further out that this window, the Queue will double-check that it hasn't missed any jobs after the window elapses.
 - `delayedDebounce`: number, ms; to avoid unnecessary churn for several jobs in short succession, the Queue may delay individual jobs by up to this amount.
 - `redis`: object or string, specifies how to connect to Redis. See [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) for the full set of options.
+
   - `host`: string, Redis host.
   - `port`: number, Redis port.
   - `socket`: string, Redis socket to be used instead of a host and port.
 
   Note that this can also be a node_redis `RedisClient` instance, in which case Bee-Queue will issue normal commands over it. It will `duplicate()` the client for blocking commands and PubSub subscriptions, if enabled. This is advanced usage,
+
 - `isWorker`: boolean. Disable if this queue will not process jobs.
 - `getEvents`: boolean. Disable if this queue does not need to receive job events.
 - `sendEvents`: boolean. Disable if this worker does not need to send job events back to other queues.
@@ -378,7 +382,9 @@ This queue has successfully processed `job`. If `result` is defined, the handler
 
 ```js
 queue.on('retrying', (job, err) => {
-  console.log(`Job ${job.id} failed with error ${err.message} but is being retried!`);
+  console.log(
+    `Job ${job.id} failed with error ${err.message} but is being retried!`
+  );
 });
 ```
 
@@ -426,7 +432,9 @@ Some worker has successfully processed job `jobId`. If `result` is defined, the 
 
 ```js
 queue.on('job retrying', (jobId, err) => {
-  console.log(`Job ${jobId} failed with error ${err.message} but is being retried!`);
+  console.log(
+    `Job ${jobId} failed with error ${err.message} but is being retried!`
+  );
 });
 ```
 
@@ -481,8 +489,7 @@ queue.getJob(3, function (err, job) {
   console.log(`Job 3 has status ${job.status}`);
 });
 
-queue.getJob(3)
-  .then((job) => console.log(`Job 3 has status ${job.status}`));
+queue.getJob(3).then((job) => console.log(`Job 3 has status ${job.status}`));
 ```
 
 Looks up a job by its `jobId`. The returned job will emit events if `getEvents` and `storeJobs` is true.
@@ -492,17 +499,15 @@ Be careful with this method; most potential uses would be better served by job e
 #### Queue#getJobs(type, page, [cb])
 
 ```js
-queue.getJobs('waiting', {start: 0, end: 25})
-  .then((jobs) => {
-    const jobIds = jobs.map((job) => job.id);
-    console.log(`Job ids: ${jobIds.join(' ')}`);
-  });
+queue.getJobs('waiting', {start: 0, end: 25}).then((jobs) => {
+  const jobIds = jobs.map((job) => job.id);
+  console.log(`Job ids: ${jobIds.join(' ')}`);
+});
 
-queue.getJobs('failed', {size: 100})
-  .then((jobs) => {
-    const jobIds = jobs.map((job) => job.id);
-    console.log(`Job ids: ${jobIds.join(' ')}`);
-  });
+queue.getJobs('failed', {size: 100}).then((jobs) => {
+  const jobIds = jobs.map((job) => job.id);
+  console.log(`Job ids: ${jobIds.join(' ')}`);
+});
 ```
 
 Looks up jobs by their queue type. When looking up jobs of type `waiting`, `active`, or `delayed`, `page` should be configured with `start` and `end` attributes to specify a range of job indices to return. Jobs of type `failed` and `succeeded` will return an arbitrary subset of the queue of size `page['size']`. Note: This is because failed and succeeded job types are represented by a Redis SET, which does not maintain a job ordering.
@@ -584,18 +589,20 @@ process.on('uncaughtException', async () => {
   process.exit(1);
 });
 ```
+
 #### Queue#isRunning()
 
 Returns `true` unless the Queue is shutting down due to a call to `Queue#close()`.
 
 #### Queue#ready([cb])
 
-Promise resolves to the queue (or callback is called wth `null` argument) when the queue (and Redis) are ready for jobs.  Learn more about `'ready'` in [Queue Local Events](#queue-local-events).
+Promise resolves to the queue (or callback is called wth `null` argument) when the queue (and Redis) are ready for jobs. Learn more about `'ready'` in [Queue Local Events](#queue-local-events).
 
 ```js
 const Queue = require('bee-queue');
 const queue = new Queue('example');
-queue.ready()
+queue
+  .ready()
   .then(async (queue) => {
     console.log('isRunning:', queue.isRunning());
     const checkHealth = await queue.checkHealth();
@@ -613,8 +620,7 @@ queue.removeJob(3, function (err) {
   }
 });
 
-queue.removeJob(3)
-  .then(() => console.log('Job 3 was removed'));
+queue.removeJob(3).then(() => console.log('Job 3 was removed'));
 ```
 
 Removes a job by its `jobId`. Idempotent.
@@ -632,8 +638,7 @@ queue.destroy(function (err) {
   }
 });
 
-queue.destroy()
-  .then(() => console.log('Queue was destroyed'));
+queue.destroy().then(() => console.log('Queue was destroyed'));
 ```
 
 Removes all Redis keys belonging to this queue (see [Under the hood](#under-the-hood)). Idempotent.
@@ -678,7 +683,9 @@ The job has succeeded. If `result` is defined, the handler called `done(null, re
 
 ```js
 job.on('retrying', (err) => {
-  console.log(`Job ${job.id} failed with error ${err.message} but is being retried!`);
+  console.log(
+    `Job ${job.id} failed with error ${err.message} but is being retried!`
+  );
 });
 ```
 
