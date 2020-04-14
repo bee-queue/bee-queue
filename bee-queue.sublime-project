@@ -9,8 +9,7 @@
         ".nyc_output"
       ],
       "file_exclude_patterns": [
-        // Yarn lock file
-        "yarn.lock"
+        "package-lock.json"
       ]
     }
   ],
