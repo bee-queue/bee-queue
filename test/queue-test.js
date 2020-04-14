@@ -47,6 +47,20 @@ async function delKeys(client, pattern) {
   }
 }
 
+async function forceStall(queue, {endDelay = 1} = {}) {
+  // Safety belts.
+  await helpers.delay(1);
+  await queue.checkStalledJobs();
+  await helpers.callAsync((done) =>
+    // This key prevents frequent running of the stall check as that would
+    // cause erroneous stalls, and its removal unblocks the discovery of
+    // stalled jobs.
+    queue.client.del(queue.toKey('stallBlock'), done)
+  );
+  // Safety belts.
+  await helpers.delay(endDelay);
+}
+
 function spitter() {
   const values = [],
     resume = [];
@@ -1587,10 +1601,9 @@ describe('Queue', (it) => {
       // Artificially move to active.
       await queue._getNextJob();
 
-      // Mark the jobs as stalling, so that Queue#process immediately detects them as stalled.
-      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
-      await queue.checkStalledJobs();
-      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
+      // Mark the jobs as stalling, so that Queue#process immediately detects
+      // them as stalled.
+      await forceStall(queue);
 
       const {done, next} = reef(jobs.length);
       queue.process(async () => {
@@ -1624,8 +1637,7 @@ describe('Queue', (it) => {
         stallInterval: 1,
       });
 
-      await queue.checkStalledJobs();
-      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
+      await forceStall(queue);
 
       const {done, next} = reef(queues.length);
       queue.process(async (job) => {
@@ -1669,9 +1681,10 @@ describe('Queue', (it) => {
         stallInterval: 1,
       });
 
-      await helpers.delay(1); // Just in case - somehow - we end up going too fast.
-      await queue.checkStalledJobs();
-      await helpers.delay(2); // Yes this has actually been too fast - we need to outrun redis' key.
+      await forceStall(queue, {
+        // Yes this has actually been too fast - we need to outrun redis' key.
+        endDelay: 2,
+      });
 
       const {done, next} = reef(numJobs);
       queue.process(async () => {
