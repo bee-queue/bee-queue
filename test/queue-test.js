@@ -7,7 +7,7 @@ import sinon from 'sinon';
 import {promisify} from 'promise-callbacks';
 
 import redis from '../lib/redis';
-import {createClient} from 'redis';
+import actualRedis from 'redis';
 
 // A promise-based barrier.
 function reef(n = 1) {
@@ -247,6 +247,43 @@ describe('Queue', (it) => {
           );
 
         return t.throws(queue.close(), Error, 'quit test error');
+      });
+
+      it('should allow close after failed startup', async (t) => {
+        const symbol = Symbol();
+        const redisParam = {
+          url: 'redis://fakedomain.example.com',
+          [symbol]: true,
+        };
+
+        const stub = sinon.stub(actualRedis, 'createClient').callThrough();
+        const relatedStub = stub
+          .withArgs(sinon.match((value) => value && value[symbol]))
+          .callsFake(function () {
+            const client = stub.wrappedMethod.call(this, redisParam.url);
+            sinon.spy(client, 'quit');
+            return client;
+          });
+
+        const queue = t.context.makeQueue({
+          getEvents: false,
+          isWorker: false,
+          quitCommandClient: true,
+          redis: redisParam,
+        });
+
+        await t.throws(queue.ready(), (err) => err.code === 'ENOTFOUND');
+
+        t.true(relatedStub.calledOnce);
+        const client = relatedStub.firstCall.returnValue;
+        t.truthy(client);
+
+        t.falsy(queue.client);
+        t.false(client.quit.called);
+
+        await t.throws(queue.close(), (err) => err.code === 'ENOTFOUND');
+
+        stub.restore();
       });
 
       it('should stop processing even with a redis retry strategy', async (t) => {
@@ -596,7 +633,7 @@ describe('Queue', (it) => {
     });
 
     it('should create a Queue with a connecting redis instance', async (t) => {
-      const client = createClient();
+      const client = actualRedis.createClient();
 
       const queue = t.context.makeQueue({
         redis: client,
