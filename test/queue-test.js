@@ -40,18 +40,11 @@ async function recordUntil(emitter, trackedEvents, lastEvent) {
   return recordedEvents;
 }
 
-function delKeys(client, pattern) {
-  const promise = helpers.deferred(),
-    done = promise.defer();
-  client.keys(pattern, (err, keys) => {
-    if (err) return done(err);
-    if (keys.length) {
-      client.del(keys, done);
-    } else {
-      done();
-    }
-  });
-  return promise;
+async function delKeys(client, pattern) {
+  const keys = await helpers.callAsync((done) => client.keys(pattern, done));
+  if (keys.length) {
+    return helpers.callAsync((done) => client.del(keys, done));
+  }
 }
 
 function spitter() {
@@ -425,9 +418,7 @@ describe('Queue', (it) => {
         t.true(client.ready);
         t.false(client.quit.called);
 
-        let promise = helpers.deferred();
-        client.ping(promise.defer());
-        await t.notThrows(promise);
+        await t.notThrows(helpers.callAsync((done) => client.ping(done)));
 
         queue = t.context.makeQueue({
           redis: client,
@@ -439,9 +430,10 @@ describe('Queue', (it) => {
         t.false(client.ready);
         t.true(client.quit.called);
 
-        promise = helpers.deferred();
-        client.ping(promise.defer());
-        await t.throws(promise, (err) => redis.isAbortError(err));
+        await t.throws(
+          helpers.callAsync((done) => client.ping(done)),
+          (err) => redis.isAbortError(err)
+        );
       });
 
       it('should not quit the command client when quitCommandClient=false', async (t) => {
@@ -459,13 +451,9 @@ describe('Queue', (it) => {
         t.true(client.ready);
         t.false(client.quit.called);
 
-        let promise = helpers.deferred();
-        client.ping(promise.defer());
-        await t.notThrows(promise);
+        await t.notThrows(helpers.callAsync((done) => client.ping(done)));
 
-        promise = helpers.deferred();
-        client.quit(promise.defer());
-        await promise;
+        await helpers.callAsync((done) => client.quit(done));
       });
     });
 
@@ -688,9 +676,7 @@ describe('Queue', (it) => {
 
       await queue.createJob({foo: 'bar'}).save();
 
-      const countsPromise = helpers.deferred();
-      queue.checkHealth(countsPromise.defer());
-      const counts = await countsPromise;
+      const counts = await helpers.callAsync((done) => queue.checkHealth(done));
 
       t.is(counts.waiting, 1);
     });
@@ -815,16 +801,14 @@ describe('Queue', (it) => {
 
       const job = await queue.createJob({foo: 'bar'}).save();
 
-      let jobsPromise = helpers.deferred();
-      queue.getJobs('waiting', {start: 0, end: 1}, jobsPromise.defer());
-      let jobs = await jobsPromise;
+      let jobs = await helpers.callAsync((done) =>
+        queue.getJobs('waiting', {start: 0, end: 1}, done)
+      );
 
       t.is(jobs.length, 1);
       t.is(jobs[0].id, job.id);
 
-      jobsPromise = helpers.deferred();
-      queue.getJobs('waiting', jobsPromise.defer());
-      jobs = await jobsPromise;
+      jobs = await helpers.callAsync((done) => queue.getJobs('waiting', done));
 
       t.is(jobs.length, 1);
       t.is(jobs[0].id, job.id);
@@ -906,9 +890,9 @@ describe('Queue', (it) => {
 
       const job = await queue.createJob({foo: 'bar'}).save();
 
-      const jobPromise = helpers.deferred();
-      queue.getJob(job.id, jobPromise.defer());
-      const gotJob = await jobPromise;
+      const gotJob = await helpers.callAsync((done) =>
+        queue.getJob(job.id, done)
+      );
 
       t.is(gotJob.id, job.id);
     });
@@ -957,9 +941,7 @@ describe('Queue', (it) => {
 
       const job = await queue.createJob({foo: 'bar'}).save();
 
-      const removePromise = helpers.deferred();
-      queue.removeJob(job.id, removePromise.defer());
-      await removePromise;
+      await helpers.callAsync((done) => queue.removeJob(job.id, done));
     });
   });
 
@@ -2162,9 +2144,7 @@ describe('Queue', (it) => {
 
       await queue.createJob({zoo: 't'}).save();
 
-      const destroyPromise = helpers.deferred();
-      queue.destroy(destroyPromise.defer());
-      await destroyPromise;
+      await helpers.callAsync((done) => queue.destroy(done));
 
       const {keys: getKeys} = promisify.methods(queue.client, ['keys']);
       const keys = await getKeys(queue.toKey('*'));
