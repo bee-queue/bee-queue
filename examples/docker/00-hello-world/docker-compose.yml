@@ -1,0 +1,18 @@
+version: '3.7'
+
+services:
+
+  # Run client.js in a container created from our image
+  client:
+    build: .
+    command: node client.js
+
+  # Run worker.js in a container created from our image
+  worker:
+    build: .
+    command: node worker.js
+
+  # Run Redis in a container created from the redis:alpine image from Docker Hub
+  redis:
+    image: redis:alpine
+    command: redis-server --tcp-backlog 128 --logfile /dev/null
