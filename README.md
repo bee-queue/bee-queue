@@ -6,7 +6,7 @@ A simple, fast, robust job/task queue for Node.js, backed by Redis.
 
 - Simple: ~1000 LOC, and minimal dependencies.
 - Fast: maximizes throughput by minimizing Redis and network overhead. [Benchmarks](#benchmarks) well.
-- Robust: designed with concurrency, atomicity, and failure in mind; close to full code coverage.
+- Robust: designed with concurrency, atomicity, and failure in mind; full code coverage.
 
 ```js
 const Queue = require('bee-queue');
