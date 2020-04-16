@@ -90,6 +90,31 @@ function spitter() {
   };
 }
 
+function stubMethod(obj, method, fn) {
+  const stub = sinon.stub(obj, method).callsFake(function (...args) {
+    return fn((...args) => stub.wrappedMethod.apply(this, args), ...args);
+  });
+  return stub;
+}
+
+function tapMethod(obj, method, fn) {
+  return stubMethod(
+    obj,
+    method,
+    (orig, ...args) => (fn(...args), orig(...args))
+  );
+}
+
+function waitMethod(obj, method) {
+  const wait = helpers.defer();
+  const stub = (wait.promise.stub = tapMethod(
+    obj,
+    method,
+    () => (stub.restore(), wait.resolve(stub))
+  ));
+  return wait.promise;
+}
+
 describe('Queue', (it) => {
   const gclient = redis.createClient();
 
@@ -641,6 +666,16 @@ describe('Queue', (it) => {
 
       await t.notThrows(queue.createJob().save());
     });
+
+    it('should reject when the client uuid fails to initialize', async (t) => {
+      const queue = t.context.makeQueue({
+        clientUUID: Promise.reject(new Error('client UUID failure')),
+      });
+
+      await t.throws(queue.ready(), 'client UUID failure');
+
+      await t.throws(queue.close(), 'client UUID failure');
+    });
   });
 
   it('adds a job with correct prefix', async (t) => {
@@ -973,23 +1008,21 @@ describe('Queue', (it) => {
         }
       });
 
-      const waitJob = queue._waitForJob,
-        wait = helpers.deferred();
-      let waitDone = wait.defer();
-      queue._waitForJob = function (...args) {
-        if (waitDone) {
-          waitDone();
-          waitDone = null;
-        }
-        return waitJob.apply(this, args);
-      };
+      const stub = sinon
+        .stub(queue, '_waitForJob')
+        .callsFake(function (...args) {
+          queue.emit('test:_waitForJob:called');
+          return stub.wrappedMethod.apply(this, args);
+        });
 
-      await wait;
+      await helpers.waitOn(queue, 'test:_waitForJob:called');
+
+      await queue.ready();
 
       const job = queue.createJob({foo: 'bar'}).setId('deadjob');
       await Promise.all([
         job.save(),
-        queue.removeJob(job.id),
+        job.remove(),
         queue.createJob({foo: 'bar'}).setId('goodjob').save(),
       ]);
 
@@ -1019,19 +1052,25 @@ describe('Queue', (it) => {
         return 'baz';
       });
 
+      const succeeded = helpers.waitOn(queue, 'succeeded'),
+        jobSucceeded = helpers.waitOn(queue, 'job succeeded');
+
       const job = await queue.createJob({foo: 'bar'}).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
       const success = sinon.spy();
       queue.once('succeeded', success);
-      await helpers.waitOn(queue, 'succeeded');
+      await succeeded;
 
       const [[succeededJob, data]] = success.args;
       t.truthy(succeededJob);
       t.is(data, 'baz');
 
-      t.true(await succeededJob.isInSet('succeeded'));
+      await Promise.all([
+        succeededJob.isInSet('succeeded').then(t.true.bind(t)),
+        jobSucceeded.then(() => t.is(job.status, 'succeeded')),
+      ]);
     });
 
     it('should process a job with a non-numeric id', async (t) => {
@@ -1055,6 +1094,7 @@ describe('Queue', (it) => {
 
       t.truthy(job);
       t.is(job.id, 'amazingjob');
+      t.is(job.status, 'succeeded');
       t.deepEqual(job.data, {foo: 'baz'});
       t.true(await job.isInSet('succeeded'));
     });
@@ -1072,15 +1112,22 @@ describe('Queue', (it) => {
         t.is(job.data.foo, 'bar');
       });
 
+      const succeeded = helpers.waitOn(queue, 'succeeded'),
+        jobSucceeded = helpers.waitOn(queue, 'job succeeded');
+
       const job = await queue.createJob({foo: 'bar'}).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
 
-      const succeededJob = await helpers.waitOn(queue, 'succeeded', true);
-      t.is(succeededJob.id, job.id);
+      await Promise.all([
+        succeeded.then(async (succeededJob) => {
+          t.is(succeededJob.id, job.id);
 
-      const jobData = await hget(queue.toKey('jobs'), job.id);
-      t.is(jobData, null);
+          const jobData = await hget(queue.toKey('jobs'), job.id);
+          t.is(jobData, null);
+        }),
+        jobSucceeded.then(() => t.is(job.status, 'succeeded')),
+      ]);
 
       t.false(await job.isInSet('success'));
     });
@@ -1116,13 +1163,17 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
 
       queue.process(async (job) => {
+        // Wait to avoid the race condition described in
+        // https://github.com/bee-queue/bee-queue/issues/189.
+        await helpers.delay(10);
         t.is(job.data.foo, 'bar');
         throw new Error('failed!');
       });
 
       const fail = sinon.spy();
       queue.once('failed', fail);
-      const failed = helpers.waitOn(queue, 'failed');
+      const failed = helpers.waitOn(queue, 'failed'),
+        jobFailed = helpers.waitOn(queue, 'job failed');
 
       const job = await queue.createJob({foo: 'bar'}).save();
       t.truthy(job.id);
@@ -1135,6 +1186,9 @@ describe('Queue', (it) => {
       t.is(failedJob.data.foo, 'bar');
       t.is(err.message, 'failed!');
       t.true(await failedJob.isInSet('failed'));
+
+      t.is(await jobFailed, job.id);
+      t.is(job.status, 'failed');
     });
 
     it('processes a job that throws an exception', async (t) => {
@@ -1146,7 +1200,8 @@ describe('Queue', (it) => {
 
       const fail = sinon.spy();
       queue.once('failed', fail);
-      const failed = helpers.waitOn(queue, 'failed');
+      const failed = helpers.waitOn(queue, 'failed'),
+        jobFailed = helpers.waitOn(queue, 'job failed');
 
       const job = await queue.createJob({foo: 'bar'}).save();
       t.truthy(job.id);
@@ -1158,6 +1213,11 @@ describe('Queue', (it) => {
       t.truthy(failedJob);
       t.is(failedJob.data.foo, 'bar');
       t.is(err.message, 'exception!');
+      t.is(failedJob.status, 'failed');
+
+      await jobFailed;
+
+      t.is(job.status, 'failed');
     });
 
     it('should capture error data', async (t) => {
@@ -1206,25 +1266,35 @@ describe('Queue', (it) => {
         callCount++;
         t.is(job.data.foo, 'bar');
         if (callCount <= 1) {
+          t.is(job.status, 'created');
           throw new Error('failed!');
         }
+        t.is(job.status, 'failed');
       });
 
       queue.on('failed', (job, err) => {
         t.truthy(job);
+        t.is(job.status, 'failed');
         t.is(job.data.foo, 'bar');
         t.is(err.message, 'failed!');
         job.retry();
       });
 
-      const succeeded = helpers.waitOn(queue, 'succeeded');
+      const succeeded = helpers.waitOn(queue, 'succeeded'),
+        jobSucceeded = helpers.waitOn(queue, 'job succeeded');
 
       const job = await queue.createJob({foo: 'bar'}).save();
       t.truthy(job.id);
       t.is(job.data.foo, 'bar');
+      t.is(job.status, 'created');
 
-      await succeeded;
-      t.is(callCount, 2);
+      await Promise.all([
+        succeeded.then((processedJob) => {
+          t.is(processedJob.status, 'succeeded');
+          t.is(callCount, 2);
+        }),
+        jobSucceeded.then(() => t.is(job.status, 'succeeded')),
+      ]);
     });
 
     it('processes a job that times out', async (t) => {
@@ -1375,6 +1445,34 @@ describe('Queue', (it) => {
       t.throws(() => {
         queue.process(() => {});
       }, /closed/);
+
+      t.context.handleErrors(t);
+    });
+
+    it('should continue processing even if the job gets removed', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const wait = waitMethod(queue, '_waitForJob');
+
+      queue.process(async (job) => {
+        if (job.id === 'deadjob') {
+          t.fail('should not be able to process the job');
+        }
+      });
+
+      await wait;
+
+      await queue.ready();
+
+      const job = queue.createJob({foo: 'bar'}).setId('deadjob');
+      await Promise.all([
+        job.save(),
+        job.remove(),
+        queue.createJob({foo: 'bar'}).setId('goodjob').save(),
+      ]);
+
+      const goodJob = await helpers.waitOn(queue, 'succeeded');
+      t.is(goodJob.id, 'goodjob');
 
       t.context.handleErrors(t);
     });
@@ -1947,6 +2045,74 @@ describe('Queue', (it) => {
   });
 
   it.describe('Pubsub events', (it) => {
+    it('should capture errors when parsing JSON', async (t) => {
+      const queue = t.context.makeQueue();
+
+      await queue.ready();
+
+      // Publish a malformed JSON object.
+      queue.client.publish(queue.toKey('events'), '{');
+
+      await helpers.waitOn(queue, 'error');
+
+      t.throws(t.context.consumeError, (err) => err.name === 'SyntaxError');
+    });
+
+    it('should identify locally produced jobs', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const jobSucceeded = helpers.waitOn(queue, 'job succeeded');
+
+      const job = await queue.createJob({}).save();
+      queue.jobs.delete(job.id);
+
+      queue.process(async () => {});
+
+      await jobSucceeded;
+      t.is(job.status, 'succeeded');
+    });
+
+    it('should identify locally produced jobs even after saved twice', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const jobSucceeded = helpers.waitOn(queue, 'job succeeded');
+
+      const job = await queue.createJob({}).save();
+      queue.jobs.delete(job.id);
+
+      queue.process(async () => {});
+
+      // Remove the ID temporarily, so that internally it looks like it hasn't
+      // been saved.
+      const oid = job.id;
+      job.id = null;
+      // This could theoretically result in a different local job ID, causing
+      // the data to not wire up correctly.
+      const promise = job.save();
+      job.id = oid;
+
+      await Promise.all([promise, jobSucceeded]);
+      t.is(job.status, 'succeeded');
+    });
+
+    it('should not directly handle event errors', async (t) => {
+      const queue = t.context.makeQueue();
+
+      queue.process(async () => {});
+
+      const error = new Error('failure');
+
+      const gotError = helpers.waitOn(queue, 'error:user');
+
+      queue.once('job succeeded', () => {
+        throw error;
+      });
+
+      await queue.createJob({}).save();
+
+      t.is(await gotError, error);
+    });
+
     it('emits a job succeeded event', async (t) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();
