@@ -11,14 +11,13 @@ import actualRedis from 'redis';
 
 // A promise-based barrier.
 function reef(n = 1) {
-  const done = helpers.deferred(),
-    end = done.defer();
+  const done = helpers.defer();
   return {
-    done,
+    done: done.promise,
     next() {
       --n;
       if (n < 0) return false;
-      if (n === 0) end();
+      if (n === 0) done.resolve();
       return true;
     },
   };
@@ -353,21 +352,21 @@ describe('Queue', (it) => {
       it('should gracefully shut down', async (t) => {
         const queue = t.context.makeQueue();
 
-        const started = helpers.deferred(),
-          resume = helpers.deferred();
+        const started = helpers.defer(),
+          resume = helpers.defer();
         queue.process(() => {
-          setImmediate(started.defer(), null);
-          return resume;
+          setImmediate(started.resolve);
+          return resume.promise;
         });
 
         const successSpy = sinon.spy();
         queue.on('succeeded', successSpy);
 
         await queue.createJob({}).save();
-        await started;
+        await started.promise;
 
         // Asynchronously wait 20 seconds, then complete the process handler.
-        setTimeout(resume.defer(), 20, null);
+        setTimeout(resume.resolve, 20);
 
         // Meanwhile, close the queue, and verify that success is called before close completes.
         t.false(successSpy.called);
@@ -378,12 +377,11 @@ describe('Queue', (it) => {
       it('should not process new jobs while shutting down', async (t) => {
         const queue = t.context.makeQueue();
 
-        const started = helpers.deferred(),
-          resumed = helpers.deferred(),
-          resume = resumed.defer();
+        const started = helpers.defer(),
+          resume = helpers.defer();
         const processSpy = sinon.spy(() => {
-          setImmediate(started.defer(), null);
-          return resumed;
+          setImmediate(started.resolve);
+          return resume.promise;
         });
         queue.process(processSpy);
 
@@ -391,12 +389,12 @@ describe('Queue', (it) => {
         queue.on('succeeded', successSpy);
 
         await queue.createJob({is: 'first'}).save();
-        await started;
+        await started.promise;
 
         // Close the queue, save a new job, and then complete the first job.
         const closed = queue.close();
         await queue.createJob({is: 'second'}).save();
-        resume(null);
+        resume.resolve();
         await closed;
 
         // Verify that the second job wasn't picked up for processing.
@@ -710,21 +708,20 @@ describe('Queue', (it) => {
 
     it('reports an active job', async (t) => {
       const queue = t.context.makeQueue();
-      const end = helpers.deferred(),
-        finish = end.defer();
+      const end = helpers.defer();
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         const counts = await queue.checkHealth();
         t.is(counts.active, 1);
 
-        finish();
+        end.resolve();
       });
 
       const job = await queue.createJob({foo: 'bar'}).save();
       t.truthy(job.id);
 
-      return end;
+      return end.promise;
     });
 
     it('reports a succeeded job', async (t) => {
@@ -1332,8 +1329,7 @@ describe('Queue', (it) => {
       const retries = 1;
       const failMsg = 'failing to auto-retry...';
 
-      const end = helpers.deferred(),
-        finish = end.defer();
+      const end = helpers.defer();
 
       let failCount = 0;
 
@@ -1343,7 +1339,7 @@ describe('Queue', (it) => {
           throw new Error(failMsg);
         }
         t.is(failCount, retries);
-        finish();
+        end.resolve();
       });
 
       queue.on('failed', (job, err) => {
@@ -1358,7 +1354,7 @@ describe('Queue', (it) => {
       t.is(job.data.foo, 'bar');
       t.is(job.options.retries, retries);
 
-      return end;
+      return end.promise;
     });
 
     it('should fail a job that has a retry but is intentionally stopped', async (t) => {
@@ -1385,8 +1381,7 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       const retries = 1;
 
-      const end = helpers.deferred(),
-        finish = end.defer();
+      const end = helpers.defer();
 
       let failCount = 0;
 
@@ -1396,7 +1391,7 @@ describe('Queue', (it) => {
           return helpers.delay(20);
         }
         t.is(failCount, retries);
-        finish();
+        end.resolve();
       });
 
       queue.on('failed', (job) => {
@@ -1414,7 +1409,7 @@ describe('Queue', (it) => {
       t.is(job.data.foo, 'bar');
       t.is(job.options.retries, retries);
 
-      return end;
+      return end.promise;
     });
 
     it('refuses to process when isWorker is false', (t) => {
@@ -1487,8 +1482,7 @@ describe('Queue', (it) => {
       const queue = t.context.makeQueue();
       const numJobs = 20;
 
-      const end = helpers.deferred(),
-        finish = end.defer();
+      const end = helpers.defer();
 
       let counter = 0;
 
@@ -1496,7 +1490,7 @@ describe('Queue', (it) => {
         t.is(job.data.count, counter);
         counter++;
         if (counter === numJobs) {
-          finish();
+          end.resolve();
         }
       });
 
@@ -1508,7 +1502,7 @@ describe('Queue', (it) => {
       // Save all the jobs.
       await Promise.all(jobs.map((job) => job.save()));
 
-      return end;
+      return end.promise;
     });
 
     it('processes many jobs with one concurrent processor', async (t) => {
@@ -1516,8 +1510,7 @@ describe('Queue', (it) => {
       const concurrency = 5;
       const numJobs = 20;
 
-      const end = helpers.deferred(),
-        finish = end.defer();
+      const end = helpers.defer();
 
       let counter = 0;
 
@@ -1527,7 +1520,7 @@ describe('Queue', (it) => {
         t.is(job.data.count, counter);
         counter++;
         if (counter === numJobs) {
-          finish();
+          end.resolve();
         }
       });
 
@@ -1535,7 +1528,7 @@ describe('Queue', (it) => {
         await queue.createJob({count: i}).save();
       }
 
-      return end;
+      return end.promise;
     });
 
     it('processes many randomly offset jobs with one concurrent processor', async (t) => {
@@ -1543,8 +1536,7 @@ describe('Queue', (it) => {
       const concurrency = 5;
       const numJobs = 20;
 
-      const end = helpers.deferred(),
-        finish = end.defer();
+      const end = helpers.defer();
 
       let counter = 0;
 
@@ -1553,17 +1545,17 @@ describe('Queue', (it) => {
         await helpers.delay(10);
         counter++;
         if (counter === numJobs) {
-          finish();
+          end.resolve();
         }
       });
 
       for (let i = 0; i < numJobs; i++) {
         setTimeout(() => {
-          queue.createJob({count: i}).save().catch(finish);
+          queue.createJob({count: i}).save().catch(end.reject);
         }, Math.random() * 50);
       }
 
-      return end;
+      return end.promise;
     });
 
     it('processes many jobs with multiple processors', async (t) => {
@@ -1576,8 +1568,7 @@ describe('Queue', (it) => {
       const numJobs = 20;
       const processed = new Set();
 
-      const end = helpers.deferred(),
-        finish = end.defer();
+      const end = helpers.defer();
 
       let counter = 0;
 
@@ -1598,7 +1589,7 @@ describe('Queue', (it) => {
         for (let i = 0; i < numJobs; i++) {
           t.true(processed.has(i));
         }
-        finish(null, Promise.all(processors.map((queue) => queue.close())));
+        end.resolve(Promise.all(processors.map((queue) => queue.close())));
       };
 
       for (const queue of processors) {
@@ -1609,7 +1600,7 @@ describe('Queue', (it) => {
         queue.createJob({count: i}).save();
       }
 
-      return end.then(() => t.context.handleErrors(t));
+      return end.promise.then(() => t.context.handleErrors(t));
     });
   });
 
@@ -2029,11 +2020,10 @@ describe('Queue', (it) => {
 
       await queue.createJob({foo: 'bar'}).save();
 
-      const jobDone = helpers.deferred(),
-        finishJob = jobDone.defer();
+      const jobDone = helpers.defer();
       queue.process((job) => {
         t.is(job.data.foo, 'bar');
-        return jobDone;
+        return jobDone.promise;
       });
 
       const queue2 = t.context.makeQueue();
@@ -2042,7 +2032,7 @@ describe('Queue', (it) => {
       });
 
       await helpers.delay(20);
-      finishJob();
+      jobDone.resolve();
 
       await helpers.waitOn(queue, 'succeeded', true);
     });

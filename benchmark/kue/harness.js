@@ -4,14 +4,13 @@ const queue = kue.createQueue();
 
 // A promise-based barrier.
 function reef(n = 1) {
-  const done = helpers.deferred(),
-    end = done.defer();
+  const done = helpers.defer();
   return {
-    done,
+    done: done.promise,
     next() {
       --n;
       if (n < 0) return false;
-      if (n === 0) end();
+      if (n === 0) done.resolve();
       return true;
     },
   };
@@ -31,9 +30,7 @@ module.exports = (options) => {
   }
   return done.then(() => {
     const elapsed = Date.now() - startTime;
-    const promise = helpers.deferred();
-    queue.shutdown(promise.defer());
-    return promise.then(() => elapsed);
+    return helpers.callAsync((cb) => queue.shutdown(cb)).then(() => elapsed);
   });
 };
 
