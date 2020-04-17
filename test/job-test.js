@@ -7,13 +7,17 @@ import helpers from '../lib/helpers';
 import {promisify} from 'promise-callbacks';
 
 describe('Job', (it) => {
+  const redisUrl = process.env.BEE_QUEUE_TEST_REDIS;
+
   const data = {foo: 'bar'};
   const options = {test: 1};
 
   let uid = 0;
 
   it.beforeEach(async (t) => {
-    const queue = new Queue(`test-job-${uid++}`);
+    const queue = new Queue(`test-job-${uid++}`, {
+      redis: redisUrl,
+    });
 
     function makeJob() {
       const job = queue.createJob(data);
