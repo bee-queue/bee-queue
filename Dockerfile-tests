@@ -1,0 +1,46 @@
+# We build an image with bee-queue's node_modules and all the source
+# files.  We jump through some Docker FROM hoops to avoid having the
+# bloat of the g++ compiler and other tools in the final image.
+
+FROM node:lts-alpine as beequeue-base
+
+# Info, and add bash, which we need in the final image
+RUN true \
+  && echo -n "node " && node --version \
+  && echo -n "npm " && npm --version \
+  && echo -n "apk " && apk --version \
+  && apk update \
+  && apk add --no-cache bash \
+  && rm -r /usr/share/man \
+  && true
+
+FROM beequeue-base as beequeue-node_modules
+
+# Ensure that tools for npm are available (for node-gyp in particular)
+# to build node_modules
+RUN true \
+  && apk add --no-cache python make g++ \
+  && true
+
+WORKDIR /bee-queue
+
+# Start with just these two files so as to optimize that npm install
+# only runs when package.json has been updated
+COPY package.json package-lock.json ./
+RUN npm --version && npm ci
+
+# Build the target image
+FROM beequeue-base
+
+WORKDIR /bee-queue
+
+COPY --from=beequeue-node_modules /bee-queue/node_modules ./node_modules/
+
+# We use a script for Docker-based testing (instead of npm test) so
+# that the dev cycle doesn't have to wait for the npm install
+# triggered by editing e.g. the scripts stanza in package.json
+ENV TEST_SCRIPT $TEST_SCRIPT
+CMD ./${TEST_SCRIPT}
+
+# Now copy all the source files
+COPY . ./

@@ -1,0 +1,17 @@
+version: '3.7'
+
+services:
+  bee-queue:
+    build:
+      context: .
+      dockerfile: Dockerfile-tests
+    environment:
+      # Url for the Redis server, must have schema
+      - BEE_QUEUE_TEST_REDIS=redis://redis
+      - TEST_SCRIPT
+
+  redis:
+    image: redis:alpine
+    # sigh, escaping to get the shell to echo what it's running
+    command: /bin/sh -c set\ -x\ &&\ redis-server\ --tcp-backlog\ 128\ --logfile\ /dev/null
+    #command: redis-server --tcp-backlog 128 --logfile /dev/null
