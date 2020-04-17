@@ -1,0 +1,21 @@
+version: '3.7'
+
+services:
+
+  # Run web.js in a container created from our image
+  web:
+    build: .
+    command: node web.js
+    ports:
+      - '3000:3000'
+
+  # Run worker.js in a container created from our image
+  worker:
+    build: .
+    command: node worker.js
+
+
+  # Run Redis in a container created from the redis:alpine image from Docker Hub
+  redis:
+    image: redis:alpine
+    command: redis-server --tcp-backlog 128 --logfile /dev/null
