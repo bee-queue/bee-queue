@@ -1389,7 +1389,7 @@ describe('Queue', (it) => {
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         if (job.options.retries) {
-          return helpers.defer(20);
+          return helpers.delay(20);
         }
         t.is(failCount, retries);
         finish();
