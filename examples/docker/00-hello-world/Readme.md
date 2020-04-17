@@ -2,7 +2,8 @@
 
 This example is the "Hello World" for Bee-Queue running in Docker containers.
 
-The main purpose of this example is to validate that your Docker framework is usable.
+It is a minimalist example of running Bee-Queue a networked setting with client and worker running in different Node JS processes.
+The main purpose of this example is to validate that your Docker framework is usable for the other examples.
 As such the code for this example is about as terse as possible.
 Once this example works, use the other Docker examples to learn about Bee-Queue.
 
