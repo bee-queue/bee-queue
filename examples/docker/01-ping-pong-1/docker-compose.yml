@@ -1,7 +1,6 @@
 version: '3.7'
 
 services:
-
   # Run ping.js in a container created from our image
   ping:
     build: .
@@ -11,7 +10,6 @@ services:
   pong:
     build: .
     command: node pong.js
-
 
   # Run Redis in a container created from the redis:alpine image from Docker Hub
   redis:
