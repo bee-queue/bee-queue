@@ -8,9 +8,7 @@
         "coverage",
         ".nyc_output"
       ],
-      "file_exclude_patterns": [
-        "package-lock.json"
-      ]
+      "file_exclude_patterns": ["package-lock.json"]
     }
   ],
   "settings": {
