@@ -1002,20 +1002,22 @@ describe('Queue', (it) => {
     it('should not cause an error if immediately removed', async (t) => {
       const queue = t.context.makeQueue();
 
+      const step1 = helpers.defer(),
+        step2 = helpers.defer();
+
+      const stub = stubMethod(queue, '_waitForJob', (orig, ...args) => {
+        step1.resolve();
+        return orig(...args).then((value) => step2.promise.then(() => value));
+      });
+
       queue.process(async (job) => {
         if (job.id === 'deadjob') {
           t.fail('should not be able to process the job');
         }
       });
 
-      const stub = sinon
-        .stub(queue, '_waitForJob')
-        .callsFake(function (...args) {
-          queue.emit('test:_waitForJob:called');
-          return stub.wrappedMethod.apply(this, args);
-        });
-
-      await helpers.waitOn(queue, 'test:_waitForJob:called');
+      await step1.promise;
+      stub.restore();
 
       await queue.ready();
 
@@ -1025,6 +1027,8 @@ describe('Queue', (it) => {
         job.remove(),
         queue.createJob({foo: 'bar'}).setId('goodjob').save(),
       ]);
+
+      step2.resolve();
 
       const goodJob = await helpers.waitOn(queue, 'succeeded');
       t.is(goodJob.id, 'goodjob');
