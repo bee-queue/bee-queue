@@ -35,7 +35,7 @@
     "ci": "if node -e '({...0})' 2>/dev/null && node -e '\"\".trimEnd()' 2>/dev/null; then npm run lint && npm run coverage-and-publish; else ava; fi",
     "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
     "coverage": "nyc ava",
-    "lint": "eslint . && prettier --check '**/*.html|json|md|sublime-project|ts|yml'",
+    "lint": "eslint . && prettier --check '**/*.(html|json|md|sublime-project|ts|yml)'",
     "report": "npm run coverage && nyc report --reporter=html",
     "test": "npm run lint && ava"
   },
