@@ -1,7 +1,6 @@
 version: '3.7'
 
 services:
-
   # Run web.js in a container created from our image
   web:
     build: .
@@ -13,7 +12,6 @@ services:
   worker:
     build: .
     command: node worker.js
-
 
   # Run Redis in a container created from the redis:alpine image from Docker Hub
   redis:
