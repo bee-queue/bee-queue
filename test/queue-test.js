@@ -658,6 +658,32 @@ describe('Queue', (it) => {
     t.is(jobData, job.toData());
   });
 
+  it.describe('Remove', (it) => {
+    it('should remove a job', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+      });
+
+      const [job1, job2] = await Promise.all([
+        queue.createJob().save(),
+        queue.createJob().save(),
+      ]);
+      const [ref1, ref2] = await Promise.all([
+        queue.getJob(job1.id),
+        queue.getJob(job2.id),
+      ]);
+      t.is(ref1, job1);
+      t.is(ref2, job2);
+
+      await Promise.all([queue.removeJob(job1.id), job2.remove()]);
+
+      t.deepEqual(
+        await Promise.all([queue.getJob(job1.id), queue.getJob(job2.id)]),
+        [null, null]
+      );
+    });
+  });
+
   it.describe('Health Check', (it) => {
     it('reports a waiting job', async (t) => {
       const queue = t.context.makeQueue({
