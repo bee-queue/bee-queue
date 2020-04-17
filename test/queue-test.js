@@ -565,19 +565,7 @@ describe('Queue', (it) => {
       // Not called at all yet because queue.process uses setImmediate.
       t.is(jobSpy.callCount, 0);
 
-      // Override _waitForJob.
-      const waitJob = queue._waitForJob,
-        wait = helpers.deferred();
-      let waitDone = wait.defer();
-      queue._waitForJob = function (...args) {
-        if (waitDone) {
-          waitDone();
-          waitDone = null;
-        }
-        return waitJob.apply(this, args);
-      };
-
-      await wait;
+      await waitMethod(queue, '_waitForJob');
 
       const errored = helpers.waitOn(queue, 'error');
 
