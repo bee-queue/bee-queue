@@ -1,2 +1,3 @@
 /benchmark/results-*
 /coverage
+/.nyc_output
