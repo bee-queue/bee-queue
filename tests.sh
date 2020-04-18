@@ -12,7 +12,7 @@ SCRIPT="$(basename "${BASH_SOURCE[0]}")"
 set -x
 
 # Dev-centric test steps based on scripts in package.json
-PATH=$(npm bin):$PATH
+PATH="$(npm bin):$PATH"
 
 # If ava testing hangs (which, sadly, happens all too often), add --serial to get a more
 # deterministic record that will log up to the test prior to the one that hangs... But, as
