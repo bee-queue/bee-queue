@@ -8,7 +8,7 @@ DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 SCRIPT="$(basename "${BASH_SOURCE[0]}")"
 
 
-if [ "${1:-}" = -h -o "${1:-}" = --help ] ; then
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] ; then
   cat <<EOF
 
 $SCRIPT -- Run standard bee-queue tests in a Docker container with a Redis server
@@ -19,12 +19,12 @@ The optional command and args specify what to run in the container (default: npm
 
 You can use tools or run scripts from package.json, e.g.
 
-  $SCRIPT  npx ava --serial --fail-fast --verbose --no-color --timeout 30000
-  $SCRIPT  npm run coverage
+  ./$SCRIPT  npx ava --serial --fail-fast --verbose --no-color --timeout 30000
+  ./$SCRIPT  npm run coverage
 
 If you want to work interactively in the container, run a shell, e.g.
 
-  $SCRIPT  bash
+  ./$SCRIPT  bash
 
 Notes:
 - The very first time this script is used it takes a while for Docker to
