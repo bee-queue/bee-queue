@@ -558,7 +558,7 @@ Note that for calls that specify an interval, you must provide a callback if you
 
 #### Queue#checkHealth([cb])
 
-Check the "health" of the queue. Returns a promise that resolves to the number of jobs in each state (`waiting`, `active`, `succeeded`, `failed`, `delayed`), and the newest job ID (if using the default ID behavior) in `newestJob`. You can periodically query the `newestJob` ID to estimate the job creation throughput, and can infer the job processing throughput by incorporating the `waiting` and `active` counts.
+Check the "health" of the queue. Returns a promise that resolves to the number of jobs in each state (`waiting`, `active`, `succeeded`, `failed`, `delayed`), and the total number of jobs saved (with a default ID) in `newestJob`. You can periodically query `newestJob` to estimate the job creation throughput, and can infer the job processing throughput by incorporating the `waiting` and `active` counts.
 
 ```js
 const counts = await queue.checkHealth();
