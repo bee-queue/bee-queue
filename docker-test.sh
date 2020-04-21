@@ -11,9 +11,9 @@ SCRIPT="$(basename "${BASH_SOURCE[0]}")"
 if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]] ; then
   cat <<EOF
 
-$SCRIPT -- Run standard bee-queue tests in a Docker container with a Redis server
+$SCRIPT -- Run standard Bee-Queue tests in a Docker container with an ephemeral Redis server
 
-Usage: $SCRIPT [command ...args]
+Usage: $SCRIPT [command [...args]]
 
 The optional command and args specify what to run in the container (default: npm test).
 
@@ -27,9 +27,10 @@ If you want to work interactively in the container, run a shell, e.g.
   ./$SCRIPT  bash
 
 Notes:
-- The very first time this script is used it takes a while for Docker to
-  download the base image and to populate its caches.
-- You can ignore the Transparent Huge Pages warning from the Redis server.
+
+- The very first time this script is used it takes a while for Docker to download the base
+  image and to populate its caches.
+- You can ignore any Transparent Huge Pages warning from the Redis server.
 
 EOF
 
