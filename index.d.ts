@@ -106,6 +106,7 @@ declare namespace BeeQueue {
     readonly options: any;
     queue: BeeQueue<T>;
     progress: any;
+    status: 'created' | 'succeeded' | 'failed' | 'retrying';
 
     on(ev: 'succeeded', fn: (result: any) => void): this;
     on(ev: 'retrying', fn: (err: Error) => void): this;
