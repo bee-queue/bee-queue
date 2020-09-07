@@ -1439,6 +1439,41 @@ describe('Queue', (it) => {
       t.is(err.message, `Job ${job.id} timed out (10 ms)`);
     });
 
+    it('clears a waiting job that is missing data', async (t) => {
+      const queue = t.context.makeQueue();
+
+      const job = await queue.createJob({foo: 'first'}).save();
+
+      // Delete the job's data from redis
+      await new Promise((resolve) =>
+        queue.client.hdel(queue.toKey('jobs'), job.id, resolve)
+      );
+
+      // Create a second job
+      await queue.createJob({foo: 'second'}).save();
+
+      const succeeded = helpers.waitOn(queue, 'succeeded');
+
+      // Now run the queue
+      let callCount = 0;
+      queue.process(async (processedJob) => {
+        callCount += 1;
+        t.is(processedJob.data.foo, 'second');
+      });
+
+      await succeeded;
+      t.is(callCount, 1);
+
+      // By default the job id would have been moved to the active list (soon to stall)
+      // So we just check it is no longer there
+      await new Promise((resolve) =>
+        queue.client.llen(queue.toKey('active'), (_, active) => {
+          t.is(active, 0);
+          resolve();
+        })
+      );
+    });
+
     it('processes a job that auto-retries', async (t) => {
       const queue = t.context.makeQueue();
       const retries = 1;
