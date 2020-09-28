@@ -167,9 +167,7 @@ describe('Job', (it) => {
       const {hget} = promisify.methods(queue.client, ['hget']);
 
       const job = await makeJob();
-      const removed = helpers.deferred();
-      job.remove(removed.defer());
-      await removed;
+      await helpers.callAsync((done) => job.remove(done));
 
       t.is(await hget(queue.toKey('jobs'), job.id), null);
     });
@@ -202,9 +200,9 @@ describe('Job', (it) => {
       const {queue, makeJob} = t.context;
 
       const job = await makeJob();
-      const promise = helpers.deferred();
-      Job.fromId(queue, job.id, promise.defer());
-      const storedJob = await promise;
+      const storedJob = await helpers.callAsync((done) =>
+        Job.fromId(queue, job.id, done)
+      );
       t.truthy(storedJob);
       t.true(helpers.has(storedJob, 'id'));
       t.deepEqual(storedJob.data, data);

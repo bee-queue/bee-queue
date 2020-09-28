@@ -4,34 +4,28 @@ import Queue from '../lib/queue';
 import helpers from '../lib/helpers';
 import sinon from 'sinon';
 
+import {deferred} from 'promise-callbacks';
+
 import redis from '../lib/redis';
 
 import {EventEmitter as Emitter} from 'events';
 
-function delKeys(client, pattern) {
-  const promise = helpers.deferred(),
-    done = promise.defer();
-  client.keys(pattern, (err, keys) => {
-    if (err) return done(err);
-    if (keys.length) {
-      client.del(keys, done);
-    } else {
-      done();
-    }
-  });
-  return promise;
+async function delKeys(client, pattern) {
+  const keys = await helpers.callAsync((done) => client.keys(pattern, done));
+  if (keys.length) {
+    return helpers.callAsync((done) => client.del(keys, done));
+  }
 }
 
 // A promise-based barrier.
 function reef(n = 1) {
-  const done = helpers.deferred(),
-    end = done.defer();
+  const done = helpers.defer();
   return {
-    done,
+    done: done.promise,
     next() {
       --n;
       if (n < 0) return false;
-      if (n === 0) end();
+      if (n === 0) done.resolve();
       return true;
     },
   };
@@ -198,7 +192,7 @@ describe('Delayed jobs', (it) => {
       nearTermWindow: 100,
     });
 
-    let scheduled = helpers.deferred(),
+    let scheduled = deferred(),
       onSchedule = scheduled.defer();
 
     const mockTimer = new Emitter();
@@ -231,7 +225,7 @@ describe('Delayed jobs', (it) => {
     t.is(mockTimer.schedule.secondCall.args[0], start + 150);
     await scheduled;
 
-    scheduled = helpers.deferred();
+    scheduled = deferred();
     onSchedule = scheduled.defer();
     mockTimer.emit('trigger');
     t.is(await scheduled, start + 150);
