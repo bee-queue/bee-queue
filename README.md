@@ -154,6 +154,23 @@ Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.back
 
 Jobs can later be retrieved from Redis using [Queue#getJob](#queuegetjobjobid-cb), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
 
+### Advanced: Bulk-Creating Jobs
+
+Normally, creating and saving jobs blocks the underlying redis client for the full duration of an RTT to the Redis server. This can reduce throughput in cases where many operations should occur without delay - particularly when there are many jobs that need to be created quickly. Use `Queue#saveAll` to save an iterable (e.g. an Array) containing jobs in a pipelined network request, thus pushing all the work out on the wire before hearing back from the Redis server.
+
+```js
+addQueue
+  .saveAll([
+    addQueue.createJob({x: 3, y: 4}),
+    addQueue.createJob({x: 4, y: 5}),
+  ])
+  .then((errors) => {
+    // The errors value is a Map associating Jobs with Errors. This will often be an empty Map.
+  });
+```
+
+Each job in the array provided to saveAll will be mutated with the ID it gets assigned.
+
 ## Processing Jobs
 
 To start processing jobs, call `Queue.process` and provide a handler function:
