@@ -700,6 +700,33 @@ describe('Queue', (it) => {
         [null, null]
       );
     });
+
+    it('should remove a job not stored in local queue', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        storeJobs: false,
+      });
+
+      const [job1, job2] = await Promise.all([
+        queue.createJob().save(),
+        queue.createJob().save(),
+      ]);
+      const [ref1, ref2] = await Promise.all([
+        queue.getJob(job1.id),
+        queue.getJob(job2.id),
+      ]);
+      t.deepEqual(ref1, job1);
+      t.not(ref1, job1);
+      t.deepEqual(ref2, job2);
+      t.not(ref2, job2);
+
+      await Promise.all([queue.removeJob(job1.id), job2.remove()]);
+
+      t.deepEqual(
+        await Promise.all([queue.getJob(job1.id), queue.getJob(job2.id)]),
+        [null, null]
+      );
+    });
   });
 
   it.describe('Health Check', (it) => {
