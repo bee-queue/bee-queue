@@ -1440,7 +1440,7 @@ describe('Queue', (it) => {
     });
 
     it('clears a waiting job that is missing data', async (t) => {
-      const queue = t.context.makeQueue();
+      const queue = t.context.makeQueue({clearMissingJobs: true});
 
       const job = await queue.createJob({foo: 'first'}).save();
 

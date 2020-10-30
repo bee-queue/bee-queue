@@ -349,6 +349,7 @@ The `settings` fields are:
 - `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
 - `quitCommandClient`: boolean. Whether to `QUIT` the redis command client (the client it sends normal operations over) when `Queue#close` is called. This defaults to `true` for normal usage, and `false` if an existing `RedisClient` object was provided to the `redis` option.
 - `redisScanCount`: number. For setting the value of the `SSCAN` Redis command used in `Queue#getJobs` for succeeded and failed job types.
+- `clearMissingJobs`: boolean. Enable to clear out job references if data is missing.
 
 ### Properties
 
