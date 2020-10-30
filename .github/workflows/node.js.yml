@@ -42,11 +42,24 @@ jobs:
           # For commitlint; ideally this would only check out the feature branch's history, but
           # that's not currently an option.
           fetch-depth: ${{ github.event_name == 'push' }}
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Use Node.js 14 for dependencies
+        uses: actions/setup-node@v1
+        if: !steps.cache.outputs.cache-hit
+        with:
+          node-version: 14.x
+      - name: Install dependencies
+        if: !steps.cache.outputs.cache-hit
+        run: npm ci
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm ci || npm i
       - run: npm run ci --if-present
         env:
           BEE_QUEUE_TEST_REDIS: redis://localhost:6379
