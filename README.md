@@ -160,10 +160,7 @@ Normally, creating and saving jobs blocks the underlying redis client for the fu
 
 ```js
 addQueue
-  .saveAll([
-    addQueue.createJob({x: 3, y: 4}),
-    addQueue.createJob({x: 4, y: 5}),
-  ])
+  .saveAll([addQueue.createJob({x: 3, y: 4}), addQueue.createJob({x: 4, y: 5})])
   .then((errors) => {
     // The errors value is a Map associating Jobs with Errors. This will often be an empty Map.
   });
