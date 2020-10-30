@@ -33,7 +33,7 @@ jobs:
       matrix:
         node-version: [4.0.x, 8.x, 10.x, 12.x, 14.x]
         include:
-          - node: 14.x
+          - node-version: 14.x
             report-coverage: true
 
     steps:
@@ -53,6 +53,6 @@ jobs:
           GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
       - name: Report to Coveralls
         uses: coverallsapp/github-action@master
-        if: ${{ matrix.report-coverage }}
+        if: matrix.report-coverage
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
