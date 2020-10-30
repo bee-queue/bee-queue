@@ -48,3 +48,21 @@ jobs:
         env:
           BEE_QUEUE_TEST_REDIS: redis://localhost:6379
           GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
+      - name: Report to Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          flag-name: node-${{ matrix.node-version }}
+          parallel: true
+
+  complete:
+    # https://github.community/t/github-actions-does-not-respect-skip-ci/17325/9
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    needs: lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Finalize Coveralls
+        uses: coverallsapp/github-action@master
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          parallel-finished: true
