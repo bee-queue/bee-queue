@@ -1,4 +1,5 @@
 import {describe} from 'ava-spec';
+import * as url from 'url';
 
 import Queue from '../lib/queue';
 import helpers from '../lib/helpers';
@@ -93,7 +94,9 @@ function spitter() {
 describe('Queue', (it) => {
   const redisUrl = process.env.BEE_QUEUE_TEST_REDIS;
   // redisUrl must have a schema portion, e.g. redis://redis.example.com
-  const redisHost = redisUrl ? new URL(redisUrl).hostname : undefined;
+  const redisHost = redisUrl
+    ? (url.URL ? new url.URL(redisUrl) : url.parse(redisUrl)).hostname
+    : undefined;
   const gclient = redis.createClient(redisUrl);
 
   it.before(() => gclient);

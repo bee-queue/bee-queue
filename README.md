@@ -1,6 +1,6 @@
 <a name="top"></a>
 ![bee-queue logo](https://raw.githubusercontent.com/bee-queue/bee-queue/master/bee-queue.png)
-[![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
+[![npm Version][npm-image]][npm-url] [![Build Status][ci-image]][ci-url] [![Coverage Status][coveralls-image]][coveralls-url]
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
 
@@ -900,7 +900,7 @@ You'll need a local redis server to run the tests. Note that running the tests m
 
 [npm-image]: https://img.shields.io/npm/v/bee-queue.svg?style=flat
 [npm-url]: https://www.npmjs.com/package/bee-queue
-[travis-image]: https://img.shields.io/travis/bee-queue/bee-queue.svg?style=flat
-[travis-url]: https://travis-ci.org/bee-queue/bee-queue
+[travis-image]: https://github.com/bee-queue/bee-queue/workflows/Node.js%20CI/badge.svg
+[travis-url]: https://github.com/bee-queue/bee-queue/actions
 [coveralls-image]: https://coveralls.io/repos/bee-queue/bee-queue/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/r/bee-queue/bee-queue?branch=master

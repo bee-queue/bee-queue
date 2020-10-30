@@ -1,0 +1,71 @@
+# This workflow will do a clean install of node dependencies, and run the linter
+# For more information see: https://help.github.com/actions/language-and-framework-guides/using-nodejs-with-github-actions
+
+name: Node.js CI
+
+on:
+  # Any additional branches here will currently be treated as release (or maintenance) branches.
+  # if the need to run jobs on other branches emerges, then the release job will need a better
+  # condition expression.
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  lint:
+    # https://github.community/t/github-actions-does-not-respect-skip-ci/17325/9
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    strategy:
+      matrix:
+        node-version: [4.0.x, 8.x, 10.x, 12.x, 14.x]
+        include:
+          - node-version: 14.x
+            report-coverage: true
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # For commitlint; ideally this would only check out the feature branch's history, but
+          # that's not currently an option.
+          fetch-depth: ${{ github.event_name == 'push' }}
+      - name: Cache dependencies
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - name: Use Node.js 14 for dependencies
+        uses: actions/setup-node@v1
+        if: '!steps.cache.outputs.cache-hit'
+        with:
+          node-version: 14.x
+      - name: Install dependencies
+        if: '!steps.cache.outputs.cache-hit'
+        run: npm ci
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm run ci --if-present
+        env:
+          BEE_QUEUE_TEST_REDIS: redis://localhost:6379
+          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
+      - name: Report to Coveralls
+        uses: coverallsapp/github-action@master
+        if: matrix.report-coverage
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
