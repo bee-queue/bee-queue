@@ -50,11 +50,11 @@ jobs:
           key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Use Node.js 14 for dependencies
         uses: actions/setup-node@v1
-        if: "!steps.cache.outputs.cache-hit"
+        if: '!steps.cache.outputs.cache-hit'
         with:
           node-version: 14.x
       - name: Install dependencies
-        if: "!steps.cache.outputs.cache-hit"
+        if: '!steps.cache.outputs.cache-hit'
         run: npm ci
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v1
