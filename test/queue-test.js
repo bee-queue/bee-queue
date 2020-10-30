@@ -1445,8 +1445,8 @@ describe('Queue', (it) => {
       const job = await queue.createJob({foo: 'first'}).save();
 
       // Delete the job's data from redis
-      await new Promise((resolve) =>
-        queue.client.hdel(queue.toKey('jobs'), job.id, resolve)
+      await helpers.callAsync((done) =>
+        queue.client.hdel(queue.toKey('jobs'), job.id, done)
       );
 
       // Create a second job
@@ -1466,12 +1466,10 @@ describe('Queue', (it) => {
 
       // By default the job id would have been moved to the active list (soon to stall)
       // So we just check it is no longer there
-      await new Promise((resolve) =>
-        queue.client.llen(queue.toKey('active'), (_, active) => {
-          t.is(active, 0);
-          resolve();
-        })
+      const active = await helpers.callAsync((done) =>
+        queue.client.llen(queue.toKey('active'), done)
       );
+      t.is(active, 0);
     });
 
     it('processes a job that auto-retries', async (t) => {
