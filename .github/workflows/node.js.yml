@@ -63,6 +63,9 @@ jobs:
       - run: npm run ci --if-present
         env:
           BEE_QUEUE_TEST_REDIS: redis://localhost:6379
+      - run: npm run ci:commitlint
+        if: "github.event_name != 'push'"
+        env:
           GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
       - name: Report to Coveralls
         uses: coverallsapp/github-action@master
