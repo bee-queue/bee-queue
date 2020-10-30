@@ -1,4 +1,5 @@
 import {describe} from 'ava-spec';
+import {URL} from 'url';
 
 import Queue from '../lib/queue';
 import helpers from '../lib/helpers';
