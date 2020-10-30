@@ -9,6 +9,8 @@
     "redis": "^2.7.1"
   },
   "devDependencies": {
+    "@commitlint/cli": "^11.0.0",
+    "@commitlint/config-conventional": "^11.0.0",
     "ava": "^0.25.0",
     "ava-spec": "^1.1.0",
     "eslint": "^7.8.1",
@@ -31,7 +33,8 @@
     "lib"
   ],
   "scripts": {
-    "ci": "if node -e '({...0})' 2>/dev/null && node -e '\"\".trimEnd()' 2>/dev/null; then npm run lint && npm run ci:coverage; else ava; fi",
+    "ci": "if node -e '({...0})' 2>/dev/null && node -e '\"\".trimEnd()' 2>/dev/null; then npm run lint && npm run ci:coverage && if [ -z \"$CI\" ]; then npm run ci:commitlint; fi; else ava; fi",
+    "ci:commitlint": "commitlint --from \"origin/${GITHUB_BASE_REF:-master}\"",
     "ci:coverage": "if [ -z \"$CI\" ]; then npm run coverage; else npm run coverage-and-report; fi",
     "coverage-and-report": "npm run coverage && mkdir -p coverage && nyc report --reporter=text-lcov > coverage/lcov.info",
     "coverage": "nyc ava",
@@ -53,6 +56,9 @@
     "node": ">= 4"
   },
   "author": "Lewis J Ellis <me@lewisjellis.com>",
+  "contributors": [
+    "Eli Skeggs <dev@eliskeggs.com> (https://eli.skeg.gs)"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
