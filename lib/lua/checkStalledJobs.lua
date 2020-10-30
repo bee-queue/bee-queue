@@ -41,7 +41,7 @@ if next(stalling) ~= nil then
   -- to be in, but this is fairer.
   local pushed = 0
   -- don't lpush zero jobs (the redis command will fail)
-  while (pushed < #stalled) do
+  while pushed < #stalled do
     redis.call("lpush", KEYS[3], unpack(stalled, pushed + 1, math.min(pushed + maxUnpack, #stalled)))
     pushed = pushed + maxUnpack
   end
@@ -50,7 +50,7 @@ end
 
 -- copy currently active jobs into stalling set
 local actives, added = redis.call("lrange", KEYS[4], 0, -1), 0
-while (added < #actives) do
+while added < #actives do
   redis.call("sadd", KEYS[2], unpack(actives, added + 1, math.min(added + maxUnpack, #actives)))
   added = added + maxUnpack
 end
