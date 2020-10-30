@@ -40,9 +40,10 @@ if next(stalling) ~= nil then
   -- hog the job consumers and starve the whole system. not a great situation
   -- to be in, but this is fairer.
   local pushed = 0
+  local nStalled = #stalled
   -- don't lpush zero jobs (the redis command will fail)
-  while pushed < #stalled do
-    redis.call("lpush", KEYS[3], unpack(stalled, pushed + 1, math.min(pushed + maxUnpack, #stalled)))
+  while pushed < nStalled do
+    redis.call("lpush", KEYS[3], unpack(stalled, pushed + 1, math.min(pushed + maxUnpack, nStalled)))
     pushed = pushed + maxUnpack
   end
   redis.call("del", KEYS[2])
@@ -50,8 +51,9 @@ end
 
 -- copy currently active jobs into stalling set
 local actives, added = redis.call("lrange", KEYS[4], 0, -1), 0
-while added < #actives do
-  redis.call("sadd", KEYS[2], unpack(actives, added + 1, math.min(added + maxUnpack, #actives)))
+local nActives = #actives
+while added < nActives do
+  redis.call("sadd", KEYS[2], unpack(actives, added + 1, math.min(added + maxUnpack, nActives)))
   added = added + maxUnpack
 end
 
