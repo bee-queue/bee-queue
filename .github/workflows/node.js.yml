@@ -46,5 +46,5 @@ jobs:
       - run: npm ci || npm i
       - run: npm run ci --if-present
         env:
-          BEE_QUEUE_TEST_REDIS: redis://redis:6379
+          BEE_QUEUE_TEST_REDIS: redis://localhost:6379
           GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
