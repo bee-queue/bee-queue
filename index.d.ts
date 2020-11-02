@@ -10,6 +10,7 @@ declare class BeeQueue<T = any> extends EventEmitter {
   jobs: any;
   paused: boolean;
   settings: any;
+  backoffStrategies: Map<string, (job: BeeQueue.Job) => number>;
 
   constructor(name: string, settings?: BeeQueue.QueueSettings);
 
@@ -116,7 +117,7 @@ declare namespace BeeQueue {
     setId(id: string): this;
     retries(n: number): this;
     backoff(
-      strategy: 'immediate' | 'fixed' | 'exponential',
+      strategy: keyof typeof this.backoffStrategies,
       delayFactor?: number
     ): this;
     delayUntil(dateOrTimestamp: Date | number): this;
