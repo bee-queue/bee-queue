@@ -12,6 +12,10 @@ if a jobId is not removed from the stalling set within a stallInterval window,
 we assume the job has stalled and should be reset (moved from active back to waiting)
 --]]
 
+-- It isn't clear what this value should be, it depends on memory available for the stack.
+-- This seems a reasonable limit.
+local maxUnpack = 1024
+
 -- try to update the stallBlock key
 if not redis.call("set", KEYS[1], "1", "PX", tonumber(ARGV[1]), "NX") then
   -- hasn't been long enough (stallInterval) since last check
@@ -31,20 +35,24 @@ if next(stalling) ~= nil then
       stalled[#stalled + 1] = jobId
     end
   end
+  
+  -- lpush instead of rpush so that jobs which cause uncaught exceptions don't
+  -- hog the job consumers and starve the whole system. not a great situation
+  -- to be in, but this is fairer.
+  local pushed = 0
   -- don't lpush zero jobs (the redis command will fail)
-  if #stalled > 0 then
-    -- lpush instead of rpush so that jobs which cause uncaught exceptions don't
-    -- hog the job consumers and starve the whole system. not a great situation
-    -- to be in, but this is fairer.
-    redis.call("lpush", KEYS[3], unpack(stalled))
+  while (pushed < #stalled) do
+    redis.call("lpush", KEYS[3], unpack(stalled, pushed + 1, math.min(pushed + maxUnpack, #stalled)))
+    pushed = pushed + maxUnpack
   end
   redis.call("del", KEYS[2])
 end
 
 -- copy currently active jobs into stalling set
-local actives = redis.call("lrange", KEYS[4], 0, -1)
-if next(actives) ~= nil then
-  redis.call("sadd", KEYS[2], unpack(actives))
+local actives, added = redis.call("lrange", KEYS[4], 0, -1), 0
+while (added < #actives) do
+  redis.call("sadd", KEYS[2], unpack(actives, added + 1, math.min(added + maxUnpack, #actives)))
+  added = added + maxUnpack
 end
 
 return stalled
