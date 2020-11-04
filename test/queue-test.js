@@ -1891,6 +1891,36 @@ describe('Queue', (it) => {
       return done;
     });
 
+    it('should reset and process more than the unpack limit stalled jobs when starting a queue', async (t) => {
+      t.plan(0);
+
+      const queue = t.context.makeQueue({
+        stallInterval: 1,
+      });
+
+      // Create 1025 jobs
+      const jobs = Array.from(new Array(1025)).map((_, i) =>
+        queue.createJob({foo: `bar${i}`})
+      );
+
+      // Save the jobs.
+      await Promise.all(jobs.map((job) => job.save()));
+
+      // Artificially move to active.
+      await queue._getNextJob();
+
+      // Mark the jobs as stalling, so that Queue#process immediately detects
+      // them as stalled.
+      await forceStall(queue);
+
+      const {done, next} = reef(jobs.length);
+      queue.process(async () => {
+        next();
+      });
+
+      return done;
+    });
+
     it('resets and processes jobs from multiple stalled queues', async (t) => {
       const queues = [];
       for (let i = 0; i < 5; i++) {
