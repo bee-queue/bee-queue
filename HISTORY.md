@@ -1,3 +1,10 @@
+### [1.3.1](https://github.com/bee-queue/bee-queue/compare/v1.3.0...v1.3.1) (2020-11-04)
+
+### Bug Fixes
+
+- **scale:** bound unpack arguments count ([#297](https://github.com/bee-queue/bee-queue/issues/297)) ([4108e5e](https://github.com/bee-queue/bee-queue/commit/4108e5e4e97dcf2d8df44dd0114ba31edab511ca))
+- **types:** fix typescript definitions errors ([#311](https://github.com/bee-queue/bee-queue/issues/311)) ([3bc3f31](https://github.com/bee-queue/bee-queue/commit/3bc3f317d09a04b1165fc9f3aa46e17e82d3606f))
+
 ## [1.3.0](https://github.com/bee-queue/bee-queue/compare/v1.2.3...v1.3.0) (2020-11-03)
 
 ### Features
