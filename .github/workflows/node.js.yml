@@ -38,10 +38,6 @@ jobs:
 
     steps:
       - uses: actions/checkout@v2
-        with:
-          # For commitlint; ideally this would only check out the feature branch's history, but
-          # that's not currently an option.
-          fetch-depth: ${{ github.event_name == 'push' }}
       - name: Cache dependencies
         id: cache
         uses: actions/cache@v2
@@ -63,15 +59,38 @@ jobs:
       - run: npm run ci --if-present
         env:
           BEE_QUEUE_TEST_REDIS: redis://localhost:6379
-      - run: npm run ci:commitlint
-        if: "github.event_name != 'push'"
-        env:
-          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
       - name: Report to Coveralls
         uses: coverallsapp/github-action@master
         if: matrix.report-coverage
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  commitlint:
+    # https://github.community/t/github-actions-does-not-respect-skip-ci/17325/9
+    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    runs-on: ubuntu-latest
+
+    needs: [test]
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          # For commitlint; ideally this would only check out the feature branch's history, but
+          # that's not currently an option.
+          fetch-depth: ${{ github.event_name == 'push' }}
+      - name: Use Node.js 14.x
+        uses: actions/setup-node@v1
+        with:
+          node-version: 14.x
+      - name: Restore dependencies
+        id: cache
+        uses: actions/cache@v2
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+      - run: npm run ci:commitlint
+        if: "github.event_name != 'push'"
+        env:
+          GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
 
   release:
     # https://github.community/t/github-actions-does-not-respect-skip-ci/17325/9
@@ -79,7 +98,6 @@ jobs:
     runs-on: ubuntu-latest
 
     needs: [test]
-
     steps:
       - uses: actions/checkout@v2
         with:
