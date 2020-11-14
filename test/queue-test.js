@@ -469,7 +469,6 @@ describe('Queue', (it) => {
         // TODO: also pretend the quit worked if there was an NR_CLOSED
         // https://github.com/NodeRedis/node-redis/blob/0041e3e53d5292b13d96ce076653c5b91b314fda/lib/individualCommands.js#L84
         await queue.close();
-        await helpers.delay(50); // ioredis#614 bleh
 
         t.false(redis.isReady(client));
         t.true(client.quit.called);
@@ -488,7 +487,6 @@ describe('Queue', (it) => {
         sinon.spy(client, 'quit');
 
         await queue.close();
-        await helpers.delay(50); // ioredis#614 bleh
 
         t.true(redis.isReady(client));
         t.false(client.quit.called);
@@ -613,9 +611,6 @@ describe('Queue', (it) => {
       await queue.close();
 
       t.true(redis.isReady(client));
-      // ioredis still has status = ready immediately after quit() resolves...
-      // so just uhh, wait a second for it to catch up...filed ioredis#614
-      await helpers.delay(50);
       t.false(redis.isReady(queue.eclient));
     });
 
@@ -1068,7 +1063,7 @@ describe('Queue', (it) => {
       t.is(errors.size, 1);
       const errPair = errors[Symbol.iterator]().next().value;
       t.is(errPair[0], jobs[1]);
-      t.regex(errPair[1].message, /^NOSCRIPT\b/);
+      t.is(redis.errorCode(errPair[1]), 'NOSCRIPT');
     });
 
     it('should reject on batch execution failure', async (t) => {
@@ -1428,8 +1423,6 @@ describe('Queue', (it) => {
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         if (job.options.retries) {
-          // todo this was .defer(20) - no such thing
-          // assuming this is supposed to be delay, but how did it pass before?
           return helpers.delay(20);
         }
         t.is(failCount, retries);
