@@ -465,7 +465,6 @@ describe('Queue', (it) => {
           quitCommandClient: true,
         });
 
-        // TODO: have Queue#close wait for the queue to close, perhaps?
         // TODO: also pretend the quit worked if there was an NR_CLOSED
         // https://github.com/NodeRedis/node-redis/blob/0041e3e53d5292b13d96ce076653c5b91b314fda/lib/individualCommands.js#L84
         await queue.close();
@@ -1282,7 +1281,7 @@ describe('Queue', (it) => {
       const jobs = errors.map((error) => queue.createJob({ error }));
       const afterFailed = jobs.map((job) => helpers.waitOn(job, 'failed'));
 
-      await Promise.all(jobs.map((job) => job.save()));
+      await queue.saveAll(jobs);
       await Promise.all(afterFailed);
 
       // Force getJobs to fetch fresh copies of the jobs.
