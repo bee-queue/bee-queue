@@ -5,7 +5,7 @@ import Queue from '../lib/queue';
 import helpers from './helpers';
 import sinon from 'sinon';
 
-import redis from '../lib/redis';
+import * as redis from '../lib/redis';
 import Redis from 'ioredis';
 
 async function recordUntil(emitter, trackedEvents, lastEvent) {
@@ -1506,8 +1506,7 @@ describe('Queue', (it) => {
         jobs.push(queue.createJob({ count: i }));
       }
 
-      // Save all the jobs.
-      await Promise.all(jobs.map((job) => job.save()));
+      await queue.saveAll(jobs);
 
       return end;
     });
@@ -1792,7 +1791,7 @@ describe('Queue', (it) => {
       ];
 
       // Save the three jobs.
-      await Promise.all(jobs.map((job) => job.save()));
+      await queue.saveAll(jobs);
 
       // Artificially move to active.
       await queue._getNextJob();
@@ -1822,7 +1821,7 @@ describe('Queue', (it) => {
       );
 
       // Save the jobs.
-      await Promise.all(jobs.map((job) => job.save()));
+      await queue.saveAll(jobs);
 
       // Artificially move to active.
       await queue._getNextJob();
@@ -1890,7 +1889,7 @@ describe('Queue', (it) => {
       }
 
       // Save all the jobs.
-      await Promise.all(jobs.map((job) => job.save()));
+      await deadQueue.saveAll(jobs);
 
       const { done: resume, next: spooled } = helpers.reef();
       deadQueue.process(concurrency, () => {
