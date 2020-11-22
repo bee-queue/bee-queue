@@ -45,6 +45,11 @@ describe('EagerTimer', (it) => {
     Object.assign(t.context, { EagerTimer, timer, clock, start, trigger });
   });
 
+  it('validates its parameter', (t) => {
+    const EagerTimer = require('../lib/eager-timer');
+    t.throws(() => new EagerTimer(-1), TypeError);
+  });
+
   it('should trigger in the future', (t) => {
     const { clock, timer, start, trigger } = t.context;
 
