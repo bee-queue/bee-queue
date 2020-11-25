@@ -64,7 +64,7 @@ jobs:
         env:
           BEE_QUEUE_TEST_REDIS: redis://localhost:6379
       - run: npm run ci:commitlint
-        if: "github.event_name != 'push'"
+        if: "github.event_name != 'push' && github.actor != 'dependabot[bot]'"
         env:
           GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
       - name: Report to Coveralls
