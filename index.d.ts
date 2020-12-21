@@ -124,6 +124,7 @@ declare namespace BeeQueue {
     reportProgress(p: any): void;
     remove(): Promise<this>;
     remove(cb: (job: this) => void): void;
+    repeat(repeatString: string): this;
   }
 
   interface Page {

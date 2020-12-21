@@ -677,6 +677,7 @@ Returns the number of keys removed.
   - the queue that ran `getJob` to fetch the job from redis, or
   - the queue that called `process` to process it
 - `progress`: number; progress between 0 and 100, as reported by `reportProgress`.
+- `repeatString`: a crontab-like string to repeat the job automatically, you should have set the property (activateDelayedJobs) true
 
 ### Job Events
 
@@ -799,6 +800,15 @@ const job = await queue.createJob({...})
 Sets a job runtime timeout in milliseconds; if the job's handler function takes longer than the timeout to call `done`, the worker assumes the job has failed and reports it as such (causing the job to retry if applicable).
 
 Defaults to no timeout.
+
+#### Job#repeat(repeatString)
+```js
+const job = queue.createJob({...});
+job.repeat('* * * * *');
+job.save()
+```
+
+the job would be executed every minute.
 
 #### Job#save([cb])
 

@@ -4,6 +4,7 @@
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
+    "cron-parser": "^2.18.0",
     "p-finally": "^1.0.0",
     "promise-callbacks": "^3.8.1",
     "redis": "^2.7.1"
