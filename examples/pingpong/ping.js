@@ -1,6 +1,6 @@
 const Queue = require('../../');
-const pingQueue = Queue('ping');
-const pongQueue = Queue('pong');
+const pingQueue = new Queue('ping');
+const pongQueue = new Queue('pong');
 
 pongQueue.process(function (job, done) {
   console.log('Ping received back pong');
