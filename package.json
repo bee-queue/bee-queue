@@ -4,7 +4,7 @@
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
-    "p-finally": "^1.0.0",
+    "p-finally": "^3.0.0",
     "promise-callbacks": "^3.8.1",
     "redis": "^2.7.1"
   },
