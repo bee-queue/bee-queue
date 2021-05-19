@@ -329,7 +329,7 @@ The `settings` fields are:
 
 - `prefix`: string, default `bq`. Useful if the `bq:` namespace is, for whatever reason, unavailable or problematic on your redis instance.
 - `stallInterval`: number, ms; the length of the window in which workers must report that they aren't stalling. Higher values will reduce Redis/network overhead, but if a worker stalls, it will take longer before its stalled job(s) will be retried. A higher value will also result in a lower probability of false-positives during stall detection.
-- `nearTermWindow`: number, ms; the window during which delayed jobs will be specifically scheduled using `setTimeout` - if all delayed jobs are further out that this window, the Queue will double-check that it hasn't missed any jobs after the window elapses.
+- `nearTermWindow`: number, ms; the window during which delayed jobs will be specifically scheduled using `setTimeout` - if all delayed jobs are further out than this window, the Queue will double-check that it hasn't missed any jobs after the window elapses.
 - `delayedDebounce`: number, ms; to avoid unnecessary churn for several jobs in short succession, the Queue may delay individual jobs by up to this amount.
 - `redis`: object or string, specifies how to connect to Redis. See [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) for the full set of options.
 
