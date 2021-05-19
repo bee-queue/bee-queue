@@ -1,3 +1,13 @@
+## [1.4.0](https://github.com/bee-queue/bee-queue/compare/v1.3.1...v1.4.0) (2021-05-19)
+
+### Features
+
+- **job:** store progress with the whole job data ([#339](https://github.com/bee-queue/bee-queue/issues/339)) ([6df8b5a](https://github.com/bee-queue/bee-queue/commit/6df8b5a6d126d8a9e06300451481f57eab3a7d89))
+
+### Bug Fixes
+
+- typo fix in README ([#412](https://github.com/bee-queue/bee-queue/issues/412)) ([850d1d1](https://github.com/bee-queue/bee-queue/commit/850d1d1bd1c43552ad312bfcd41fe2741994f78a))
+
 ### [1.3.1](https://github.com/bee-queue/bee-queue/compare/v1.3.0...v1.3.1) (2020-11-04)
 
 ### Bug Fixes
