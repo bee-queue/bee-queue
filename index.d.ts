@@ -80,6 +80,8 @@ declare class BeeQueue<T = any> extends EventEmitter {
 
   destroy(): Promise<void>;
   destroy(cb: () => void): void;
+
+  saveAll(jobs: BeeQueue.Job<T>[]): Promise<Map<BeeQueue.Job<T>, Error>>;
 }
 
 declare namespace BeeQueue {
