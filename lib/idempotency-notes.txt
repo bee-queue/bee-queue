@@ -1,0 +1,32 @@
+does end-to-end idempotency require queue-level idempotency?
+
+no - provided the retries clearly mark that they are retries
+  (or that each job processing attempt assumes retry case, and operates in an
+  idempotent manner)
+
+how does this intersect with cron jobs that spin up events in event queues
+
+autoUpgradeMemberToPaid
+- branching logic based on state at time of job execution
+  maybe solved by making and storing that decision, checkpointing, and then
+  working off the checkpoint to apply changes; retries might result in an
+  inapplicable changeset, though
+    e.g. what happens when user wasn't in trial initially but gets put on a
+    trial while
+
+  the desire isn't for a consistent operation, but for an atomic operation or
+  transaction prior to job completion
+
+  do basic at-least once semantics cause problems here?
+    provided the effects are transactional, no
+
+  conceptually this job represents a mapping from one [total-system] state to
+      another state
+    multiple writers might be interacting with the system at the same time, so
+    the read might be out of date by the time we attempt to write the result
+    we might need to treat this as a read-write-validate-rollback flow, but even
+    that is susceptible to changes between the validate and rollback stages, so
+    txns there are also needed
+
+  sometimes version-based conflict resolution is a better way to go, but that
+  mostly only works for single-document updates

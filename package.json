@@ -18,6 +18,7 @@
     "@semantic-release/release-notes-generator": "^9.0.1",
     "ava": "^0.25.0",
     "ava-spec": "^1.1.0",
+    "c8": "^7.3.5",
     "conventional-changelog-conventionalcommits": "^4.4.0",
     "eslint": "^7.8.1",
     "eslint-config-prettier": "^6.10.1",
@@ -44,8 +45,8 @@
     "ci": "npm run lint && npm run ci:coverage && if [ -z \"$CI\" ]; then npm run ci:commitlint; fi; else ava",
     "ci:commitlint": "commitlint --from \"origin/${GITHUB_BASE_REF:-master}\"",
     "ci:coverage": "if [ -z \"$CI\" ]; then npm run coverage; else npm run coverage-and-report; fi",
-    "coverage-and-report": "npm run coverage && mkdir -p coverage && nyc report --reporter=text-lcov > coverage/lcov.info",
-    "coverage": "nyc ava",
+    "coverage-and-report": "npm run coverage && mkdir -p coverage && c8 report --reporter=text-lcov > coverage/lcov.info",
+    "coverage": "c8 ava",
     "lint": "eslint . && prettier --check '**/*.(html|json|md|sublime-project|ts|yml)'",
     "report": "npm run coverage && nyc report --reporter=html",
     "test": "npm run lint && ava"

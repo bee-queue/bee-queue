@@ -2,7 +2,7 @@ import { describe } from 'ava-spec';
 import * as url from 'url';
 
 import Queue from '../lib/queue';
-import helpers from './helpers';
+import * as helpers from './helpers';
 import sinon from 'sinon';
 
 import * as redis from '../lib/redis';
@@ -522,26 +522,25 @@ describe('Queue', (it) => {
 
       // Override _waitForJob.
       const waitForJob = queue._waitForJob;
-      const waitingForJob = helpers.deferred();
-      let waitDone = waitingForJob.defer();
+      const waitingForJob = helpers.defer();
       queue._waitForJob = function (...args) {
-        if (waitDone) {
-          waitDone();
-          waitDone = null;
-        }
+        waitingForJob.resolve();
         return waitForJob.apply(this, args);
       };
 
-      await waitingForJob;
+      await waitingForJob.promise;
 
       // todo ensure this is how to abruptly kill ioredis connections
       queue.bclient.stream.destroy();
-      await helpers.waitOn(queue.bclient, 'reconnecting');
-      await helpers.waitOn(queue.bclient, 'ready');
+      await Promise.all([
+        helpers.waitOn(queue.bclient, 'reconnecting'),
+        helpers.waitOn(queue.bclient, 'ready'),
+      ]);
+      // await helpers.waitOn(queue.bclient, 'ready');
       // t.true(redis.isAbortError(err)); todo i think we just dont get these in ioredis maybe?
 
-      queue.createJob({ foo: 'bar' }).save();
-      await helpers.waitOn(queue, 'succeeded', true);
+      const succeeded = helpers.waitOn(queue, 'succeeded', true);
+      await Promise.all([queue.createJob({ foo: 'bar' }).save(), succeeded]);
 
       t.is(jobSpy.callCount, 1);
       t.is(t.context.queueErrors.length, 0);

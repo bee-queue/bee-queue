@@ -22,6 +22,7 @@ async function delKeys(client, pattern) {
 }
 
 module.exports = {
+  ...require('../lib/helpers'),
   reef,
   delKeys,
   deferred,
