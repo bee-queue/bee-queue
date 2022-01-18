@@ -161,6 +161,19 @@ describe('Job', (it) => {
       t.is(await hget(queue.toKey('jobs'), job.id), null);
     });
 
+    it('should warn about job being removed', async (t) => {
+      const {makeJob} = t.context;
+
+      const job = await makeJob();
+      return new Promise((resolve) => {
+        job.on('removed', () => {
+          t.true(true);
+          resolve();
+        });
+        job.remove();
+      });
+    });
+
     it('should work with a callback', async (t) => {
       const {queue, makeJob} = t.context;
 
