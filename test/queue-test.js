@@ -2307,6 +2307,33 @@ describe('Queue', (it) => {
       ]);
     });
 
+    it('emits a job removed event', async (t) => {
+      const queue = t.context.makeQueue();
+      const worker = t.context.makeQueue();
+
+      const job = queue.createJob({foo: 'bar'});
+      const record = Promise.all([
+        recordUntil(job, ['removed'], 'removed'),
+        recordUntil(queue, ['job removed'], 'job removed'),
+      ]);
+
+      worker.process((job) => {
+        job.reportProgress(20);
+        return helpers.delay(20);
+      });
+      await job.save();
+
+      job.remove();
+
+      // Wait for the event to show up in both, but only bind the value from the event on the job
+      // object.
+      const [jobEvents, queueEvents] = await record;
+
+      t.deepEqual(jobEvents, [['removed', undefined]]);
+
+      t.deepEqual(queueEvents, [['job removed', job.id, undefined]]);
+    });
+
     it('emits a job retrying event', async (t) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();

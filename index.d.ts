@@ -25,6 +25,7 @@ declare class BeeQueue<T = any> extends EventEmitter {
   on(ev: 'job retrying', fn: (jobId: string, err: Error) => void): this;
   on(ev: 'job failed', fn: (jobId: string, err: Error) => void): this;
   on(ev: 'job progress', fn: (jobId: string, progress: any) => void): this;
+  on(ev: 'job removed', fn: (jobId: string) => void): this;
 
   ready(): Promise<this>;
   ready(cb?: (err: Error | null) => void): Promise<this>;
@@ -113,6 +114,7 @@ declare namespace BeeQueue {
     on(ev: 'retrying', fn: (err: Error) => void): this;
     on(ev: 'failed', fn: (err: Error) => void): this;
     on(ev: 'progress', fn: (progress: any) => void): this;
+    on(ev: 'removed', fn: () => void): this;
 
     setId(id: string): this;
     retries(n: number): this;
