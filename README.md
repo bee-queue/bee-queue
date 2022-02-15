@@ -474,6 +474,16 @@ queue.on('job progress', (jobId, progress) => {
 
 Some worker is processing job `jobId`, and it sent a [progress report](#jobreportprogressn) of `progress` percent.
 
+#### job removed
+
+```js
+queue.on('job removed', (jobId) => {
+  console.log(`Job ${jobId} has been removed`);
+});
+```
+
+A job has been removed from the queue. Any side effect should be handled.
+
 ### Queue Delayed Job activation
 
 The `Queue` will activate no delayed jobs unless `activateDelayedJobs` is set to `true`.
@@ -724,6 +734,16 @@ job.on('progress', (progress) => {
 ```
 
 The job has sent a [progress report](#jobreportprogressn) of `progress` percent.
+
+#### removed
+
+```js
+job.on('removed', (progress) => {
+  console.log(`Job ${job.id} has been removed`);
+});
+```
+
+The job has been removed. If the job was ongoing, the worker should handle the side effect and try to stop the job process if possible.
 
 ### Methods
 
