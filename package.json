@@ -6,7 +6,7 @@
   "dependencies": {
     "p-finally": "^1.0.0",
     "promise-callbacks": "^3.8.1",
-    "redis": "^2.7.1"
+    "redis": "^4.0.4"
   },
   "devDependencies": {
     "@commitlint/cli": "^11.0.0",
