@@ -18,7 +18,7 @@
     "@semantic-release/github": "^7.1.1",
     "@semantic-release/npm": "^7.0.6",
     "@semantic-release/release-notes-generator": "^9.0.1",
-    "ava": "^0.25.0",
+    "ava": "^4.1.0",
     "ava-spec": "^1.1.0",
     "conventional-changelog-conventionalcommits": "^4.4.0",
     "eslint": "^7.8.1",
