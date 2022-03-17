@@ -9,7 +9,7 @@
     "redis": "^2.7.1"
   },
   "devDependencies": {
-    "@commitlint/cli": "^11.0.0",
+    "@commitlint/cli": "^16.2.3",
     "@commitlint/config-conventional": "^11.0.0",
     "@semantic-release/changelog": "^5.0.1",
     "@semantic-release/commit-analyzer": "^8.0.1",
