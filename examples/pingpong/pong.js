@@ -1,12 +1,19 @@
 const Queue = require('../../');
-
 const pingQueue = new Queue('ping');
-const pongQueue = new Queue('pong');
 
 pingQueue.process(function (job, done) {
-  console.log('Pong received ping');
-  pongQueue.createJob().save(function () {
-    console.log('Pong sent back pong');
-    done();
+  console.log('processing job, waiting 2sec', job.id);
+
+  job.on('removed', () => {
+    console.log('REMOVED');
   });
+
+  pingQueue.on('job removed', (jobId) => {
+    console.log('REMOVED', jobId);
+  });
+
+  setTimeout(() => {
+    console.log('done!');
+    done();
+  }, 2000);
 });

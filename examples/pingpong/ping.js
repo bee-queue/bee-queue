@@ -1,17 +1,14 @@
 const Queue = require('../../');
 const pingQueue = new Queue('ping');
-const pongQueue = new Queue('pong');
 
-pongQueue.process(function (job, done) {
-  console.log('Ping received back pong');
-  done();
-});
+const sendPing = async function () {
+  const job = await pingQueue.createJob().save();
+  console.log('created job, will remove after 1sec');
 
-const sendPing = function () {
-  pingQueue.createJob().save(function () {
-    console.log('Ping sent ping');
-  });
+  setTimeout(() => {
+    console.log('removing job');
+    job.remove();
+  }, 1000);
 };
 
 sendPing();
-setTimeout(sendPing, 2000);
