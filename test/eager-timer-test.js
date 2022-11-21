@@ -1,7 +1,7 @@
-import {describe} from 'ava-spec';
-import sandbox from 'sandboxed-module';
-import lolex from 'lolex';
-import sinon from 'sinon';
+const {describe} = require('ava-spec');
+const sandbox = require('sandboxed-module');
+const FakeTimers = require('@sinonjs/fake-timers');
+const sinon = require('sinon');
 
 function maybeCoverage() {
   return Object.keys(require.cache).some((path) =>
@@ -13,7 +13,7 @@ describe('EagerTimer', (it) => {
   it.beforeEach(async (t) => {
     // Some reasonable time so we don't start at 0.
     const start = 10;
-    const clock = lolex.createClock(start);
+    const clock = FakeTimers.createClock(start);
 
     const EagerTimer = sandbox.require('../lib/eager-timer', {
       locals: {
@@ -199,9 +199,9 @@ describe('EagerTimer', (it) => {
   it('should fail on invalid maximum delays', (t) => {
     const {EagerTimer} = t.context;
 
-    t.throws(() => new EagerTimer(-1), /positive integer/i);
-    t.throws(() => new EagerTimer(NaN), /positive integer/i);
-    t.throws(() => new EagerTimer(Infinity), /positive integer/i);
-    t.throws(() => new EagerTimer(1.5), /positive integer/i);
+    t.throws(() => new EagerTimer(-1), {message: /positive integer/i});
+    t.throws(() => new EagerTimer(NaN), {message: /positive integer/i});
+    t.throws(() => new EagerTimer(Infinity), {message: /positive integer/i});
+    t.throws(() => new EagerTimer(1.5), {message: /positive integer/i});
   });
 });

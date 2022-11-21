@@ -1,8 +1,8 @@
-import {describe} from 'ava-spec';
+const {describe} = require('ava-spec');
 
-import sinon from 'sinon';
+const sinon = require('sinon');
 
-import {delay, finallyRejectsWithInitial} from '../lib/helpers';
+const {delay, finallyRejectsWithInitial} = require('../lib/helpers');
 
 const mark = () =>
   (
@@ -19,9 +19,9 @@ describe('finallyRejectsWithInitial', (it) => {
     t.true(spy.calledOnce);
     spy.resetHistory();
 
-    await t.throws(
-      finallyRejectsWithInitial(Promise.reject(new Error('test 1')), spy),
-      'test 1'
+    await t.throwsAsync(
+      () => finallyRejectsWithInitial(Promise.reject(new Error('test 1')), spy),
+      {message: 'test 1'}
     );
     t.true(spy.calledOnce);
     spy.resetHistory();
@@ -33,16 +33,16 @@ describe('finallyRejectsWithInitial', (it) => {
   it('prefers the original error', async (t) => {
     const stub = sinon.stub().rejects(new Error('second'));
 
-    await t.throws(
-      finallyRejectsWithInitial(Promise.resolve(), stub),
-      'second'
+    await t.throwsAsync(
+      () => finallyRejectsWithInitial(Promise.resolve(), stub),
+      {message: 'second'}
     );
     t.true(stub.calledOnce);
     stub.resetHistory();
 
-    await t.throws(
-      finallyRejectsWithInitial(Promise.reject(new Error('first')), stub),
-      'first'
+    await t.throwsAsync(
+      () => finallyRejectsWithInitial(Promise.reject(new Error('first')), stub),
+      {message: 'first'}
     );
     t.true(stub.calledOnce);
   });
@@ -59,17 +59,21 @@ describe('finallyRejectsWithInitial', (it) => {
   it('handles synchronous exceptions', async (t) => {
     const stub = sinon.stub().throws(new Error('err 2'));
 
-    await t.throws(finallyRejectsWithInitial(Promise.resolve(), stub), 'err 2');
+    await t.throwsAsync(
+      () => finallyRejectsWithInitial(Promise.resolve(), stub),
+      {message: 'err 2'}
+    );
     t.true(stub.calledOnce);
     stub.resetHistory();
 
     const measure = mark();
-    await t.throws(
-      finallyRejectsWithInitial(
-        delay(11).then(() => Promise.reject(new Error('err 1'))),
-        stub
-      ),
-      'err 1'
+    await t.throwsAsync(
+      () =>
+        finallyRejectsWithInitial(
+          delay(11).then(() => Promise.reject(new Error('err 1'))),
+          stub
+        ),
+      {message: 'err 1'}
     );
     t.true(measure() >= 10);
     t.true(stub.calledOnce);
