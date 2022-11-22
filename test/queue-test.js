@@ -548,7 +548,7 @@ describe('Queue', (it) => {
         },
       });
 
-      const jobSpy = sinon.spy(queue, '_getNextJob');
+      const jobSpy = sinon.spy(queue, '_waitForJob');
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
@@ -588,6 +588,47 @@ describe('Queue', (it) => {
       t.is(jobSpy.callCount, 2);
 
       t.context.queueErrors = t.context.queueErrors.filter((e) => e !== err);
+    });
+
+    it('should backoff retries to brpoplpush', async (t) => {
+      const queue = t.context.makeQueue({
+        initialRedisFailureRetryDelay: 10,
+      });
+
+      await helpers.waitOn(queue, 'ready');
+
+      queue.bclient.brpoplpush = function (source, destination, timeout, cb) {
+        cb(new Error('redis failed'));
+      };
+
+      const errors = [];
+      queue.on('error', (err) => {
+        t.is(err.message, 'redis failed');
+        errors.push(err);
+      });
+
+      queue.process(() => {});
+
+      const firstErr = await helpers.waitOn(queue, 'error');
+      t.is(firstErr.message, 'redis failed');
+      const start = new Date();
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => e !== firstErr
+      );
+
+      const secondErr = await helpers.waitOn(queue, 'error');
+      t.is(secondErr.message, 'redis failed');
+      t.true(new Date() - start > 10);
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => e !== secondErr
+      );
+
+      const thirdErr = await helpers.waitOn(queue, 'error');
+      t.is(thirdErr.message, 'redis failed');
+      t.true(new Date() - start > 30);
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => e !== thirdErr
+      );
     });
   });
 
