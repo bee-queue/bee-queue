@@ -5,10 +5,12 @@ import sinon from 'sinon';
 import {delay, finallyRejectsWithInitial} from '../lib/helpers';
 
 const mark = () =>
-  ((start) => () =>
-    ((end) => (end[0] - start[0]) * 1e3 + (end[1] - start[1]) / 1e6)(
-      process.hrtime()
-    ))(process.hrtime());
+  (
+    (start) => () =>
+      ((end) => (end[0] - start[0]) * 1e3 + (end[1] - start[1]) / 1e6)(
+        process.hrtime()
+      )
+  )(process.hrtime());
 
 describe('finallyRejectsWithInitial', (it) => {
   it('invokes the function', async (t) => {
