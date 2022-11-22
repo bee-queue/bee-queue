@@ -1,3 +1,9 @@
+## [1.4.2](https://github.com/bee-queue/bee-queue/compare/v1.4.1...v1.4.2) (2022-11-22)
+
+### Bug Fixes
+
+- require redis v3 ([#546](https://github.com/bee-queue/bee-queue/issues/546)) ([445521b](https://github.com/bee-queue/bee-queue/commit/445521b1c00d38900dc6c8244fa96c15c051048e))
+
 ## [1.4.1](https://github.com/bee-queue/bee-queue/compare/v1.4.0...v1.4.1) (2022-11-22)
 
 ### Bug Fixes
