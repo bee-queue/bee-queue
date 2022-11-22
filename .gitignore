@@ -36,3 +36,6 @@ jspm_packages
 .DS_Store
 *.sublime-workspace
 notes.txt
+
+#IntelliJ
+.idea
