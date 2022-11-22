@@ -1,3 +1,9 @@
+## [1.4.1](https://github.com/bee-queue/bee-queue/compare/v1.4.0...v1.4.1) (2022-11-22)
+
+### Bug Fixes
+
+- If the brpoplpush commands fails, wait before retrying ([#162](https://github.com/bee-queue/bee-queue/issues/162)) ([657eb1f](https://github.com/bee-queue/bee-queue/commit/657eb1f7d70ef37dc5f1c1b5e242e31bd1d0c7e5))
+
 ## [1.4.0](https://github.com/bee-queue/bee-queue/compare/v1.3.1...v1.4.0) (2021-05-19)
 
 ### Features
