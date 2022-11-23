@@ -896,7 +896,23 @@ Some significant non-features include:
 
 Some of these could be worthwhile additions; please comment if you're interested in using or helping implement them!
 
-You'll need a local redis server to run the tests. Note that running the tests may delete some keys in the form of `bq:test-*-*:*`.
+## Testing
+
+You'll need a local Redis server to run the tests. Note that running the tests may delete some keys in the form of `bq:test-*-*:*`.
+
+Alternatively, if you have Docker available, you can run tests or do forensic work in an ephemeral container with its own Redis server, e.g.:
+
+```bash
+$ ./run-docker-script.sh
+
+$ ./run-docker-script.sh npx ava --serial --fail-fast --verbose --no-color --timeout 30000
+
+$ ./run-docker-script.sh npm run coverage
+
+$ ./run-docker-script.sh bash
+
+$ ./run-docker-script.sh --help
+```
 
 [npm-image]: https://img.shields.io/npm/v/bee-queue.svg?style=flat
 [npm-url]: https://www.npmjs.com/package/bee-queue
