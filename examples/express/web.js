@@ -4,7 +4,7 @@ const app = express();
 app.use(logger('dev'));
 
 const Queue = require('../../');
-const queue = Queue('express-example');
+const queue = new Queue('express-example');
 
 app.get('/run/:x/:y', function (req, res) {
   const job = queue.createJob({

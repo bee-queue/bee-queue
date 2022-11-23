@@ -2,6 +2,12 @@
 
 This app receives a request, enqueues a job, waits for its results, then returns the results in the response.
 
+Setup:
+
+```
+npm i morgan@1 express@4
+```
+
 First run:
 
 ```

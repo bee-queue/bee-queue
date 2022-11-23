@@ -27,9 +27,8 @@ describe('EagerTimer', (it) => {
             nyc(source) {
               const Instrumenter = require('nyc/lib/instrumenters/istanbul');
               const instrumenter = Instrumenter(process.cwd(), {});
-              const instrumentMethod = instrumenter.instrumentSync.bind(
-                instrumenter
-              );
+              const instrumentMethod =
+                instrumenter.instrumentSync.bind(instrumenter);
               return instrumentMethod(source, this.filename, {
                 registerMap() {},
               });

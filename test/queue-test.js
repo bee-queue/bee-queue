@@ -1,4 +1,5 @@
 import {describe} from 'ava-spec';
+import * as url from 'url';
 
 import Queue from '../lib/queue';
 import Job from '../lib/job';
@@ -94,7 +95,9 @@ function spitter() {
 describe('Queue', (it) => {
   const redisUrl = process.env.BEE_QUEUE_TEST_REDIS;
   // redisUrl must have a schema portion, e.g. redis://redis.example.com
-  const redisHost = redisUrl ? new URL(redisUrl).hostname : undefined;
+  const redisHost = redisUrl
+    ? (url.URL ? new url.URL(redisUrl) : url.parse(redisUrl)).hostname
+    : undefined;
   const gclient = redis.createClient(redisUrl);
 
   it.before(() => gclient);
@@ -545,7 +548,7 @@ describe('Queue', (it) => {
         },
       });
 
-      const jobSpy = sinon.spy(queue, '_getNextJob');
+      const jobSpy = sinon.spy(queue, '_waitForJob');
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
@@ -585,6 +588,47 @@ describe('Queue', (it) => {
       t.is(jobSpy.callCount, 2);
 
       t.context.queueErrors = t.context.queueErrors.filter((e) => e !== err);
+    });
+
+    it('should backoff retries to brpoplpush', async (t) => {
+      const queue = t.context.makeQueue({
+        initialRedisFailureRetryDelay: 10,
+      });
+
+      await helpers.waitOn(queue, 'ready');
+
+      queue.bclient.brpoplpush = function (source, destination, timeout, cb) {
+        cb(new Error('redis failed'));
+      };
+
+      const errors = [];
+      queue.on('error', (err) => {
+        t.is(err.message, 'redis failed');
+        errors.push(err);
+      });
+
+      queue.process(() => {});
+
+      const firstErr = await helpers.waitOn(queue, 'error');
+      t.is(firstErr.message, 'redis failed');
+      const start = new Date();
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => e !== firstErr
+      );
+
+      const secondErr = await helpers.waitOn(queue, 'error');
+      t.is(secondErr.message, 'redis failed');
+      t.true(new Date() - start > 10);
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => e !== secondErr
+      );
+
+      const thirdErr = await helpers.waitOn(queue, 'error');
+      t.is(thirdErr.message, 'redis failed');
+      t.true(new Date() - start > 30);
+      t.context.queueErrors = t.context.queueErrors.filter(
+        (e) => e !== thirdErr
+      );
     });
   });
 
@@ -692,6 +736,33 @@ describe('Queue', (it) => {
       ]);
       t.is(ref1, job1);
       t.is(ref2, job2);
+
+      await Promise.all([queue.removeJob(job1.id), job2.remove()]);
+
+      t.deepEqual(
+        await Promise.all([queue.getJob(job1.id), queue.getJob(job2.id)]),
+        [null, null]
+      );
+    });
+
+    it('should remove a job not stored in local queue', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        storeJobs: false,
+      });
+
+      const [job1, job2] = await Promise.all([
+        queue.createJob().save(),
+        queue.createJob().save(),
+      ]);
+      const [ref1, ref2] = await Promise.all([
+        queue.getJob(job1.id),
+        queue.getJob(job2.id),
+      ]);
+      t.deepEqual(ref1, job1);
+      t.not(ref1, job1);
+      t.deepEqual(ref2, job2);
+      t.not(ref2, job2);
 
       await Promise.all([queue.removeJob(job1.id), job2.remove()]);
 
@@ -1004,6 +1075,118 @@ describe('Queue', (it) => {
       );
 
       t.is(gotJob.id, job.id);
+    });
+  });
+
+  it.describe('saveAll', (it) => {
+    it('should save all the provided jobs', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      await queue.saveAll([
+        queue.createJob({foo: 'bar'}).setId('asdf'),
+        queue.createJob({foo: 'bar2'}).setId('asdf2'),
+      ]);
+
+      const [bar, bar2] = await Promise.all([
+        queue.getJob('asdf'),
+        queue.getJob('asdf2'),
+      ]);
+      t.truthy(bar);
+      t.truthy(bar2);
+      t.deepEqual(bar.data, {foo: 'bar'});
+      t.deepEqual(bar2.data, {foo: 'bar2'});
+    });
+
+    it('should produce internal errors', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      const circ = () => {
+        const value = {};
+        value.value = value;
+        return value;
+      };
+
+      const errors = await queue.saveAll([
+        queue.createJob(circ()),
+        queue.createJob(circ()),
+      ]);
+
+      t.is(errors.size, 2);
+      for (const err of errors.values()) {
+        t.is(err.name, 'TypeError');
+        t.regex(err.message, /circular/);
+      }
+    });
+
+    it('should produce redis errors', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      await queue.ready();
+
+      const stub = sinon
+        .stub(queue.client, 'internal_send_command')
+        .callsFake(function (commandObj) {
+          if (
+            commandObj.command.toUpperCase() === 'EVALSHA' &&
+            commandObj.args.some((arg) => /"hij"/.test(arg))
+          ) {
+            // This is just a randomly generated string passed through sha1sum. It
+            // will not be a loaded script, which will cause the command to fail.
+            commandObj.args[0] = '91ea7bce9a02621ada10e620f546467cad1a6b07';
+          }
+          return stub.wrappedMethod.call(this, commandObj);
+        });
+
+      const jobs = [
+        queue.createJob({abc: 'def'}),
+        queue.createJob({def: 'hij'}),
+      ];
+
+      const errors = await queue.saveAll(jobs);
+
+      t.is(errors.size, 1);
+      const errPair = errors[Symbol.iterator]().next().value;
+      t.is(errPair[0], jobs[1]);
+      t.is(errPair[1].code, 'NOSCRIPT');
+    });
+
+    it('should reject on batch execution failure', async (t) => {
+      const queue = t.context.makeQueue({
+        getEvents: false,
+        sendEvents: false,
+        storeJobs: false,
+      });
+
+      await queue.ready();
+
+      const batchStub = sinon
+        .stub(queue.client, 'batch')
+        .callsFake(function () {
+          const batch = batchStub.wrappedMethod.apply(this, arguments);
+          sinon.stub(batch, 'exec').yields(new Error('test error'));
+          return batch;
+        });
+
+      await t.throws(
+        queue.saveAll([
+          queue.createJob({abc: 'def'}),
+          queue.createJob({def: 'hij'}),
+        ]),
+        Error,
+        'test error'
+      );
     });
   });
 
@@ -1567,6 +1750,47 @@ describe('Queue', (it) => {
       t.throws(() => job.backoff('fixed', 44.5), /positive integer/i);
     });
 
+    it('should support custom backoff strategies', async (t) => {
+      const queue = t.context.makeQueue({
+        activateDelayedJobs: true,
+      });
+
+      queue.backoffStrategies.set(
+        'my-custom-backoff',
+        (job) => job.options.backoff.delay
+      );
+
+      const calls = [];
+
+      queue.process(async (job) => {
+        t.deepEqual(job.options.backoff, {
+          strategy: 'my-custom-backoff',
+          delay: 100,
+        });
+        t.deepEqual(job.data, {is: 'my-custom-backoff'});
+        calls.push(Date.now());
+        if (calls.length === 1) {
+          throw new Error('forced retry');
+        }
+        t.is(calls.length, 2);
+      });
+
+      const succeed = helpers.waitOn(queue, 'succeeded', true);
+
+      await queue
+        .createJob({is: 'my-custom-backoff'})
+        .retries(2)
+        .backoff('my-custom-backoff', 100)
+        .save();
+
+      await succeed;
+
+      t.is(calls.length, 2);
+
+      // Ensure there was a delay.
+      t.true(calls[1] - calls[0] >= 100);
+    });
+
     it('should handle fixed backoff', async (t) => {
       const queue = t.context.makeQueue({
         activateDelayedJobs: true,
@@ -1690,6 +1914,36 @@ describe('Queue', (it) => {
       ];
 
       // Save the three jobs.
+      await Promise.all(jobs.map((job) => job.save()));
+
+      // Artificially move to active.
+      await queue._getNextJob();
+
+      // Mark the jobs as stalling, so that Queue#process immediately detects
+      // them as stalled.
+      await forceStall(queue);
+
+      const {done, next} = reef(jobs.length);
+      queue.process(async () => {
+        next();
+      });
+
+      return done;
+    });
+
+    it('should reset and process more than the unpack limit stalled jobs when starting a queue', async (t) => {
+      t.plan(0);
+
+      const queue = t.context.makeQueue({
+        stallInterval: 1,
+      });
+
+      // Create 1025 jobs
+      const jobs = Array.from(new Array(1025)).map((_, i) =>
+        queue.createJob({foo: `bar${i}`})
+      );
+
+      // Save the jobs.
       await Promise.all(jobs.map((job) => job.save()));
 
       // Artificially move to active.

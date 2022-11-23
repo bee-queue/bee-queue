@@ -1,24 +1,34 @@
 {
   "name": "bee-queue",
-  "version": "1.2.3",
+  "version": "1.4.3",
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
     "p-finally": "^1.0.0",
     "promise-callbacks": "^3.8.1",
-    "redis": "^2.7.1"
+    "redis": "^3.1.2"
   },
   "devDependencies": {
+    "@commitlint/cli": "^17.2.0",
+    "@commitlint/config-conventional": "^17.3.0",
+    "@semantic-release/changelog": "^6.0.1",
+    "@semantic-release/commit-analyzer": "^9.0.2",
+    "@semantic-release/exec": "^6.0.3",
+    "@semantic-release/git": "^10.0.1",
+    "@semantic-release/github": "^8.0.6",
+    "@semantic-release/npm": "^9.0.1",
+    "@semantic-release/release-notes-generator": "^10.0.3",
     "ava": "^0.25.0",
     "ava-spec": "^1.1.0",
-    "coveralls": "^3.0.11",
-    "eslint": "^6.8.0",
-    "eslint-config-prettier": "^6.10.1",
-    "eslint-plugin-prettier": "^3.1.2",
+    "conventional-changelog-conventionalcommits": "^5.0.0",
+    "eslint": "^8.28.0",
+    "eslint-config-prettier": "^8.5.0",
+    "eslint-plugin-prettier": "^4.2.1",
     "lolex": "^6.0.0",
     "nyc": "^15.0.1",
     "prettier": "^2.0.4",
     "sandboxed-module": "^2.0.3",
+    "semantic-release": "^19.0.5",
     "semver": "^7.2.1",
     "sinon": "^7.5.0"
   },
@@ -32,9 +42,10 @@
     "lib"
   ],
   "scripts": {
-    "ci": "if node -e '({...0})' 2>/dev/null && node -e '\"\".trimEnd()' 2>/dev/null; then npm run lint && npm run ci:coverage; else ava; fi",
-    "ci:coverage": "if [ -z \"$CI\" ]; then npm run coverage; else npm run coverage-and-publish; fi",
-    "coverage-and-publish": "npm run coverage && nyc report --reporter=text-lcov | coveralls",
+    "ci": "if node -e '({...0})' 2>/dev/null && node -e '\"\".trimEnd()' 2>/dev/null; then npm run lint && npm run ci:coverage && if [ -z \"$CI\" ]; then npm run ci:commitlint; fi; else ava; fi",
+    "ci:commitlint": "if node -e 'async()=>{for await(var a of a);}'; then commitlint --from \"origin/${GITHUB_BASE_REF:-master}\"; fi",
+    "ci:coverage": "if [ -z \"$CI\" ]; then npm run coverage; else npm run coverage-and-report; fi",
+    "coverage-and-report": "npm run coverage && mkdir -p coverage && nyc report --reporter=text-lcov > coverage/lcov.info",
     "coverage": "nyc ava",
     "lint": "eslint . && prettier --check '**/*.(html|json|md|sublime-project|ts|yml)'",
     "report": "npm run coverage && nyc report --reporter=html",
@@ -54,6 +65,9 @@
     "node": ">= 4"
   },
   "author": "Lewis J Ellis <me@lewisjellis.com>",
+  "contributors": [
+    "Eli Skeggs <dev@eliskeggs.com> (https://eli.skeg.gs)"
+  ],
   "license": "MIT",
   "repository": {
     "type": "git",
