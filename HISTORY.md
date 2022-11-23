@@ -1,3 +1,9 @@
+## [1.4.3](https://github.com/bee-queue/bee-queue/compare/v1.4.2...v1.4.3) (2022-11-23)
+
+### Bug Fixes
+
+- queues stop working when there are more than 8k jobs with the same timestamp ([#550](https://github.com/bee-queue/bee-queue/issues/550)) ([28ca743](https://github.com/bee-queue/bee-queue/commit/28ca74326b89dcdb013317cf39c02fee4fca381e))
+
 ## [1.4.2](https://github.com/bee-queue/bee-queue/compare/v1.4.1...v1.4.2) (2022-11-22)
 
 ### Bug Fixes
