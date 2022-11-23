@@ -40,3 +40,6 @@ notes.txt
 # Cruft from failed Docker builds
 entrypoint.sh
 package-min.json
+
+#IntelliJ
+.idea

@@ -2,7 +2,7 @@
 /// <reference types="redis" />
 
 import {EventEmitter} from 'events';
-import {ClientOpts} from 'redis';
+import {ClientOpts, RedisClient} from 'redis';
 
 declare class BeeQueue<T = any> extends EventEmitter {
   name: string;
@@ -10,6 +10,7 @@ declare class BeeQueue<T = any> extends EventEmitter {
   jobs: any;
   paused: boolean;
   settings: any;
+  backoffStrategies: Map<string, (job: BeeQueue.Job<T>) => number>;
 
   constructor(name: string, settings?: BeeQueue.QueueSettings);
 
@@ -87,7 +88,7 @@ declare namespace BeeQueue {
     stallInterval?: number;
     nearTermWindow?: number;
     delayedDebounce?: number;
-    redis?: ClientOpts;
+    redis?: ClientOpts | RedisClient;
     isWorker?: boolean;
     getEvents?: boolean;
     sendEvents?: boolean;
@@ -106,6 +107,7 @@ declare namespace BeeQueue {
     readonly options: any;
     queue: BeeQueue<T>;
     progress: any;
+    status: 'created' | 'succeeded' | 'failed' | 'retrying';
 
     on(ev: 'succeeded', fn: (result: any) => void): this;
     on(ev: 'retrying', fn: (err: Error) => void): this;
@@ -114,10 +116,7 @@ declare namespace BeeQueue {
 
     setId(id: string): this;
     retries(n: number): this;
-    backoff(
-      strategy: 'immediate' | 'fixed' | 'exponential',
-      delayFactor?: number
-    ): this;
+    backoff(strategy: string, delayFactor?: number): this;
     delayUntil(dateOrTimestamp: Date | number): this;
     timeout(milliseconds: number): this;
     save(): Promise<this>;

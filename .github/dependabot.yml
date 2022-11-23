@@ -1,0 +1,11 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: '/'
+    schedule:
+      interval: daily
+    open-pull-requests-limit: 10
+    versioning-strategy: widen
+    commit-message:
+      prefix: chore
+      include: scope

@@ -1,6 +1,6 @@
 <a name="top"></a>
 ![bee-queue logo](https://raw.githubusercontent.com/bee-queue/bee-queue/master/bee-queue.png)
-[![NPM Version][npm-image]][npm-url] [![Build Status][travis-image]][travis-url] [![Coverage Status][coveralls-image]][coveralls-url]
+[![npm Version][npm-image]][npm-url] [![Node.js CI](https://github.com/bee-queue/bee-queue/actions/workflows/node.js.yml/badge.svg)](https://github.com/bee-queue/bee-queue/actions/workflows/node.js.yml) [![Coverage Status][coveralls-image]][coveralls-url]
 
 A simple, fast, robust job/task queue for Node.js, backed by Redis.
 
@@ -29,7 +29,7 @@ queue.process(function (job, done) {
 
 Bee-Queue is meant to power a distributed worker pool and was built with short, real-time jobs in mind. A web server can enqueue a job, wait for a worker process to complete it, and return its results within an HTTP request. Scaling is as simple as running more workers.
 
-Thanks to the folks at [Mixmax](https://mixmax.com), Bee-Queue is once again being regularly [maintained](https://mixmax.com/blog/bee-queue-v1-node-redis-queue)!
+Thanks to the folks at [Mixmax](https://mixmax.com), Bee-Queue is once again being regularly [maintained](https://www.mixmax.com/engineering/bee-queue-v1-node-redis-queue/)!
 
 [Celery](http://www.celeryproject.org/), [Resque](https://github.com/resque/resque), [Kue](https://github.com/Automattic/kue), and [Bull](https://github.com/OptimalBits/bull) operate similarly, but are generally designed for longer background jobs, supporting things like job prioritization and repeatable jobs, which Bee-Queue [currently does not](#contributing). Bee-Queue can handle longer background jobs just fine, but they aren't [the primary focus](#motivation).
 
@@ -153,6 +153,20 @@ The Job's `save` method returns a Promise in addition to calling the optional ca
 Each Job can be configured with the commands `.setId(id)`, `.retries(n)`, `.backoff(strategy, delayFactor)`, `.delayUntil(date|timestamp)`, and `.timeout(ms)` for setting options.
 
 Jobs can later be retrieved from Redis using [Queue#getJob](#queuegetjobjobid-cb), but most use cases won't need this, and can instead use [Job and Queue Events](#job-and-queue-events).
+
+### Advanced: Bulk-Creating Jobs
+
+Normally, creating and saving jobs blocks the underlying redis client for the full duration of an RTT to the Redis server. This can reduce throughput in cases where many operations should occur without delay - particularly when there are many jobs that need to be created quickly. Use `Queue#saveAll` to save an iterable (e.g. an Array) containing jobs in a pipelined network request, thus pushing all the work out on the wire before hearing back from the Redis server.
+
+```js
+addQueue
+  .saveAll([addQueue.createJob({x: 3, y: 4}), addQueue.createJob({x: 4, y: 5})])
+  .then((errors) => {
+    // The errors value is a Map associating Jobs with Errors. This will often be an empty Map.
+  });
+```
+
+Each job in the array provided to saveAll will be mutated with the ID it gets assigned.
 
 ## Processing Jobs
 
@@ -315,7 +329,7 @@ The `settings` fields are:
 
 - `prefix`: string, default `bq`. Useful if the `bq:` namespace is, for whatever reason, unavailable or problematic on your redis instance.
 - `stallInterval`: number, ms; the length of the window in which workers must report that they aren't stalling. Higher values will reduce Redis/network overhead, but if a worker stalls, it will take longer before its stalled job(s) will be retried. A higher value will also result in a lower probability of false-positives during stall detection.
-- `nearTermWindow`: number, ms; the window during which delayed jobs will be specifically scheduled using `setTimeout` - if all delayed jobs are further out that this window, the Queue will double-check that it hasn't missed any jobs after the window elapses.
+- `nearTermWindow`: number, ms; the window during which delayed jobs will be specifically scheduled using `setTimeout` - if all delayed jobs are further out than this window, the Queue will double-check that it hasn't missed any jobs after the window elapses.
 - `delayedDebounce`: number, ms; to avoid unnecessary churn for several jobs in short succession, the Queue may delay individual jobs by up to this amount.
 - `redis`: object or string, specifies how to connect to Redis. See [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) for the full set of options.
 
@@ -566,7 +580,7 @@ const counts = await queue.checkHealth();
 console.log('job state counts:', counts);
 ```
 
-#### Queue#close([cb])
+#### Queue#close([timeout], [cb])
 
 Closes the queue's connections to Redis. Idempotent.
 
@@ -723,7 +737,7 @@ const job = await queue.createJob({...})
   .save();
 ```
 
-Explicitly sets the ID of the job. If a job with the given ID already exists, the Job will not be created, and `job.id` will be set to `null`. This method can be used to run a once for each of an external resource by passing that resource's ID. For instance, you might run the setup job for a user only once by setting the job ID to the ID of the user.
+Explicitly sets the ID of the job. If a job with the given ID already exists, the Job will not be created, and `job.id` will be set to `null`. This method can be used to run a job once for each of an external resource by passing that resource's ID. For instance, you might run the setup job for a user only once by setting the job ID to the ID of the user. Furthermore, when this feature is used with queue settings `removeOnSuccess: true` and `removeOnFailure: true`, it will allow that job to be re-run again, effectively ensuring that jobId will have a global concurrency of 1.
 
 Avoid passing a numeric job ID, as it may conflict with an auto-generated ID.
 
@@ -902,7 +916,7 @@ $ ./run-docker-script.sh --help
 
 [npm-image]: https://img.shields.io/npm/v/bee-queue.svg?style=flat
 [npm-url]: https://www.npmjs.com/package/bee-queue
-[travis-image]: https://img.shields.io/travis/bee-queue/bee-queue.svg?style=flat
-[travis-url]: https://travis-ci.org/bee-queue/bee-queue
+[travis-image]: https://github.com/bee-queue/bee-queue/workflows/Node.js%20CI/badge.svg
+[travis-url]: https://github.com/bee-queue/bee-queue/actions
 [coveralls-image]: https://coveralls.io/repos/bee-queue/bee-queue/badge.svg?branch=master
 [coveralls-url]: https://coveralls.io/r/bee-queue/bee-queue?branch=master
