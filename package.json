@@ -4,7 +4,7 @@
   "description": "A simple, fast, robust job/task queue, backed by Redis.",
   "main": "index.js",
   "dependencies": {
-    "p-finally": "^1.0.0",
+    "p-finally": "^2.0.0",
     "promise-callbacks": "^3.8.1",
     "redis": "^3.1.2"
   },
@@ -18,19 +18,19 @@
     "@semantic-release/github": "^8.0.6",
     "@semantic-release/npm": "^9.0.1",
     "@semantic-release/release-notes-generator": "^10.0.3",
-    "ava": "^0.25.0",
+    "@sinonjs/fake-timers": "^10.0.0",
+    "ava": "^3.15.0",
     "ava-spec": "^1.1.0",
     "conventional-changelog-conventionalcommits": "^5.0.0",
     "eslint": "^8.28.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
-    "lolex": "^6.0.0",
     "nyc": "^15.0.1",
     "prettier": "^2.0.4",
     "sandboxed-module": "^2.0.3",
     "semantic-release": "^19.0.5",
     "semver": "^7.2.1",
-    "sinon": "^7.5.0"
+    "sinon": "^15.0.0"
   },
   "files": [
     "HISTORY.md",
