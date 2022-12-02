@@ -7,6 +7,11 @@ const sinon = require('sinon');
 
 const {promisify} = require('promise-callbacks');
 
+const withCallback = (fn) => async (t) => {
+  await promisify(fn)(t);
+  t.pass(); // There must be at least one passing assertion for the test to pass
+};
+
 const redis = require('../lib/redis');
 const actualRedis = require('redis');
 
@@ -181,10 +186,13 @@ describe('Queue', (it) => {
     t.context.handleErrors(t);
   });
 
-  it.cb('should support a ready callback', (t) => {
-    const queue = t.context.makeQueue();
-    queue.ready(t.end);
-  });
+  it(
+    'should support a ready callback',
+    withCallback((t, end) => {
+      const queue = t.context.makeQueue();
+      queue.ready(end);
+    })
+  );
 
   it('should indicate whether it is running', async (t) => {
     const queue = t.context.makeQueue();
@@ -225,16 +233,19 @@ describe('Queue', (it) => {
         t.false(redis.isReady(queue.eclient));
       });
 
-      it.cb('should support callbacks', (t) => {
-        const queue = t.context.makeQueue();
+      it(
+        'should support callbacks',
+        withCallback((t, end) => {
+          const queue = t.context.makeQueue();
 
-        queue
-          .ready()
-          .then(() => {
-            queue.close(t.end);
-          })
-          .catch(t.end);
-      });
+          queue
+            .ready()
+            .then(() => {
+              queue.close(end);
+            })
+            .catch(end);
+        })
+      );
 
       it('should not fail when called again', async (t) => {
         const queue = t.context.makeQueue();
@@ -245,11 +256,14 @@ describe('Queue', (it) => {
         await t.notThrowsAsync(() => queue.close());
       });
 
-      it.cb('should support callbacks when called again', (t) => {
-        const queue = t.context.makeQueue();
+      it(
+        'should support callbacks when called again',
+        withCallback((t, end) => {
+          const queue = t.context.makeQueue();
 
-        queue.close().then(() => void queue.close(t.end), t.end);
-      });
+          queue.close().then(() => void queue.close(end), end);
+        })
+      );
 
       it('should produce quit errors during close', async (t) => {
         const queue = t.context.makeQueue();

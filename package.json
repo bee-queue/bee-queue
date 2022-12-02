@@ -19,7 +19,7 @@
     "@semantic-release/npm": "^9.0.1",
     "@semantic-release/release-notes-generator": "^10.0.3",
     "@sinonjs/fake-timers": "^10.0.0",
-    "ava": "^3.15.0",
+    "ava": "^5.1.0",
     "ava-spec": "^1.1.0",
     "conventional-changelog-conventionalcommits": "^5.0.0",
     "eslint": "^8.28.0",

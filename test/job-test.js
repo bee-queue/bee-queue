@@ -6,6 +6,11 @@ const helpers = require('../lib/helpers');
 
 const {promisify} = require('promise-callbacks');
 
+const withCallback = (fn) => async (t) => {
+  await promisify(fn)(t);
+  t.pass(); // There must be at least one passing assertion for the test to pass
+};
+
 describe('Job', (it) => {
   const redisUrl = process.env.BEE_QUEUE_TEST_REDIS;
 
@@ -51,10 +56,13 @@ describe('Job', (it) => {
     t.deepEqual(job.data, {});
   });
 
-  it.cb('should save with a callback', (t) => {
-    const {queue} = t.context;
-    queue.createJob().save(t.end);
-  });
+  it(
+    'should save with a callback',
+    withCallback((t, end) => {
+      const {queue} = t.context;
+      queue.createJob().save(end);
+    })
+  );
 
   it.describe('Chaining', (it) => {
     it('sets retries', (t) => {
@@ -150,11 +158,14 @@ describe('Job', (it) => {
       });
     });
 
-    it.cb('should support callbacks', (t) => {
-      const {makeJob} = t.context;
+    it(
+      'should support callbacks',
+      withCallback((t, end) => {
+        const {makeJob} = t.context;
 
-      makeJob().then((job) => job.reportProgress(50, t.end), t.end);
-    });
+        makeJob().then((job) => job.reportProgress(50, end), end);
+      })
+    );
   });
 
   it.describe('Remove', (it) => {
@@ -184,25 +195,31 @@ describe('Job', (it) => {
   });
 
   it.describe('Retry', (it) => {
-    it.cb('should support callbacks', (t) => {
-      const {makeJob} = t.context;
+    it(
+      'should support callbacks',
+      withCallback((t, end) => {
+        const {makeJob} = t.context;
 
-      makeJob().then((job) => job.retry(t.end), t.end);
-    });
+        makeJob().then((job) => job.retry(end), end);
+      })
+    );
   });
 
   it.describe('IsInSet', (it) => {
-    it.cb('should support callbacks', (t) => {
-      const {makeJob} = t.context;
+    it(
+      'should support callbacks',
+      withCallback((t, end) => {
+        const {makeJob} = t.context;
 
-      makeJob().then((job) => job.isInSet('stalling', next), t.end);
+        makeJob().then((job) => job.isInSet('stalling', next), end);
 
-      function next(err, inSet) {
-        t.falsy(err);
-        t.is(inSet, false);
-        t.end();
-      }
-    });
+        function next(err, inSet) {
+          t.falsy(err);
+          t.is(inSet, false);
+          end();
+        }
+      })
+    );
   });
 
   it.describe('fromId', (it) => {
