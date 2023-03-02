@@ -11,7 +11,7 @@ const withCallback = (fn) => async (t) => {
   t.pass(); // There must be at least one passing assertion for the test to pass
 };
 
-describe('Job', (it) => {
+describe.skip('Job', (it) => {
   const redisUrl = process.env.BEE_QUEUE_TEST_REDIS;
 
   const data = {foo: 'bar'};

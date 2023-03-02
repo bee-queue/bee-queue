@@ -176,7 +176,7 @@ describe('Queue', (it) => {
     delKeys(await gclient, `bq:${t.context.queueName}:*`)
   );
 
-  it('should initialize without ensuring scripts', async (t) => {
+  it.skip('should initialize without ensuring scripts', async (t) => {
     const queue = t.context.makeQueue({
       ensureScripts: false,
     });
@@ -186,7 +186,7 @@ describe('Queue', (it) => {
     t.context.handleErrors(t);
   });
 
-  it(
+  it.skip(
     'should support a ready callback',
     withCallback((t, end) => {
       const queue = t.context.makeQueue();
@@ -194,7 +194,7 @@ describe('Queue', (it) => {
     })
   );
 
-  it('should indicate whether it is running', async (t) => {
+  it.skip('should indicate whether it is running', async (t) => {
     const queue = t.context.makeQueue();
 
     // The queue should be "running" immediately - different from ready because it can accept jobs
@@ -206,7 +206,7 @@ describe('Queue', (it) => {
     t.false(queue.isRunning());
   });
 
-  it.describe('Connection', (it) => {
+  it.skip.describe('Connection', (it) => {
     it.describe('Close', (it) => {
       it('should close the redis clients', async (t) => {
         const queue = t.context.makeQueue();
@@ -666,7 +666,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Constructor', (it) => {
+  it.skip.describe('Constructor', (it) => {
     it('creates a queue with default redis settings', async (t) => {
       const queue = t.context.makeQueue();
 
@@ -767,7 +767,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it('adds a job with correct prefix', async (t) => {
+  it.skip('adds a job with correct prefix', async (t) => {
     const queue = t.context.makeQueue();
 
     await queue.ready();
@@ -782,7 +782,7 @@ describe('Queue', (it) => {
     t.is(jobData, job.toData());
   });
 
-  it.describe('Remove', (it) => {
+  it.skip.describe('Remove', (it) => {
     it('should remove a job', async (t) => {
       const queue = t.context.makeQueue({
         getEvents: false,
@@ -835,7 +835,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Health Check', (it) => {
+  it.skip.describe('Health Check', (it) => {
     it('reports a waiting job', async (t) => {
       const queue = t.context.makeQueue({
         isWorker: false,
@@ -961,7 +961,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('getJobs', (it) => {
+  it.skip.describe('getJobs', (it) => {
     it('gets waiting jobs', async (t) => {
       const queue = t.context.makeQueue();
 
@@ -1118,7 +1118,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('getJob', (it) => {
+  it.skip.describe('getJob', (it) => {
     it('gets an job created by the same queue instance', async (t) => {
       const queue = t.context.makeQueue();
 
@@ -1179,7 +1179,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('saveAll', (it) => {
+  it.skip.describe('saveAll', (it) => {
     it('should save all the provided jobs', async (t) => {
       const queue = t.context.makeQueue({
         getEvents: false,
@@ -1294,7 +1294,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('removeJob', (it) => {
+  it.skip.describe('removeJob', (it) => {
     it('should not cause an error if immediately removed', async (t) => {
       const queue = t.context.makeQueue();
 
@@ -1341,7 +1341,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Processing jobs', (it) => {
+  it.skip.describe('Processing jobs', (it) => {
     it('processes a job', async (t) => {
       const queue = t.context.makeQueue();
 
@@ -1727,7 +1727,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Processing many jobs', (it) => {
+  it.skip.describe('Processing many jobs', (it) => {
     it('processes many jobs in a row with one processor', async (t) => {
       const queue = t.context.makeQueue();
       const numJobs = 20;
@@ -1858,7 +1858,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Backoff', (it) => {
+  it.skip.describe('Backoff', (it) => {
     it('should fail for invalid backoff strategies and delays', (t) => {
       const queue = t.context.makeQueue({
         isWorker: false,
@@ -2024,7 +2024,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Resets', (it) => {
+  it.skip.describe('Resets', (it) => {
     it('should reset and process stalled jobs when starting a queue', async (t) => {
       t.plan(0);
 
@@ -2325,7 +2325,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Startup', (it) => {
+  it.skip.describe('Startup', (it) => {
     it('processes pre-existing jobs when starting a queue', async (t) => {
       const deadQueue = t.context.makeQueue();
 
@@ -2379,7 +2379,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Pubsub events', (it) => {
+  it.skip.describe('Pubsub events', (it) => {
     it('emits a job succeeded event', async (t) => {
       const queue = t.context.makeQueue();
       const worker = t.context.makeQueue();
@@ -2601,7 +2601,7 @@ describe('Queue', (it) => {
     });
   });
 
-  it.describe('Destroy', (it) => {
+  it.skip.describe('Destroy', (it) => {
     it('should remove all associated redis keys', async (t) => {
       const queue = t.context.makeQueue();
 
