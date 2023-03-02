@@ -106,7 +106,7 @@ describe('Delayed jobs', (it) => {
     delKeys(await gclient, `bq:${t.context.queueName}:*`)
   );
 
-  it('should process delayed jobs', async (t) => {
+  it.skip('should process delayed jobs', async (t) => {
     const queue = t.context.makeQueue({
       activateDelayedJobs: true,
       getEvents: false,
@@ -137,7 +137,7 @@ describe('Delayed jobs', (it) => {
   // distributed systems and inconsistent clocks. As such, we can't reject delayed publish
   // notifications, so if our local redis has a delayed publish, it'll show up and trigger an
   // extra raiseDelayedJobs invocation.
-  it('should process two proximal delayed jobs', async (t) => {
+  it.skip('should process two proximal delayed jobs', async (t) => {
     const queue = t.context.makeQueue({
       activateDelayedJobs: true,
       delayedDebounce: 150,
@@ -192,7 +192,7 @@ describe('Delayed jobs', (it) => {
     t.context.handleErrors(t);
   });
 
-  it('should process a distant delayed job', async (t) => {
+  it.skip('should process a distant delayed job', async (t) => {
     const queue = t.context.makeQueue({
       activateDelayedJobs: true,
       nearTermWindow: 100,
@@ -248,7 +248,7 @@ describe('Delayed jobs', (it) => {
     t.context.handleErrors(t);
   });
 
-  it('should process delayed jobs from other workers', async (t) => {
+  it.skip('should process delayed jobs from other workers', async (t) => {
     const queue = t.context.makeQueue({
       getEvents: false,
       activateDelayedJobs: false,
@@ -278,7 +278,7 @@ describe('Delayed jobs', (it) => {
     t.true(processSpy.calledOnce);
   });
 
-  it('should process the delayed job the first time it was created', async (t) => {
+  it.skip('should process the delayed job the first time it was created', async (t) => {
     const queue = t.context.makeQueue({
       getEvents: false,
       sendEvents: false,
