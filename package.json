@@ -16,7 +16,7 @@
     "@semantic-release/exec": "^6.0.3",
     "@semantic-release/git": "^10.0.1",
     "@semantic-release/github": "^8.0.6",
-    "@semantic-release/npm": "^9.0.1",
+    "@semantic-release/npm": "^10.0.3",
     "@semantic-release/release-notes-generator": "^10.0.3",
     "@sinonjs/fake-timers": "^10.0.0",
     "ava": "^5.1.0",
