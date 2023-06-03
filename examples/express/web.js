@@ -8,8 +8,8 @@ const queue = new Queue('express-example');
 
 app.get('/run/:x/:y', function (req, res) {
   const job = queue.createJob({
-    x: req.params.x,
-    y: req.params.y,
+    x: parseInt(req.params.x),
+    y: parseInt(req.params.y),
   });
 
   job.on('succeeded', function (result) {
