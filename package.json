@@ -21,7 +21,7 @@
     "@sinonjs/fake-timers": "^10.0.0",
     "ava": "^5.1.0",
     "ava-spec": "^1.1.0",
-    "conventional-changelog-conventionalcommits": "^5.0.0",
+    "conventional-changelog-conventionalcommits": "^6.1.0",
     "eslint": "^8.28.0",
     "eslint-config-prettier": "^8.5.0",
     "eslint-plugin-prettier": "^4.2.1",
