@@ -26,7 +26,7 @@
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^4.2.1",
     "nyc": "^15.0.1",
-    "prettier": "^2.0.4",
+    "prettier": "^3.0.3",
     "sandboxed-module": "^2.0.3",
     "semantic-release": "^22.0.5",
     "semver": "^7.2.1",
