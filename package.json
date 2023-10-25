@@ -30,7 +30,7 @@
     "sandboxed-module": "^2.0.3",
     "semantic-release": "^21.0.1",
     "semver": "^7.2.1",
-    "sinon": "^15.0.0"
+    "sinon": "^17.0.0"
   },
   "files": [
     "HISTORY.md",
