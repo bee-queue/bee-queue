@@ -322,6 +322,7 @@ const queue = new Queue('test', {
   removeOnSuccess: false,
   removeOnFailure: false,
   redisScanCount: 100,
+  autoConnect: true,
 });
 ```
 
@@ -349,6 +350,7 @@ The `settings` fields are:
 - `removeOnFailure`: boolean. Enable to have this worker automatically remove its failed jobs from Redis, so as to keep memory usage down. This will not remove jobs that are set to retry unless they fail all their retries.
 - `quitCommandClient`: boolean. Whether to `QUIT` the redis command client (the client it sends normal operations over) when `Queue#close` is called. This defaults to `true` for normal usage, and `false` if an existing `RedisClient` object was provided to the `redis` option.
 - `redisScanCount`: number. For setting the value of the `SSCAN` Redis command used in `Queue#getJobs` for succeeded and failed job types.
+- `autoConnect`: if set to `false`, then `queue.connect()` must be called to connect to the redis host. This is useful when the timing of connection to the redis need to be strictly controlled.
 
 ### Properties
 
@@ -602,6 +604,21 @@ process.on('uncaughtException', async () => {
   }
   process.exit(1);
 });
+```
+
+#### Queue#connect()
+
+Establish the queue's connections to Redis. Will only works if `settings.autoConnect` is set to `false`
+
+```js
+const Queue = require('bee-queue');
+const queue = new Queue('example', {
+  redis: redis: redis.createClient(process.env.REDIS_URL),
+  autoConnect: false;
+});
+await queue.connect();
+queue.createJob({...})
+//....
 ```
 
 #### Queue#isRunning()

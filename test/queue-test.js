@@ -726,6 +726,34 @@ describe('Queue', (it) => {
 
       await t.notThrows(() => queue.createJob().save());
     });
+
+    it('should connect to redis automatically if autoConnect=true', async (t) => {
+      const client = actualRedis.createClient(redisUrl);
+
+      const queue = t.context.makeQueue({
+        redis: client,
+        autoConnect: true,
+      });
+
+      await queue.ready();
+      t.is(queue._isReady, true);
+    });
+
+    it('should connect to redis only if connect() is called while setting autoConnect=false', async (t) => {
+      const client = actualRedis.createClient(redisUrl);
+
+      const queue = t.context.makeQueue({
+        redis: client,
+        autoConnect: false,
+      });
+
+      await queue.ready();
+      t.is(queue._isReady, false);
+
+      await queue.connect();
+
+      t.is(queue._isReady, true);
+    });
   });
 
   it('adds a job with correct prefix', async (t) => {
