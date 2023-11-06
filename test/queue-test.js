@@ -1,6 +1,7 @@
 const {describe} = require('ava-spec');
 const url = require('url');
 
+const Job = require('../lib/job');
 const Queue = require('../lib/queue');
 const helpers = require('../lib/helpers');
 const sinon = require('sinon');
@@ -465,7 +466,7 @@ describe('Queue', (it) => {
         const jobs = spitter();
         queue.process((job) => jobs.pushSuspend(job));
 
-        await queue.createJob({}).save();
+        const job = await queue.createJob({}).save();
         const [, finishJob] = await jobs.shift();
 
         await t.throwsAsync(() => queue.close(10));
@@ -476,9 +477,8 @@ describe('Queue', (it) => {
         const errors = t.context.queueErrors,
           count = errors.length;
         t.context.queueErrors = errors.filter((err) => {
-          return (
-            err.message !== 'unable to update the status of succeeded job 1'
-          );
+          const ref = `unable to update the status of succeeded job ${job.id}`;
+          return err.message !== ref;
         });
         t.is(t.context.queueErrors.length, count - 1);
         t.context.handleErrors(t);
@@ -587,12 +587,12 @@ describe('Queue', (it) => {
       const waitJob = queue._waitForJob,
         wait = helpers.deferred();
       let waitDone = wait.defer();
-      queue._waitForJob = function (...args) {
+      queue._waitForJob = function () {
         if (waitDone) {
           waitDone();
           waitDone = null;
         }
-        return waitJob.apply(this, args);
+        return waitJob.call(this);
       };
 
       await wait;
@@ -1247,7 +1247,7 @@ describe('Queue', (it) => {
   });
 
   it.describe('removeJob', (it) => {
-    it('should not cause an error if immediately removed', async (t) => {
+    it('should not error if active then removed before running', async (t) => {
       const queue = t.context.makeQueue();
 
       queue.process(async (job) => {
@@ -1256,25 +1256,24 @@ describe('Queue', (it) => {
         }
       });
 
-      const waitJob = queue._waitForJob,
-        wait = helpers.deferred();
-      let waitDone = wait.defer();
-      queue._waitForJob = function (...args) {
-        if (waitDone) {
+      // Wrap Job.fromId.  When our wrapper is called with 'deadjob'
+      // (from queue._waitForJob) we undo the wrapping and we remove
+      // the job (from 'active')
+      const wait = helpers.deferred();
+      const waitDone = wait.defer();
+      const fromId = Job.fromId;
+      Job.fromId = async (queue, jobId, cb) => {
+        if (jobId === 'deadjob') {
+          Job.fromId = fromId;
+          await queue.removeJob(jobId);
           waitDone();
-          waitDone = null;
         }
-        return waitJob.apply(this, args);
+        return fromId(queue, jobId, cb);
       };
 
+      await queue.createJob({foo: 'bar'}).setId('deadjob').save();
       await wait;
-
-      const job = queue.createJob({foo: 'bar'}).setId('deadjob');
-      await Promise.all([
-        job.save(),
-        queue.removeJob(job.id),
-        queue.createJob({foo: 'bar'}).setId('goodjob').save(),
-      ]);
+      await queue.createJob({foo: 'bar'}).setId('goodjob').save();
 
       const goodJob = await helpers.waitOn(queue, 'succeeded');
       t.is(goodJob.id, 'goodjob');
@@ -1468,16 +1467,16 @@ describe('Queue', (it) => {
       queue.jobs = new Map();
 
       const failed = await queue.getJobs('failed');
-      const failedErrors = new Set(
-        failed.map((job) => {
+      const failedErrors = failed
+        .map((job) => {
           t.is(job.options.stacktraces.length, 1);
           return job.options.stacktraces[0];
         })
-      );
+        .sort();
 
       t.deepEqual(
         failedErrors,
-        new Set([stack, 'has message', 'is string', true])
+        [stack, 'has message', 'is string', true].sort()
       );
     });
 
@@ -1531,7 +1530,7 @@ describe('Queue', (it) => {
       const [[failedJob, err]] = fail.args;
 
       t.truthy(failedJob);
-      t.is(job.id, '1');
+      t.is(job.id, failedJob.id);
       t.is(failedJob.data.foo, 'bar');
       t.is(err.message, `Job ${job.id} timed out (10 ms)`);
     });
