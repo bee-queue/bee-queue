@@ -1,12 +1,12 @@
-import {describe} from 'ava-spec';
+const {describe} = require('ava-spec');
 
-import Queue from '../lib/queue';
-import helpers from '../lib/helpers';
-import sinon from 'sinon';
+const Queue = require('../lib/queue');
+const helpers = require('../lib/helpers');
+const sinon = require('sinon');
 
-import redis from '../lib/redis';
+const redis = require('../lib/redis');
 
-import {EventEmitter as Emitter} from 'events';
+const {EventEmitter: Emitter} = require('events');
 
 function delKeys(client, pattern) {
   const promise = helpers.deferred(),

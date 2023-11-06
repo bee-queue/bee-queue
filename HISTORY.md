@@ -1,3 +1,19 @@
+## [1.6.0](https://github.com/bee-queue/bee-queue/compare/v1.5.0...v1.6.0) (2023-11-02)
+
+### Features
+
+- **queue:** allow manual connection ([#708](https://github.com/bee-queue/bee-queue/issues/708)) ([425fb89](https://github.com/bee-queue/bee-queue/commit/425fb897ef8515f881e9db7e4462ed4f3625eba8))
+
+## [1.5.0](https://github.com/bee-queue/bee-queue/compare/v1.4.3...v1.5.0) (2022-11-28)
+
+### Features
+
+- **tests:** add docker-test.sh for running tests in a Docker container ([#554](https://github.com/bee-queue/bee-queue/issues/554)) ([1932b39](https://github.com/bee-queue/bee-queue/commit/1932b39e0d5daba2d85922ac1ff5e15898155302))
+
+### Bug Fixes
+
+- **types:** add types for saveAll() ([#553](https://github.com/bee-queue/bee-queue/issues/553)) ([f909e2a](https://github.com/bee-queue/bee-queue/commit/f909e2a003f2ef97d71d993442eeaddedf2ab5e3)), closes [#318](https://github.com/bee-queue/bee-queue/issues/318)
+
 ## [1.4.3](https://github.com/bee-queue/bee-queue/compare/v1.4.2...v1.4.3) (2022-11-23)
 
 ### Bug Fixes
