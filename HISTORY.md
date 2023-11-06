@@ -1,3 +1,9 @@
+## [1.7.0](https://github.com/bee-queue/bee-queue/compare/v1.6.0...v1.7.0) (2023-11-06)
+
+### Features
+
+- improve job failure events ([#227](https://github.com/bee-queue/bee-queue/issues/227)) ([15d02c2](https://github.com/bee-queue/bee-queue/commit/15d02c2f7e99505a4a7ce94c12d7311795d28c47))
+
 ## [1.6.0](https://github.com/bee-queue/bee-queue/compare/v1.5.0...v1.6.0) (2023-11-02)
 
 ### Features
