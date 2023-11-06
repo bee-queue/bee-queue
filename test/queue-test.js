@@ -463,25 +463,36 @@ describe('Queue', (it) => {
         const queue = t.context.makeQueue();
 
         const jobs = spitter();
-        queue.process((job) => jobs.pushSuspend(job));
+        queue.process(2, (job) => jobs.pushSuspend(job));
 
-        await queue.createJob({}).save();
-        const [, finishJob] = await jobs.shift();
+        await Promise.all([
+          queue.createJob({}).save(),
+          queue.createJob({}).save(),
+        ]);
+        const [[, finishJob1], [, finishJob2]] = await Promise.all([
+          jobs.shift(),
+          jobs.shift(),
+        ]);
 
-        await t.throwsAsync(() => queue.close(10));
-        finishJob(null);
+        await t.throwsAsync(() => queue.close(10), {message: /timed out/});
+
+        finishJob1();
+        const fail = Promise.reject(new Error('test error'));
+        fail.catch(() => {}); // Prevent unhandled rejections.
+        finishJob2(fail);
 
         await helpers.delay(5);
 
-        const errors = t.context.queueErrors,
-          count = errors.length;
-        t.context.queueErrors = errors.filter((err) => {
-          return (
-            err.message !== 'unable to update the status of succeeded job 1'
-          );
-        });
-        t.is(t.context.queueErrors.length, count - 1);
-        t.context.handleErrors(t);
+        t.is(t.context.queueErrors.length, 2);
+        t.true(
+          t.context.queueErrors.every((err) =>
+            /^unable to update the status of (?:succeeded job 1|failed job 2)$/.test(
+              err.message
+            )
+          )
+        );
+        t.not(...t.context.queueErrors.slice(0, 2));
+        t.context.queueErrors.length = 0;
       });
 
       it('should not error on close', async (t) => {
@@ -875,7 +886,7 @@ describe('Queue', (it) => {
       t.is(counts.succeeded, 1);
     });
 
-    it('reports a failed job', async (t) => {
+    it('should report a failed job', async (t) => {
       const queue = t.context.makeQueue();
 
       queue.process(async (job) => {
@@ -883,14 +894,51 @@ describe('Queue', (it) => {
         throw new Error('failed!');
       });
 
+      const events = [
+        helpers.waitOn(queue, 'failed'),
+        helpers.waitOn(queue, 'failed:fatal'),
+      ];
+
       const job = await queue.createJob({foo: 'bar'}).save();
       t.truthy(job.id);
 
-      const failedJob = await helpers.waitOn(queue, 'failed');
+      const [failedJob, fatalJob] = await Promise.all(events);
       t.is(failedJob.id, job.id);
+      t.is(fatalJob.id, job.id);
 
       const counts = await queue.checkHealth();
       t.is(counts.failed, 1);
+    });
+
+    it('should report a retried job', async (t) => {
+      const queue = t.context.makeQueue({getEvents: false, storeJobs: false});
+
+      queue.process(async (job) => {
+        t.is(job.data.foo, 'bar');
+        if (job.options.retries) throw new Error('failed for retry!');
+        // job succeeds on the retry
+      });
+
+      const emits = Promise.all([
+        helpers.waitOn(queue, 'failed'),
+        helpers.waitOn(queue, 'retrying'),
+        helpers.waitOn(queue, 'succeeded'),
+      ]);
+
+      const job = await queue.createJob({foo: 'bar'}).retries(1).save();
+      t.truthy(job.id);
+
+      const [failedJob, retriedJob, succeededJob] = await emits;
+      t.is(failedJob.id, job.id);
+      t.is(failedJob.status, 'retrying');
+      t.is(retriedJob.id, job.id);
+      t.is(retriedJob.status, 'retrying');
+      t.is(succeededJob.id, job.id);
+      t.is(succeededJob.status, 'succeeded');
+
+      const counts = await queue.checkHealth();
+      t.is(counts.failed, 0);
+      t.is(counts.succeeded, 1);
     });
 
     it('should not report the latest job for custom job ids', async (t) => {
@@ -1536,30 +1584,36 @@ describe('Queue', (it) => {
       t.is(err.message, `Job ${job.id} timed out (10 ms)`);
     });
 
-    it('processes a job that auto-retries', async (t) => {
+    it('should process a job that auto-retries', async (t) => {
       const queue = t.context.makeQueue();
-      const retries = 1;
-      const failMsg = 'failing to auto-retry...';
+      const retries = 2;
+      const failMsg = 'failing for auto-retry...';
 
       const end = helpers.deferred(),
         finish = end.defer();
 
-      let failCount = 0;
+      function validateEvent(job, err) {
+        t.truthy(job);
+        t.is(job.data.foo, 'bar');
+        t.is(err.message, failMsg);
+      }
+
+      const retryingStub = sinon.stub().callsFake(validateEvent),
+        failedStub = sinon.stub().callsFake(validateEvent);
+
+      queue
+        .on('retrying', retryingStub)
+        .on('failed', failedStub)
+        .on('failed:fatal', () => t.fail('unexpected fatal failure'));
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         if (job.options.retries) {
           throw new Error(failMsg);
         }
-        t.is(failCount, retries);
+        t.is(retryingStub.callCount, retries);
+        t.is(failedStub.callCount, retries);
         finish();
-      });
-
-      queue.on('failed', (job, err) => {
-        ++failCount;
-        t.truthy(job);
-        t.is(job.data.foo, 'bar');
-        t.is(err.message, failMsg);
       });
 
       const job = await queue.createJob({foo: 'bar'}).retries(retries).save();
@@ -1590,28 +1644,34 @@ describe('Queue', (it) => {
       t.true(called);
     });
 
-    it('processes a job that times out and auto-retries', async (t) => {
+    it('should process a job that times out and auto-retries', async (t) => {
       const queue = t.context.makeQueue();
       const retries = 1;
 
       const end = helpers.deferred(),
         finish = end.defer();
 
-      let failCount = 0;
+      function validateEvent(job, err) {
+        t.regex(err.message, /timed out/);
+        t.truthy(job);
+        t.is(job.data.foo, 'bar');
+      }
+
+      const retryingStub = sinon.stub().callsFake(validateEvent),
+        failedStub = sinon.stub().callsFake(validateEvent);
+      queue
+        .on('retrying', retryingStub)
+        .on('failed', failedStub)
+        .on('failed:fatal', () => t.fail('unexpected fatal failure'));
 
       queue.process(async (job) => {
         t.is(job.data.foo, 'bar');
         if (job.options.retries) {
-          return helpers.defer(20);
+          return helpers.delay(20);
         }
-        t.is(failCount, retries);
+        t.is(retryingStub.callCount, retries);
+        t.is(failedStub.callCount, retries);
         finish();
-      });
-
-      queue.on('failed', (job) => {
-        failCount += 1;
-        t.truthy(job);
-        t.is(job.data.foo, 'bar');
       });
 
       const job = await queue
@@ -2379,8 +2439,8 @@ describe('Queue', (it) => {
       });
       await job.save();
 
-      // Wait for the event to show up in both, but only bind the value from the event on the job
-      // object.
+      // Wait for the event to show up in both, but only bind the value from the
+      // event on the job object.
       const [jobEvents, queueEvents] = await record;
 
       const jobErr = jobEvents[0][1];
