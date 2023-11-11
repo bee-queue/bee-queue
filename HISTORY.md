@@ -1,3 +1,9 @@
+## [1.7.1](https://github.com/bee-queue/bee-queue/compare/v1.7.0...v1.7.1) (2023-11-11)
+
+### Bug Fixes
+
+- fixed the type for job.save function ([#719](https://github.com/bee-queue/bee-queue/issues/719)) ([77a5dac](https://github.com/bee-queue/bee-queue/commit/77a5dacac1e54f4138dc9d3d3e8cf6c76e129d7d))
+
 ## [1.7.0](https://github.com/bee-queue/bee-queue/compare/v1.6.0...v1.7.0) (2023-11-06)
 
 ### Features
