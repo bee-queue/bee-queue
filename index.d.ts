@@ -124,7 +124,7 @@ declare namespace BeeQueue {
     delayUntil(dateOrTimestamp: Date | number): this;
     timeout(milliseconds: number): this;
     save(): Promise<this>;
-    save(cb: (job: this) => void): void;
+    save(cb: (err: Error, job: this) => void): void;
     reportProgress(p: any): void;
     remove(): Promise<this>;
     remove(cb: (job: this) => void): void;
