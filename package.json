@@ -28,9 +28,9 @@
     "nyc": "^15.0.1",
     "prettier": "^3.0.3",
     "sandboxed-module": "^2.0.3",
-    "semantic-release": "^23.0.2",
+    "semantic-release": "^24.0.0",
     "semver": "^7.2.1",
-    "sinon": "^17.0.0"
+    "sinon": "^18.0.0"
   },
   "files": [
     "HISTORY.md",
