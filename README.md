@@ -251,7 +251,7 @@ By default, every time you create a queue instance with `new Queue()` a new redi
 
 Let's say for example you have a web application with 30 producer queues and you run 10 webservers & 10 worker servers, each one with 4 processes/server. With the default settings this is going to add up to a lot of Redis connections. Each Redis connection consumes a fairly large chunk of memory, and it adds up quickly!
 
-The producer queues are the ones that run on the webserver and they push jobs into the queue. These queues do not need to receive events so they can all share one redis connection by passing in an instance of [node_redis `RedisClient`](https://github.com/NodeRedis/node_redis#rediscreateclient).
+The producer queues are the ones that run on the webserver and they push jobs into the queue. These queues do not need to receive events so they can all share one redis connection by passing in an instance of [node_redis `RedisClient`](https://github.com/NodeRedis/node_redis#rediscreateclient). Note at this time we do not support the latest version (v4) and you must use v3.x
 
 Example:
 
