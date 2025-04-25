@@ -338,9 +338,9 @@ The `settings` fields are:
   - `port`: number, Redis port.
   - `socket`: string, Redis socket to be used instead of a host and port.
 
-Note that this can also be a node_redis `RedisClient` instance, in which case Bee-Queue will issue normal commands over it. It will `duplicate()` the client for blocking commands and PubSub subscriptions, if enabled. This is advanced usage.
+  Note that this can also be a node_redis `RedisClient` instance, in which case Bee-Queue will issue normal commands over it. It will `duplicate()` the client for blocking commands and PubSub subscriptions, if enabled. This is advanced usage.
 
-> Ensure you are using v3 of node_redis since we do not support v4 at this time. 
+  > Ensure you are using v3 of node_redis since we do not support v4 at this time. 
 
 - `isWorker`: boolean. Disable if this queue will not process jobs.
 - `getEvents`: boolean. Disable if this queue does not need to receive job events.
