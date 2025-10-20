@@ -28,7 +28,7 @@
     "nyc": "^17.0.0",
     "prettier": "^3.0.3",
     "sandboxed-module": "^2.0.3",
-    "semantic-release": "^24.0.0",
+    "semantic-release": "^25.0.1",
     "semver": "^7.2.1",
     "sinon": "^19.0.2"
   },
