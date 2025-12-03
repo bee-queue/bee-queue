@@ -6,10 +6,10 @@
         "node_modules",
         "dist",
         "coverage",
-        ".nyc_output"
+        ".nyc_output",
       ],
-      "file_exclude_patterns": ["package-lock.json"]
-    }
+      "file_exclude_patterns": ["package-lock.json"],
+    },
   ],
   "settings": {
     "tab_size": 2,
@@ -17,6 +17,6 @@
     "translate_tabs_to_spaces": true,
     "trim_trailing_white_space_on_save": true,
     "detect_indentation": false,
-    "rulers": [80]
-  }
+    "rulers": [80],
+  },
 }
