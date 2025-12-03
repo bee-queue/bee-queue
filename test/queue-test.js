@@ -752,6 +752,7 @@ describe('Queue', (it) => {
       t.is(queue._isReady, true);
     });
 
+    // eslint-disable-next-line max-len
     it('should connect to redis only if connect() is called while setting autoConnect=false', async (t) => {
       const client = actualRedis.createClient(redisUrl);
 
@@ -2058,6 +2059,7 @@ describe('Queue', (it) => {
       return done;
     });
 
+    // eslint-disable-next-line max-len
     it('should reset and process more than the unpack limit stalled jobs when starting a queue', async (t) => {
       t.plan(0);
 
