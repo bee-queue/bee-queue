@@ -544,10 +544,12 @@ describe('Queue', (it) => {
         t.false(client.ready);
         t.true(client.quit.called);
 
-        const err = await t.throwsAsync(() =>
-          helpers.callAsync((done) => client.ping(done))
-        );
-        t.true(redis.isAbortError(err));
+        try {
+          await helpers.callAsync((done) => client.ping(done));
+          t.fail('expected ping to fail after client.quit');
+        } catch (err) {
+          t.true(redis.isAbortError(err));
+        }
       });
 
       it('should not quit the command client when quitCommandClient=false', async (t) => {

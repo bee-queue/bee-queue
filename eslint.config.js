@@ -1,0 +1,83 @@
+const prettierPlugin = require('eslint-plugin-prettier');
+
+module.exports = [
+  {
+    ignores: ['coverage/**'],
+  },
+  {
+    languageOptions: {
+      ecmaVersion: 2017
+    },
+    plugins: {
+      prettier: prettierPlugin,
+    },
+    rules: {
+      'prettier/prettier': 'error',
+      'max-len': ['error', {code: 100}],
+      'array-bracket-spacing': ['error', 'never'],
+      'brace-style': ['error', '1tbs'],
+      camelcase: 'error',
+      'comma-style': ['error', 'last'],
+      'computed-property-spacing': ['error', 'never'],
+      'consistent-this': ['error', 'self'],
+      curly: ['warn', 'multi-line'],
+      'dot-notation': 'error',
+      'eol-last': 'error',
+      eqeqeq: ['error', 'smart'],
+      'key-spacing': 'warn',
+      'new-cap': ['error', {capIsNew: false}],
+      'no-console': 'warn',
+      'no-floating-decimal': 'error',
+      'no-inner-declarations': 'error',
+      'no-mixed-spaces-and-tabs': 'error',
+      'no-redeclare': 'error',
+      'no-shadow': 'warn',
+      'no-spaced-func': 'error',
+      'no-trailing-spaces': 'error',
+      'no-undef': 'error',
+      'no-underscore-dangle': 'off',
+      'no-unused-vars': ['error', {vars: 'all', args: 'after-used'}],
+      'no-use-before-define': ['error', 'nofunc'],
+      'no-var': 'error',
+      'no-warning-comments': ['warn', {terms: ['todo'], location: 'anywhere'}],
+      'object-curly-spacing': ['error', 'never'],
+      'prefer-const': ['error', {destructuring: 'all'}],
+      quotes: ['error', 'single'],
+      semi: ['error', 'always'],
+      'semi-spacing': ['error', {before: false, after: true}],
+      'keyword-spacing': 'error',
+      'space-before-blocks': 'error',
+      'space-before-function-paren': ['error', {anonymous: 'always', named: 'never'}],
+      'space-in-parens': 'error',
+      'space-infix-ops': 'error',
+      strict: 'off',
+    },
+  },
+  {
+    files: ['lib/**'],
+    rules: {
+      'max-len': ['error', {code: 100}],
+    },
+  },
+  {
+    files: ['benchmark/**', 'examples/**'],
+    languageOptions: {
+      ecmaVersion: 2017,
+    },
+    rules: {
+      'no-console': 'off',
+    },
+  },
+  {
+    files: ['test/**'],
+    languageOptions: {
+      ecmaVersion: 2017,
+      sourceType: 'module',
+    },
+    rules: {
+      'handle-callback-err': 'warn',
+      'no-shadow': 'off',
+      'no-warning-comments': 'off',
+    },
+  },
+];
