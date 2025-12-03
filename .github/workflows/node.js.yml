@@ -31,25 +31,25 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x, 21.x]
+        node-version: [16.x, 18.x, 20.x, 21.x, 22.x, 23.x, 24.x, 25.x]
         include:
           - node-version: 18.x
             report-coverage: true
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
         with:
           # For commitlint; ideally this would only check out the feature branch's history, but
           # that's not currently an option.
           fetch-depth: ${{ github.event_name == 'push' }}
       - name: Cache dependencies
         id: cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
       - name: Use Node.js ${{ matrix.node-version }} for dependencies
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v6
         if: '!steps.cache.outputs.cache-hit'
         with:
           node-version: ${{ matrix.node-version }}
@@ -57,7 +57,7 @@ jobs:
         if: '!steps.cache.outputs.cache-hit'
         run: npm ci
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v6
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm run ci --if-present
@@ -81,7 +81,7 @@ jobs:
     needs: [test]
 
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v6
         with:
           # Necessary to prevent the checkout action from writing credentials to .git/config, which
           # semantic-release attempts to use to push despite those credentials being denied the
@@ -89,12 +89,12 @@ jobs:
           # See https://github.com/semantic-release/git/issues/196#issuecomment-601310576.
           persist-credentials: false
       - name: Use Node.js 18.x
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v6
         with:
           node-version: 18.x
       - name: Restore dependencies
         id: cache
-        uses: actions/cache@v2
+        uses: actions/cache@v4
         with:
           path: node_modules
           key: ${{ runner.os }}-${{ hashFiles('package-lock.json') }}
