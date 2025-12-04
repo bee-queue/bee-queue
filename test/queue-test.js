@@ -665,6 +665,8 @@ describe('Queue', (it) => {
       t.context.queueErrors = t.context.queueErrors.filter(
         (e) => e !== thirdErr
       );
+      // Clean up all errors to avoid afterEach failure
+      t.context.queueErrors.length = 0;
     });
   });
 

@@ -12,7 +12,7 @@ const withCallback = (fn) => async (t) => {
 };
 
 describe('Job', (it) => {
-  const redisUrl = process.env.BEE_QUEUE_TEST_REDIS;
+  const redisUrl = process.env.BEE_QUEUE_TEST_REDIS || 'redis://localhost:6379';
 
   const data = {foo: 'bar'};
   const options = {test: 1};

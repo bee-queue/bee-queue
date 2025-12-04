@@ -15,7 +15,7 @@ on:
 jobs:
   test:
     # https://github.community/t/github-actions-does-not-respect-skip-ci/17325/9
-    if: "!contains(github.event.head_commit.message, '[skip ci]')"
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
 
     services:
@@ -31,9 +31,9 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x, 21.x, 22.x, 23.x, 24.x, 25.x]
+        node-version: [20.x, 21.x, 22.x, 23.x, 24.x, 25.x]
         include:
-          - node-version: 18.x
+          - node-version: 20.x
             report-coverage: true
 
     steps:
@@ -64,7 +64,7 @@ jobs:
         env:
           BEE_QUEUE_TEST_REDIS: redis://localhost:6379
       - run: npm run ci:commitlint
-        if: "github.event_name != 'push' && github.actor != 'dependabot[bot]'"
+        if: ${{ github.event_name != 'push' && github.actor != 'dependabot[bot]' }}
         env:
           GITHUB_BASE_REF: ${{ github.event.pull_request.base.ref }}
       - name: Report to Coveralls
@@ -75,7 +75,7 @@ jobs:
 
   release:
     # https://github.community/t/github-actions-does-not-respect-skip-ci/17325/9
-    if: "github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]')"
+    if: ${{ github.event_name == 'push' && !contains(github.event.head_commit.message, '[skip ci]') }}
     runs-on: ubuntu-latest
 
     needs: [test]
@@ -88,10 +88,10 @@ jobs:
           # push.
           # See https://github.com/semantic-release/git/issues/196#issuecomment-601310576.
           persist-credentials: false
-      - name: Use Node.js 18.x
+      - name: Use Node.js 20.x
         uses: actions/setup-node@v6
         with:
-          node-version: 18.x
+          node-version: 20.x
       - name: Restore dependencies
         id: cache
         uses: actions/cache@v4

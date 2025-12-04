@@ -19,7 +19,7 @@
     "@semantic-release/npm": "^13.1.2",
     "@semantic-release/release-notes-generator": "^14.1.0",
     "@sinonjs/fake-timers": "^15.0.0",
-    "ava": "^6.4.1",
+    "ava": "^5.3.1",
     "ava-spec": "^1.1.1",
     "conventional-changelog-conventionalcommits": "^9.1.0",
     "eslint": "^9.39.1",
@@ -46,7 +46,7 @@
     "ci:commitlint": "if node -e 'async()=>{for await(var a of a);}'; then commitlint --from \"origin/${GITHUB_BASE_REF:-master}\"; fi",
     "ci:coverage": "if [ -z \"$CI\" ]; then npm run coverage; else npm run coverage-and-report; fi",
     "coverage-and-report": "npm run coverage && mkdir -p coverage && nyc report --reporter=text-lcov > coverage/lcov.info",
-    "coverage": "nyc ava",
+    "coverage": "nyc ava --timeout=30s",
     "lint": "eslint . && prettier --check '**/*.(html|json|md|sublime-project|ts|yml)'",
     "report": "npm run coverage && nyc report --reporter=html",
     "test": "npm run lint && ava"
@@ -62,7 +62,7 @@
     "lua"
   ],
   "engines": {
-    "node": ">= 4"
+    "node": ">= 20"
   },
   "author": "Lewis J Ellis <me@lewisjellis.com>",
   "contributors": [
