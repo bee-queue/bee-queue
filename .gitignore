@@ -43,3 +43,6 @@ notes.txt
 # Cruft from failed Docker builds
 entrypoint.sh
 package-min.json
+
+# dotenv environment variables file
+.env

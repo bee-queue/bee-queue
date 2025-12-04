@@ -544,10 +544,12 @@ describe('Queue', (it) => {
         t.false(client.ready);
         t.true(client.quit.called);
 
-        const err = await t.throwsAsync(() =>
-          helpers.callAsync((done) => client.ping(done))
-        );
-        t.true(redis.isAbortError(err));
+        try {
+          await helpers.callAsync((done) => client.ping(done));
+          t.fail('expected ping to fail after client.quit');
+        } catch (err) {
+          t.true(redis.isAbortError(err));
+        }
       });
 
       it('should not quit the command client when quitCommandClient=false', async (t) => {
@@ -663,6 +665,8 @@ describe('Queue', (it) => {
       t.context.queueErrors = t.context.queueErrors.filter(
         (e) => e !== thirdErr
       );
+      // Clean up all errors to avoid afterEach failure
+      t.context.queueErrors.length = 0;
     });
   });
 
@@ -750,6 +754,7 @@ describe('Queue', (it) => {
       t.is(queue._isReady, true);
     });
 
+    // eslint-disable-next-line max-len
     it('should connect to redis only if connect() is called while setting autoConnect=false', async (t) => {
       const client = actualRedis.createClient(redisUrl);
 
@@ -2056,6 +2061,7 @@ describe('Queue', (it) => {
       return done;
     });
 
+    // eslint-disable-next-line max-len
     it('should reset and process more than the unpack limit stalled jobs when starting a queue', async (t) => {
       t.plan(0);
 

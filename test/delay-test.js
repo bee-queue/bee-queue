@@ -38,7 +38,8 @@ function reef(n = 1) {
 }
 
 describe('Delayed jobs', (it) => {
-  const redisUrl = process.env.BEE_QUEUE_TEST_REDIS;
+  const redisUrl = process.env.BEE_QUEUE_TEST_REDIS || 'redis://localhost:6379';
+
   const gclient = redis.createClient(redisUrl);
 
   it.before(() => gclient);

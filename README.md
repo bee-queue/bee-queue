@@ -333,7 +333,6 @@ The `settings` fields are:
 - `nearTermWindow`: number, ms; the window during which delayed jobs will be specifically scheduled using `setTimeout` - if all delayed jobs are further out than this window, the Queue will double-check that it hasn't missed any jobs after the window elapses.
 - `delayedDebounce`: number, ms; to avoid unnecessary churn for several jobs in short succession, the Queue may delay individual jobs by up to this amount.
 - `redis`: object or string, specifies how to connect to Redis. See [`redis.createClient()`](https://github.com/NodeRedis/node_redis#rediscreateclient) for the full set of options.
-
   - `host`: string, Redis host.
   - `port`: number, Redis port.
   - `socket`: string, Redis socket to be used instead of a host and port.
