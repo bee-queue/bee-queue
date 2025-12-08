@@ -1,3 +1,13 @@
+## [2.0.0](https://github.com/bee-queue/bee-queue/compare/v1.7.1...v2.0.0) (2025-12-08)
+
+### ⚠ BREAKING CHANGES
+
+- Drop support for Node.js < 20 (#944) (#945)
+
+### Features
+
+- Drop support for Node.js < 20 ([#944](https://github.com/bee-queue/bee-queue/issues/944)) ([#945](https://github.com/bee-queue/bee-queue/issues/945)) ([4c87efb](https://github.com/bee-queue/bee-queue/commit/4c87efb9050be5d71642b4e07d678599784cc2b1))
+
 ## [1.7.1](https://github.com/bee-queue/bee-queue/compare/v1.7.0...v1.7.1) (2023-11-11)
 
 ### Bug Fixes
