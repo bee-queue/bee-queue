@@ -22,7 +22,7 @@
     "ava": "^5.3.1",
     "ava-spec": "^1.1.1",
     "conventional-changelog-conventionalcommits": "^9.1.0",
-    "eslint": "^9.39.1",
+    "eslint": "^10.0.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-prettier": "^5.5.4",
     "nyc": "^17.1.0",
